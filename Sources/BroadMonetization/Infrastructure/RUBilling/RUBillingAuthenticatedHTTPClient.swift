@@ -1,9 +1,10 @@
+import BroadCore
 import Foundation
 
 enum RUBillingHTTPClientResult: Sendable {
     case success(RUBillingAuthenticatedResponse)
     case unauthorized
-    case unavailable
+    case unavailable(NetworkFailureKind)
     case rejected
 }
 
@@ -135,13 +136,15 @@ private extension RUBillingAuthenticatedHTTPClient {
                   let response = response as? HTTPURLResponse,
                   responseSizeIsAllowed(response.expectedContentLength)
             else {
-                return .unavailable
+                return .unavailable(.other)
             }
             if response.statusCode == 401 || response.statusCode == 403 {
                 return .unauthorized
             }
             guard (200 ..< 300).contains(response.statusCode) else {
-                return response.statusCode >= 500 ? .unavailable : .rejected
+                return response.statusCode >= 500
+                    ? .unavailable(.other)
+                    : .rejected
             }
 
             var data = Data()
@@ -152,7 +155,7 @@ private extension RUBillingAuthenticatedHTTPClient {
                 guard !Task.isCancelled,
                       data.count < configuration.maximumResponseSize
                 else {
-                    return .unavailable
+                    return .unavailable(.other)
                 }
                 data.append(byte)
             }
@@ -168,7 +171,7 @@ private extension RUBillingAuthenticatedHTTPClient {
                 )
             )
         } catch {
-            return .unavailable
+            return .unavailable(NetworkFailureClassifier.classify(error))
         }
     }
 
@@ -203,6 +206,7 @@ private extension RUBillingAuthenticatedHTTPClient {
         sessionConfiguration.httpCookieStorage = nil
         sessionConfiguration.httpShouldSetCookies = false
         sessionConfiguration.urlCredentialStorage = nil
+        sessionConfiguration.waitsForConnectivity = false
         return URLSession(
             configuration: sessionConfiguration,
             delegate: RUBillingNoRedirectDelegate(),

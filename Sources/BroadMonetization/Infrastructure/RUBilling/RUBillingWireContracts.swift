@@ -75,17 +75,31 @@ public struct RUBillingEntitlementRecord: Equatable, Sendable {
     public let isActive: Bool
     public let expiresAt: Date?
     public let isLifetime: Bool
+    public let subscriptionID: RUSubscriptionID?
+    public let planName: String?
+    public let isAutoRenewalCancelled: Bool
 
     public init(
         subject: EntitlementSubject,
         isActive: Bool,
         expiresAt: Date?,
-        isLifetime: Bool
+        isLifetime: Bool,
+        subscriptionID: RUSubscriptionID? = nil,
+        planName: String? = nil,
+        isAutoRenewalCancelled: Bool = false
     ) {
         self.subject = subject
         self.isActive = isActive
         self.expiresAt = expiresAt
         self.isLifetime = isLifetime
+        self.subscriptionID = subscriptionID
+        let normalizedPlanName = planName?.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        self.planName = normalizedPlanName?.isEmpty == false
+            ? normalizedPlanName
+            : nil
+        self.isAutoRenewalCancelled = isAutoRenewalCancelled
     }
 }
 
@@ -143,6 +157,7 @@ public struct BroadAppsRUBillingWireContract:
                     productID: request.productID.rawValue,
                     paymentMethod: request.method.rawValue,
                     acceptsAutoRenewal: request.acceptsAutoRenewal,
+                    customerEmail: request.customerEmail,
                     appID: applicationID,
                     appBundle: appBundleIdentifier
                 )
@@ -253,14 +268,24 @@ public struct BroadAppsRUBillingWireContract:
         subject: EntitlementSubject
     ) throws -> RUBillingEntitlementRecord {
         let response = try Self.makeDecoder().decode(BroadAppsRUEntitlementResponseDTO.self, from: data)
-        guard response.subscriptionExpiresAt?.timeIntervalSinceReferenceDate.isFinite != false else {
+        guard response.subscriptionExpiresAt?.timeIntervalSinceReferenceDate.isFinite != false,
+              response.subscriptionID.map(
+                  MonetizationIdentifierPolicy.isValid
+              ) != false
+        else {
             throw BroadAppsRUBillingWireError.invalidEntitlement
         }
         return RUBillingEntitlementRecord(
             subject: subject,
             isActive: response.subscriptionActive,
             expiresAt: response.subscriptionExpiresAt,
-            isLifetime: response.subscriptionLifetime ?? false
+            isLifetime: response.subscriptionLifetime ?? false,
+            subscriptionID: response.subscriptionID.map(
+                RUSubscriptionID.init(rawValue:)
+            ),
+            planName: response.subscriptionPlanName,
+            isAutoRenewalCancelled:
+            response.subscriptionAutoRenewalCancelled ?? false
         )
     }
 }

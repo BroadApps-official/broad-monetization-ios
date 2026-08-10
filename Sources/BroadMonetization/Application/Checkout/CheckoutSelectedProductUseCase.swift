@@ -27,7 +27,8 @@ public actor CheckoutSelectedProductUseCase: CheckoutSelectedProductUseCaseProto
     public func callAsFunction(
         _ selection: ProductSelection,
         using checkoutMethod: CheckoutMethod,
-        remoteConfiguration: RemotePaywallConfiguration
+        remoteConfiguration: RemotePaywallConfiguration,
+        options: CheckoutOptions
     ) async -> CheckoutSelectedProductOutcome {
         // This is the provider-routing boundary, so direct callers cannot
         // bypass UI validation and reach either Apple or RU checkout with an
@@ -55,7 +56,8 @@ public actor CheckoutSelectedProductUseCase: CheckoutSelectedProductUseCaseProto
                 ruCheckout(
                     selection,
                     using: checkoutMethod,
-                    remoteConfiguration: remoteConfiguration
+                    remoteConfiguration: remoteConfiguration,
+                    options: options
                 )
             )
         }

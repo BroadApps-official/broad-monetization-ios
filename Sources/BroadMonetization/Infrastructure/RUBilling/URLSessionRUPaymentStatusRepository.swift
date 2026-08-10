@@ -49,13 +49,22 @@ struct URLSessionRUPaymentStatusRepository: RUPaymentStatusRepositoryProtocol {
             queryItems: request.queryItems,
             body: request.body
         )
-        guard case let .success(response) = result,
-              let snapshot = try? responseDecoder.decodePaymentStatus(
-                  from: response.data,
-                  expectedCheckoutSessionID: checkoutSessionID,
-                  checkedAt: clock.now()
-              )
-        else {
+        guard case let .success(response) = result else {
+            if case let .unavailable(failure) = result {
+                return .unavailable(
+                    RUBillingSafeErrors.network(
+                        failure,
+                        fallback: RUBillingSafeErrors.paymentStatusUnavailable
+                    )
+                )
+            }
+            return .unavailable(RUBillingSafeErrors.paymentStatusUnavailable)
+        }
+        guard let snapshot = try? responseDecoder.decodePaymentStatus(
+            from: response.data,
+            expectedCheckoutSessionID: checkoutSessionID,
+            checkedAt: clock.now()
+        ) else {
             return .unavailable(RUBillingSafeErrors.paymentStatusUnavailable)
         }
         return .resolved(snapshot)

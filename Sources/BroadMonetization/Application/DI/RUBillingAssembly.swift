@@ -61,5 +61,11 @@ private extension RUBillingAssembly {
             .inObjectScope(.container)
         container.register(CancelRUSubscriptionUseCaseProtocol.self) { _ in checkout.cancelSubscription }
             .inObjectScope(.container)
+        container.register(
+            LoadRUSubscriptionStatusUseCaseProtocol.self
+        ) { _ in
+            checkout.loadSubscriptionStatus
+        }
+        .inObjectScope(.container)
     }
 }

@@ -59,7 +59,14 @@ struct URLSessionRUCheckoutRepository: RUCheckoutRepositoryProtocol {
             )
         case .rejected:
             return .failed(RUBillingSafeErrors.checkoutFailed)
-        case .unauthorized, .unavailable:
+        case let .unavailable(failure):
+            return .unavailable(
+                RUBillingSafeErrors.network(
+                    failure,
+                    fallback: RUBillingSafeErrors.checkoutUnavailable
+                )
+            )
+        case .unauthorized:
             return .unavailable(RUBillingSafeErrors.checkoutUnavailable)
         }
     }

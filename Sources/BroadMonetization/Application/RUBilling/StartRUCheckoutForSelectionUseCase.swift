@@ -2,8 +2,24 @@ public protocol StartSelectedRUCheckoutUseCaseProtocol: Sendable {
     func callAsFunction(
         _ selection: ProductSelection,
         using checkoutMethod: CheckoutMethod,
-        remoteConfiguration: RemotePaywallConfiguration
+        remoteConfiguration: RemotePaywallConfiguration,
+        options: CheckoutOptions
     ) async -> RUCheckoutFlowOutcome
+}
+
+public extension StartSelectedRUCheckoutUseCaseProtocol {
+    func callAsFunction(
+        _ selection: ProductSelection,
+        using checkoutMethod: CheckoutMethod,
+        remoteConfiguration: RemotePaywallConfiguration
+    ) async -> RUCheckoutFlowOutcome {
+        await callAsFunction(
+            selection,
+            using: checkoutMethod,
+            remoteConfiguration: remoteConfiguration,
+            options: .standard
+        )
+    }
 }
 
 /// Resolves the selected occurrence to an exact backend catalog row before the
@@ -29,13 +45,22 @@ actor StartSelectedRUCheckoutUseCase:
     func callAsFunction(
         _ selection: ProductSelection,
         using checkoutMethod: CheckoutMethod,
-        remoteConfiguration: RemotePaywallConfiguration
+        remoteConfiguration: RemotePaywallConfiguration,
+        options: CheckoutOptions
     ) async -> RUCheckoutFlowOutcome {
         guard selection.product.isEligibleForGenericPurchase else {
             return .unavailable(RUBillingSafeErrors.checkoutNotEligible)
         }
         guard checkoutMethod == .sbp || checkoutMethod == .card else {
             return .unavailable(RUBillingSafeErrors.checkoutNotEligible)
+        }
+        guard let details = options.ruDetails,
+              details.acceptsOfferAndPersonalDataProcessing,
+              selection.product.kind != .autoRenewableSubscription
+              || details.acceptsRecurringCharge,
+              details.receiptEmail.map(Self.isValidEmail) != false
+        else {
+            return .unavailable(RUBillingSafeErrors.checkoutConsentRequired)
         }
         guard !isStarting else {
             return .unavailable(RUBillingSafeErrors.checkoutUnavailable)
@@ -58,11 +83,24 @@ actor StartSelectedRUCheckoutUseCase:
             RUCheckoutRequest(
                 productID: matchedProduct.catalogProductID,
                 method: checkoutMethod,
-                acceptsAutoRenewal:
-                selection.product.kind == .autoRenewableSubscription
+                acceptsAutoRenewal: details.acceptsRecurringCharge,
+                customerEmail: details.receiptEmail
             ),
             selection: selection,
             remoteConfiguration: remoteConfiguration
         )
+    }
+
+    private static func isValidEmail(_ value: String) -> Bool {
+        let parts = value.split(separator: "@", omittingEmptySubsequences: false)
+        guard parts.count == 2,
+              !parts[0].isEmpty,
+              parts[1].contains("."),
+              !parts[1].hasPrefix("."),
+              !parts[1].hasSuffix(".")
+        else {
+            return false
+        }
+        return !value.contains(where: \.isWhitespace)
     }
 }

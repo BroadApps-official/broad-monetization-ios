@@ -115,6 +115,8 @@ public struct RUBillingCheckoutServices: Sendable {
     public let startSelectedProduct: any StartSelectedRUCheckoutUseCaseProtocol
     public let applicationReturn: RUPaymentReturnCoordinator
     public let cancelSubscription: any CancelRUSubscriptionUseCaseProtocol
+    public let loadSubscriptionStatus:
+        any LoadRUSubscriptionStatusUseCaseProtocol
     public let operationGate: MonetizationOperationGate
 }
 

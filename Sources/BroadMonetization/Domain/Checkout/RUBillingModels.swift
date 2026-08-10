@@ -137,21 +137,30 @@ public struct RUCheckoutRequest: Codable, Equatable, Sendable {
         case productID
         case method
         case acceptsAutoRenewal
+        case customerEmail
     }
 
     public let productID: RUCatalogProductID
     public let method: CheckoutMethod
     public let acceptsAutoRenewal: Bool
+    public let customerEmail: String?
 
     public init(
         productID: RUCatalogProductID,
         method: CheckoutMethod,
-        acceptsAutoRenewal: Bool
+        acceptsAutoRenewal: Bool,
+        customerEmail: String? = nil
     ) {
         precondition(method == .sbp || method == .card, "RU checkout supports only SBP or card")
         self.productID = productID
         self.method = method
         self.acceptsAutoRenewal = acceptsAutoRenewal
+        let normalizedEmail = customerEmail?.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        self.customerEmail = normalizedEmail?.isEmpty == false
+            ? normalizedEmail
+            : nil
     }
 
     public init(from decoder: any Decoder) throws {
@@ -164,6 +173,10 @@ public struct RUCheckoutRequest: Codable, Equatable, Sendable {
         let acceptsAutoRenewal = try container.decode(
             Bool.self,
             forKey: .acceptsAutoRenewal
+        )
+        let customerEmail = try container.decodeIfPresent(
+            String.self,
+            forKey: .customerEmail
         )
 
         guard MonetizationIdentifierPolicy.isValid(productID.rawValue),
@@ -178,7 +191,8 @@ public struct RUCheckoutRequest: Codable, Equatable, Sendable {
         self.init(
             productID: RUCatalogProductID(rawValue: productID.rawValue),
             method: method,
-            acceptsAutoRenewal: acceptsAutoRenewal
+            acceptsAutoRenewal: acceptsAutoRenewal,
+            customerEmail: customerEmail
         )
     }
 }
@@ -322,13 +336,6 @@ public enum RUPaymentRefreshOutcome: Equatable, Sendable {
     case unavailable(AppError)
 }
 
-public enum RUSubscriptionCancellationOutcome: Equatable, Sendable {
-    case cancelled(effectiveUntil: Date?)
-    case alreadyInactive
-    case unavailable(AppError)
-    case failed(AppError)
-}
-
 private extension String? {
     var nonBlank: String? {
         guard let value = self else {
@@ -383,14 +390,4 @@ private enum RUBillingPersistedValueValidator {
             )
         )
     }
-}
-
-private struct DecodedRUCatalogProduct: Decodable {
-    let catalogProductID: RUCatalogProductID
-    let kind: RUCatalogProductKind
-    let appStoreProductID: ProductID?
-    let price: Money?
-    let displayPrice: String?
-    let subscriptionPeriod: SubscriptionPeriod
-    let supportedMethods: [CheckoutMethod]
 }

@@ -171,6 +171,7 @@ private extension URLSessionPrimaryBackendClient {
         sessionConfiguration.httpCookieStorage = nil
         sessionConfiguration.httpShouldSetCookies = false
         sessionConfiguration.urlCredentialStorage = nil
+        sessionConfiguration.waitsForConnectivity = false
         return URLSession(
             configuration: sessionConfiguration,
             delegate: PrimaryBackendNoRedirectDelegate(),

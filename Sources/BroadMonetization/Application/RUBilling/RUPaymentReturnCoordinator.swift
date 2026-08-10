@@ -1,9 +1,11 @@
+import BroadCore
+
 public enum RUPaymentReturnOutcome: Equatable, Sendable {
     case noPendingCheckout
     case active(EntitlementSnapshot)
     case pending
     case inactive
-    case unavailable
+    case unavailable(AppError)
 }
 
 public actor RUPaymentReturnCoordinator {
@@ -48,7 +50,7 @@ public actor RUPaymentReturnCoordinator {
         case .none:
             return .noPendingCheckout
         case .blockedByAnotherSubject, .unavailable:
-            return .unavailable
+            return .unavailable(RUBillingSafeErrors.paymentStatusUnavailable)
         case let .pending(value):
             context = value
         }
@@ -60,7 +62,9 @@ public actor RUPaymentReturnCoordinator {
         let generation = nextOperationGeneration()
         let task = Task { [weak self] in
             guard let self else {
-                return RUPaymentReturnOutcome.unavailable
+                return RUPaymentReturnOutcome.unavailable(
+                    RUBillingSafeErrors.paymentStatusUnavailable
+                )
             }
             return await resolveReturn(for: context)
         }
@@ -113,7 +117,7 @@ private extension RUPaymentReturnCoordinator {
                 checkoutSessionID: context.checkoutSessionID,
                 attemptID: context.attemptID
             ) else {
-                return .unavailable
+                return .unavailable(RUBillingSafeErrors.paymentStatusUnavailable)
             }
             await operationGate.notifyFinancialOperationStateChanged()
             await analytics?.track(.ruCheckoutConfirmed(context.analyticsContext))
@@ -126,13 +130,15 @@ private extension RUPaymentReturnCoordinator {
                 checkoutSessionID: context.checkoutSessionID,
                 attemptID: context.attemptID
             ) else {
-                return .unavailable
+                return .unavailable(
+                    RUBillingSafeErrors.paymentStatusUnavailable
+                )
             }
             await operationGate.notifyFinancialOperationStateChanged()
             return .inactive
-        case .unavailable:
+        case let .unavailable(error):
             await trackTimedOutIfNeeded(context)
-            return .unavailable
+            return .unavailable(error)
         }
     }
 

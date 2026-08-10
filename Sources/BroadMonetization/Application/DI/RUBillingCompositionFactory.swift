@@ -132,6 +132,11 @@ private extension RUBillingCompositionFactory {
                 refreshEntitlement: refreshEntitlement,
                 authorizationBinding: dependencies.authorizationBinding
             ),
+            loadSubscriptionStatus: LoadRUSubscriptionStatusUseCase(
+                client: makeEntitlementClient(),
+                subject: dependencies.subject,
+                authorizationBinding: dependencies.authorizationBinding
+            ),
             operationGate: operationGate
         )
     }

@@ -45,6 +45,15 @@ public struct URLSessionRUCatalogRepository: RUCatalogRepositoryProtocol {
             body: request.body
         )
 
+        if case let .unavailable(failure) = result {
+            return .unavailable(
+                RUBillingSafeErrors.network(
+                    failure,
+                    fallback: RUBillingSafeErrors.catalogUnavailable
+                )
+            )
+        }
+
         let fetchedAt = clock.now()
         guard fetchedAt.timeIntervalSinceReferenceDate.isFinite,
               case let .success(response) = result,

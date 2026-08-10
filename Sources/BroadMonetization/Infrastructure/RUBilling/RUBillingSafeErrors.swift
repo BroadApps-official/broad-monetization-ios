@@ -1,6 +1,20 @@
 import BroadCore
 
 enum RUBillingSafeErrors {
+    static let offline = AppError(
+        kind: .offline,
+        userMessage: "No internet connection. Check your connection and try again.",
+        diagnosticCode: "ru-billing.network-offline",
+        isRetryable: true
+    )
+
+    static let timedOut = AppError(
+        kind: .timeout,
+        userMessage: "The connection is unstable. Please try again.",
+        diagnosticCode: "ru-billing.network-timeout",
+        isRetryable: true
+    )
+
     static let notConfigured = AppError(
         kind: .unavailable,
         userMessage: "Alternative payments are not configured for this app.",
@@ -33,6 +47,13 @@ enum RUBillingSafeErrors {
         kind: .unavailable,
         userMessage: "This payment method is not available for the current App Store account.",
         diagnosticCode: "ru-billing.checkout-not-eligible",
+        isRetryable: false
+    )
+
+    static let checkoutConsentRequired = AppError(
+        kind: .unavailable,
+        userMessage: "Confirm the required payment terms and check the receipt email.",
+        diagnosticCode: "ru-billing.checkout-consent-required",
         isRetryable: false
     )
 
@@ -70,4 +91,18 @@ enum RUBillingSafeErrors {
         diagnosticCode: "ru-billing.cancellation-failed",
         isRetryable: true
     )
+
+    static func network(
+        _ failure: NetworkFailureKind,
+        fallback: AppError
+    ) -> AppError {
+        switch failure {
+        case .offline:
+            offline
+        case .timedOut:
+            timedOut
+        case .cancelled, .other:
+            fallback
+        }
+    }
 }

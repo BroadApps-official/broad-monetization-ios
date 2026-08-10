@@ -4,6 +4,7 @@ struct BroadAppsRUCheckoutRequestDTO: Encodable {
     let productID: String
     let paymentMethod: String
     let acceptsAutoRenewal: Bool
+    let customerEmail: String?
     let appID: String
     let appBundle: String
 }
@@ -46,6 +47,9 @@ struct BroadAppsRUEntitlementResponseDTO: Decodable {
     let subscriptionActive: Bool
     let subscriptionExpiresAt: Date?
     let subscriptionLifetime: Bool?
+    let subscriptionID: String?
+    let subscriptionPlanName: String?
+    let subscriptionAutoRenewalCancelled: Bool?
 }
 
 enum BroadAppsRUBillingWireError: Error {

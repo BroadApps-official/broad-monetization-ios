@@ -19,7 +19,8 @@ public struct DisabledSelectedRUCheckoutUseCase:
     public func callAsFunction(
         _: ProductSelection,
         using _: CheckoutMethod,
-        remoteConfiguration _: RemotePaywallConfiguration
+        remoteConfiguration _: RemotePaywallConfiguration,
+        options _: CheckoutOptions
     ) async -> RUCheckoutFlowOutcome {
         .unavailable(RUBillingSafeErrors.notConfigured)
     }

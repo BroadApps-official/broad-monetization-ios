@@ -57,7 +57,14 @@ public struct URLSessionRUCancellationRepository: RUSubscriptionRepositoryProtoc
                 ?? .failed(RUBillingSafeErrors.cancellationFailed)
         case .rejected:
             return .failed(RUBillingSafeErrors.cancellationFailed)
-        case .unauthorized, .unavailable:
+        case let .unavailable(failure):
+            return .unavailable(
+                RUBillingSafeErrors.network(
+                    failure,
+                    fallback: RUBillingSafeErrors.cancellationUnavailable
+                )
+            )
+        case .unauthorized:
             return .unavailable(RUBillingSafeErrors.cancellationUnavailable)
         }
     }

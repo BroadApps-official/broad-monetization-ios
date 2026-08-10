@@ -42,9 +42,7 @@ struct RefreshRUPaymentUseCase: RefreshRUPaymentUseCaseProtocol {
         var sawResolvedPayment = false
 
         for attempt in 1 ... policy.maximumAttempts {
-            guard !Task.isCancelled,
-                  authorizationBinding.isCurrent()
-            else {
+            guard operationMayContinue else {
                 return .unavailable(RUBillingSafeErrors.paymentStatusUnavailable)
             }
 
@@ -61,16 +59,14 @@ struct RefreshRUPaymentUseCase: RefreshRUPaymentUseCaseProtocol {
             guard authorizationBinding.isCurrent() else {
                 return .unavailable(RUBillingSafeErrors.paymentStatusUnavailable)
             }
-            switch resolution {
-            case let .active(snapshot):
-                return .active(snapshot)
-            case .inactive:
-                return .inactive
-            case let .waiting(isResolved):
+            switch pollingDecision(for: resolution) {
+            case let .finish(outcome):
+                return outcome
+            case let .continuePolling(isResolved):
                 sawResolvedPayment = sawResolvedPayment || isResolved
             }
 
-            if attempt < policy.maximumAttempts && policy.delay > .zero {
+            if shouldDelay(after: attempt) {
                 do {
                     try await ContinuousClock().sleep(for: policy.delay)
                 } catch {
@@ -83,12 +79,41 @@ struct RefreshRUPaymentUseCase: RefreshRUPaymentUseCaseProtocol {
             ? .pending
             : .unavailable(RUBillingSafeErrors.paymentStatusUnavailable)
     }
+
+    var operationMayContinue: Bool {
+        !Task.isCancelled && authorizationBinding.isCurrent()
+    }
+
+    func shouldDelay(after attempt: Int) -> Bool {
+        attempt < policy.maximumAttempts && policy.delay > .zero
+    }
+
+    fileprivate func pollingDecision(
+        for resolution: PaymentAttemptResolution
+    ) -> PaymentPollingDecision {
+        switch resolution {
+        case let .active(snapshot):
+            .finish(.active(snapshot))
+        case .inactive:
+            .finish(.inactive)
+        case let .unavailable(error):
+            .finish(.unavailable(error))
+        case let .waiting(isResolved):
+            .continuePolling(isResolved: isResolved)
+        }
+    }
 }
 
 private enum PaymentAttemptResolution {
     case active(EntitlementSnapshot)
     case inactive
+    case unavailable(AppError)
     case waiting(isResolved: Bool)
+}
+
+private enum PaymentPollingDecision {
+    case finish(RUPaymentRefreshOutcome)
+    case continuePolling(isResolved: Bool)
 }
 
 private extension RefreshRUPaymentUseCase {
@@ -96,9 +121,14 @@ private extension RefreshRUPaymentUseCase {
         _ outcome: RUPaymentStatusOutcome,
         checkoutSessionID: CheckoutSessionID
     ) async -> PaymentAttemptResolution {
-        guard case let .resolved(payment) = outcome,
-              payment.checkoutSessionID == checkoutSessionID
-        else {
+        guard case let .resolved(payment) = outcome else {
+            if case let .unavailable(error) = outcome,
+               error.kind == .offline || error.kind == .timeout {
+                return .unavailable(error)
+            }
+            return .waiting(isResolved: false)
+        }
+        guard payment.checkoutSessionID == checkoutSessionID else {
             return .waiting(isResolved: false)
         }
 

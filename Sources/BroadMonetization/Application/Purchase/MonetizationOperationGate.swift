@@ -2,6 +2,7 @@ import Foundation
 
 public enum MonetizationOperationKind: Equatable, Sendable {
     case purchase
+    case tokenPurchase
     case restore
     case ruCheckout
 }
@@ -26,6 +27,7 @@ public protocol PendingOperationBlockerProtocol: Sendable {
 public struct PendingOperationBlockerKey: Hashable, Sendable {
     public enum Kind: String, Hashable, Sendable {
         case applePurchase = "apple-purchase"
+        case tokenPurchase = "token-purchase"
         case ruCheckout = "ru-checkout"
     }
 

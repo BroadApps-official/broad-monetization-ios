@@ -26,8 +26,24 @@ public protocol CheckoutSelectedProductUseCaseProtocol: Sendable {
     func callAsFunction(
         _ selection: ProductSelection,
         using checkoutMethod: CheckoutMethod,
-        remoteConfiguration: RemotePaywallConfiguration
+        remoteConfiguration: RemotePaywallConfiguration,
+        options: CheckoutOptions
     ) async -> CheckoutSelectedProductOutcome
+}
+
+public extension CheckoutSelectedProductUseCaseProtocol {
+    func callAsFunction(
+        _ selection: ProductSelection,
+        using checkoutMethod: CheckoutMethod,
+        remoteConfiguration: RemotePaywallConfiguration
+    ) async -> CheckoutSelectedProductOutcome {
+        await callAsFunction(
+            selection,
+            using: checkoutMethod,
+            remoteConfiguration: remoteConfiguration,
+            options: .standard
+        )
+    }
 }
 
 public protocol RestorePurchasesUseCaseProtocol: Sendable {
@@ -59,6 +75,10 @@ public protocol CancelRUSubscriptionUseCaseProtocol: Sendable {
     func callAsFunction(
         subscriptionID: RUSubscriptionID
     ) async -> RUSubscriptionCancellationOutcome
+}
+
+public protocol LoadRUSubscriptionStatusUseCaseProtocol: Sendable {
+    func callAsFunction() async -> RUSubscriptionManagementLoadOutcome
 }
 
 public protocol TrackPaywallEventUseCaseProtocol: Sendable {

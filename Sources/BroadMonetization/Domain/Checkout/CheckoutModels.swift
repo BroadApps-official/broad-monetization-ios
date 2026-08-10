@@ -25,6 +25,41 @@ public struct CheckoutMethodsResolution: Equatable, Sendable {
     }
 }
 
+/// Extra information collected by the UI before a non-App-Store checkout.
+/// Apple purchases intentionally use `.standard` and never receive RU legal or
+/// receipt fields.
+public struct RUCheckoutDetails: Codable, Equatable, Sendable {
+    public let acceptsOfferAndPersonalDataProcessing: Bool
+    public let acceptsRecurringCharge: Bool
+    public let receiptEmail: String?
+
+    public init(
+        acceptsOfferAndPersonalDataProcessing: Bool,
+        acceptsRecurringCharge: Bool,
+        receiptEmail: String? = nil
+    ) {
+        self.acceptsOfferAndPersonalDataProcessing =
+            acceptsOfferAndPersonalDataProcessing
+        self.acceptsRecurringCharge = acceptsRecurringCharge
+        let normalizedEmail = receiptEmail?.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        self.receiptEmail = normalizedEmail?.isEmpty == false
+            ? normalizedEmail
+            : nil
+    }
+}
+
+public struct CheckoutOptions: Codable, Equatable, Sendable {
+    public static let standard = CheckoutOptions()
+
+    public let ruDetails: RUCheckoutDetails?
+
+    public init(ruDetails: RUCheckoutDetails? = nil) {
+        self.ruDetails = ruDetails
+    }
+}
+
 public struct ProductSelection: Codable, Equatable, Sendable {
     public let paywallPresentationID: PaywallPresentationID
     public let paywallReference: PaywallReference
