@@ -16,6 +16,10 @@ public struct RemotePaywallConfigurationParser: Sendable {
 
         return RemotePaywallConfiguration(
             ruBillingGateDecision: parseRUBillingGate(in: dictionary),
+            isAutomaticRevenueViewEnabled: value(
+                in: dictionary,
+                aliases: keys.automaticRevenueView
+            ).flatMap(parseBool),
             accessPolicy: hardPaywall,
             closeDelay: value(in: dictionary, aliases: keys.closeDelay)
                 .flatMap(parseNonNegativeTimeInterval),

@@ -1,6 +1,11 @@
 public struct RemoteConfigKeyRegistry: Sendable {
     public static let broadApps = RemoteConfigKeyRegistry(
-        ruBillingGate: ["pay", "russian_payment", "ru_billing"],
+        ruBillingGate: ["ru_pay", "pay", "russian_payment", "ru_billing"],
+        automaticRevenueView: [
+            "auto_revenue_view",
+            "auto_revnue_view",
+            "auto_revinue_view"
+        ],
         hardPaywall: ["hardPaywall", "hard_paywall", "isHard", "is_hard", "hard"],
         closeDelay: ["closeDelay", "close_delay", "close_delay_seconds"],
         uiVariant: ["ui_variant", "uiVariant"],
@@ -46,6 +51,7 @@ public struct RemoteConfigKeyRegistry: Sendable {
     )
 
     public let ruBillingGate: [String]
+    public let automaticRevenueView: [String]
     public let hardPaywall: [String]
     public let closeDelay: [String]
     public let uiVariant: [String]
@@ -60,6 +66,7 @@ public struct RemoteConfigKeyRegistry: Sendable {
 
     public init(
         ruBillingGate: [String],
+        automaticRevenueView: [String] = ["auto_revenue_view"],
         hardPaywall: [String],
         closeDelay: [String],
         uiVariant: [String],
@@ -74,6 +81,7 @@ public struct RemoteConfigKeyRegistry: Sendable {
     ) {
         let groups = [
             ruBillingGate,
+            automaticRevenueView,
             hardPaywall,
             closeDelay,
             uiVariant,
@@ -92,6 +100,7 @@ public struct RemoteConfigKeyRegistry: Sendable {
         )
 
         self.ruBillingGate = ruBillingGate
+        self.automaticRevenueView = automaticRevenueView
         self.hardPaywall = hardPaywall
         self.closeDelay = closeDelay
         self.uiVariant = uiVariant

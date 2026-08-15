@@ -27,6 +27,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
 
     public let isRUBillingEnabled: Bool?
     public let ruBillingGateDecision: RemoteRUBillingGateDecision
+    public let isAutomaticRevenueViewEnabled: Bool?
     public let accessPolicy: PaywallAccessPolicy?
     public let closeDelay: TimeInterval?
     public let uiVariantID: PaywallUIVariantID?
@@ -35,6 +36,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
 
     public init(
         isRUBillingEnabled: Bool? = nil,
+        isAutomaticRevenueViewEnabled: Bool? = nil,
         accessPolicy: PaywallAccessPolicy? = nil,
         closeDelay: TimeInterval? = nil,
         uiVariantID: PaywallUIVariantID? = nil,
@@ -53,6 +55,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         case false: .disabled
         case nil: .absent
         }
+        self.isAutomaticRevenueViewEnabled = isAutomaticRevenueViewEnabled
         self.accessPolicy = accessPolicy
         self.closeDelay = closeDelay
         self.uiVariantID = uiVariantID
@@ -62,6 +65,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
 
     init(
         ruBillingGateDecision: RemoteRUBillingGateDecision,
+        isAutomaticRevenueViewEnabled: Bool?,
         accessPolicy: PaywallAccessPolicy?,
         closeDelay: TimeInterval?,
         uiVariantID: PaywallUIVariantID?,
@@ -76,6 +80,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         }
         isRUBillingEnabled = ruBillingGateDecision.booleanValue
         self.ruBillingGateDecision = ruBillingGateDecision
+        self.isAutomaticRevenueViewEnabled = isAutomaticRevenueViewEnabled
         self.accessPolicy = accessPolicy
         self.closeDelay = closeDelay
         self.uiVariantID = uiVariantID
@@ -89,6 +94,10 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         let gateDecision = try Self.decodeGateDecision(from: container)
         try self.init(
             ruBillingGateDecision: gateDecision,
+            isAutomaticRevenueViewEnabled: container.decodeIfPresent(
+                Bool.self,
+                forKey: .isAutomaticRevenueViewEnabled
+            ),
             accessPolicy: container.decodeIfPresent(
                 PaywallAccessPolicy.self,
                 forKey: .accessPolicy
@@ -110,6 +119,10 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(isRUBillingEnabled, forKey: .isRUBillingEnabled)
         try container.encode(ruBillingGateDecision, forKey: .ruBillingGateDecision)
+        try container.encodeIfPresent(
+            isAutomaticRevenueViewEnabled,
+            forKey: .isAutomaticRevenueViewEnabled
+        )
         try container.encodeIfPresent(accessPolicy, forKey: .accessPolicy)
         try container.encodeIfPresent(closeDelay, forKey: .closeDelay)
         try container.encodeIfPresent(uiVariantID, forKey: .uiVariantID)
@@ -122,6 +135,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         let isAuthorized = provenance.authorizesTimeSensitiveFeatures
         return RemotePaywallConfiguration(
             ruBillingGateDecision: ruBillingGateDecision,
+            isAutomaticRevenueViewEnabled: isAutomaticRevenueViewEnabled,
             accessPolicy: accessPolicy,
             closeDelay: closeDelay,
             uiVariantID: uiVariantID,
@@ -133,6 +147,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case isRUBillingEnabled
         case ruBillingGateDecision
+        case isAutomaticRevenueViewEnabled
         case accessPolicy
         case closeDelay
         case uiVariantID

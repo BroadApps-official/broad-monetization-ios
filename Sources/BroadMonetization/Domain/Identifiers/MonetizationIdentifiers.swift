@@ -16,7 +16,9 @@ public enum MonetizationIdentifierPolicy {
 public struct PlacementID: RawRepresentable, Codable, Hashable, Sendable, ValidatedMonetizationIdentifier {
     public static let onboarding = PlacementID(rawValue: "onboarding")
     public static let main = PlacementID(rawValue: "main")
+    public static let proIcon = PlacementID(rawValue: "pro_icon")
     public static let settings = PlacementID(rawValue: "settings")
+    public static let ctr = PlacementID(rawValue: "CTR")
     public static let feature = PlacementID(rawValue: "feature")
     public static let tokens = PlacementID(rawValue: "tokens")
     public static let discount = PlacementID(rawValue: "discount")

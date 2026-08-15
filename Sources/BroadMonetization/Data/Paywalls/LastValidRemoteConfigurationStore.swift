@@ -12,6 +12,8 @@ public actor LastValidRemoteConfigurationStore {
         let previous = configurations[placementID]
         let resolved = RemotePaywallConfiguration(
             ruBillingGateDecision: parsed.ruBillingGateDecision,
+            isAutomaticRevenueViewEnabled: parsed.isAutomaticRevenueViewEnabled
+                ?? previous?.isAutomaticRevenueViewEnabled,
             accessPolicy: parsed.accessPolicy ?? previous?.accessPolicy,
             closeDelay: parsed.closeDelay ?? previous?.closeDelay,
             uiVariantID: parsed.uiVariantID ?? previous?.uiVariantID,
