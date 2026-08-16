@@ -9,14 +9,15 @@ public struct ResolveCheckoutMethodsUseCase: ResolveCheckoutMethodsUseCaseProtoc
         catalogRepository: any RUCatalogRepositoryProtocol,
         productMatcher: RUCatalogProductMatcher = RUCatalogProductMatcher(),
         isFeatureEnabled: Bool,
-        remoteGateFallback: RUBillingRemoteGateFallbackPolicy = .disabled
+        deviceContextProvider: any RUBillingDeviceContextProviderProtocol =
+            SystemRUBillingDeviceContextProvider()
     ) {
         self.storefrontRepository = storefrontRepository
         self.catalogRepository = catalogRepository
         self.productMatcher = productMatcher
         gate = RUBillingGate(
             isFeatureEnabled: isFeatureEnabled,
-            remoteFallback: remoteGateFallback
+            deviceContextProvider: deviceContextProvider
         )
     }
 
@@ -30,17 +31,12 @@ public struct ResolveCheckoutMethodsUseCase: ResolveCheckoutMethodsUseCaseProtoc
 
         var methods: [CheckoutMethod] = product.catalogSource == .ruBackend ? [] : [.apple]
 
-        guard gate.mayBeEligible(remoteConfiguration: remoteConfiguration) else {
+        guard gate.allows(remoteConfiguration: remoteConfiguration) else {
             return CheckoutMethodsResolution(methods: methods, storefront: nil)
         }
-        guard case let .available(storefront) = await storefrontRepository.currentStorefront() else {
-            return CheckoutMethodsResolution(methods: methods, storefront: nil)
-        }
-        guard gate.allows(
-            remoteConfiguration: remoteConfiguration,
-            storefront: storefront
-        ) else {
-            return CheckoutMethodsResolution(methods: methods, storefront: storefront)
+        let storefront: Storefront? = switch await storefrontRepository.currentStorefront() {
+        case let .available(value): value
+        case .unavailable: nil
         }
         guard case let .loaded(catalog) = await catalogRepository.loadCatalog(),
               let matched = productMatcher.matchPremiumEntitlementProduct(

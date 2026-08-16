@@ -43,7 +43,7 @@ public struct RUBillingCompositionFactory: Sendable {
         )
         let gate = RUBillingGate(
             isFeatureEnabled: configuration.isFeatureEnabled,
-            remoteFallback: configuration.remoteGateFallback
+            deviceContextProvider: dependencies.deviceContextProvider
         )
 
         return RUBillingServices(
@@ -53,7 +53,6 @@ public struct RUBillingCompositionFactory: Sendable {
                 matcher: matcher
             ),
             checkout: makeCheckoutServices(
-                storefront: storefront,
                 catalog: catalog,
                 pendingStore: pendingStore,
                 matcher: matcher,
@@ -82,13 +81,12 @@ private extension RUBillingCompositionFactory {
                 catalogRepository: catalog,
                 productMatcher: matcher,
                 isFeatureEnabled: configuration.isFeatureEnabled,
-                remoteGateFallback: configuration.remoteGateFallback
+                deviceContextProvider: dependencies.deviceContextProvider
             )
         )
     }
 
     func makeCheckoutServices(
-        storefront: CachedStorefrontRepository,
         catalog: CachedRUCatalogRepository,
         pendingStore: PendingRUCheckoutStore,
         matcher: RUCatalogProductMatcher,
@@ -100,7 +98,6 @@ private extension RUBillingCompositionFactory {
         let flow = RUCheckoutFlowCoordinator(
             checkout: create,
             authorizationProvider: dependencies.authorizationProvider,
-            storefrontRepository: storefront,
             gate: gate,
             opener: dependencies.paymentURLOpener,
             pendingStore: pendingStore,

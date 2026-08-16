@@ -47,7 +47,8 @@ public struct Storefront: Codable, Equatable, Sendable {
         )
     }
 
-    /// RU billing is deliberately based only on App Store storefront data.
+    /// Storefront remains useful as informational App Store metadata. RU
+    /// billing eligibility is decided from Adapty plus the iPhone context.
     public var isRussian: Bool {
         countryCode == "RU" || countryCode == "RUS"
     }

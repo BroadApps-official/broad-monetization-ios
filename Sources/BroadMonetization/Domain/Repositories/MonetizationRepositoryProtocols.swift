@@ -23,18 +23,16 @@ public protocol RemoteConfigRepositoryProtocol: Sendable {
 }
 
 public protocol StorefrontRepositoryProtocol: Sendable {
-    /// Eligibility-facing resolution. Unknown live state must be unavailable.
+    /// Informational App Store metadata. It does not authorize RU billing.
     func currentStorefront() async -> StorefrontResolution
 }
 
-/// Checkout authorization must use a live StoreKit value and must never fall
-/// back to a cached storefront after an App Store account change.
+/// A live StoreKit value for consumers that need current storefront metadata.
 public protocol LiveStorefrontRepositoryProtocol: Sendable {
     func liveCurrentStorefront() async -> StorefrontResolution
 }
 
-/// A non-authoritative value suitable for explanatory UI only. It must never
-/// participate in payment-method eligibility or checkout creation.
+/// A non-authoritative value suitable for explanatory UI only.
 public protocol StorefrontHintRepositoryProtocol: Sendable {
     func cachedStorefrontHint() async -> StorefrontResolution
 }

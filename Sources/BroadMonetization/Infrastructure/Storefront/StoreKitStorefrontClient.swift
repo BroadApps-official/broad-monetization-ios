@@ -10,8 +10,7 @@ public protocol StoreKitStorefrontClientProtocol: Sendable {
     func loadCurrentStorefront() async -> StoreKitStorefrontClientResult
 }
 
-/// Reads only the storefront tied to the App Store account. Device locale,
-/// preferred languages and region settings are deliberately not consulted.
+/// Reads the storefront tied to the App Store account as informational data.
 public struct StoreKitCurrentStorefrontClient: StoreKitStorefrontClientProtocol {
     public init() {}
 

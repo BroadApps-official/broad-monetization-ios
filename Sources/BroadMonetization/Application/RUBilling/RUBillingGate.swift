@@ -1,25 +1,21 @@
-public enum RUBillingRemoteGateFallbackPolicy: Equatable, Sendable {
-    case disabled
-    case enabled
-}
-
 public struct RUBillingGate: Sendable {
     private let isFeatureEnabled: Bool
-    private let remoteFallback: RUBillingRemoteGateFallbackPolicy
+    private let deviceContextProvider: any RUBillingDeviceContextProviderProtocol
 
     public init(
         isFeatureEnabled: Bool,
-        remoteFallback: RUBillingRemoteGateFallbackPolicy = .disabled
+        deviceContextProvider: any RUBillingDeviceContextProviderProtocol =
+            SystemRUBillingDeviceContextProvider()
     ) {
         self.isFeatureEnabled = isFeatureEnabled
-        self.remoteFallback = remoteFallback
+        self.deviceContextProvider = deviceContextProvider
     }
 
     public func allows(
-        remoteConfiguration: RemotePaywallConfiguration,
-        storefront: Storefront
+        remoteConfiguration: RemotePaywallConfiguration
     ) -> Bool {
-        mayBeEligible(remoteConfiguration: remoteConfiguration) && storefront.isRussian
+        mayBeEligible(remoteConfiguration: remoteConfiguration)
+            && deviceContextProvider.currentContext().isRussian
     }
 
     public func mayBeEligible(
@@ -34,11 +30,11 @@ public struct RUBillingGate: Sendable {
             return false
         case .enabled:
             // Cached or otherwise unqualified positive values never authorize
-            // a financial feature, even when a host fallback exists.
+            // a financial feature.
             return remoteConfiguration.authorizesFinancialFeatures
         case .absent:
-            // Only an absent remote decision may defer to explicit host policy.
-            return remoteFallback == .enabled
+            // RU billing is never enabled without an explicit `ru_pay = true`.
+            return false
         }
     }
 }

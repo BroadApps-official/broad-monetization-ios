@@ -38,7 +38,6 @@ public struct RUBillingCompositionConfiguration: Sendable {
     public let http: RUBillingHTTPConfiguration
     public let entitlementFreshness: EntitlementFreshnessPolicy
     public let isFeatureEnabled: Bool
-    public let remoteGateFallback: RUBillingRemoteGateFallbackPolicy
     public let polling: RUPaymentPollingPolicy
     public let cache: RUBillingCacheConfiguration
 
@@ -46,14 +45,12 @@ public struct RUBillingCompositionConfiguration: Sendable {
         http: RUBillingHTTPConfiguration,
         entitlementFreshness: EntitlementFreshnessPolicy,
         isFeatureEnabled: Bool,
-        remoteGateFallback: RUBillingRemoteGateFallbackPolicy = .disabled,
         polling: RUPaymentPollingPolicy = RUPaymentPollingPolicy(),
         cache: RUBillingCacheConfiguration = RUBillingCacheConfiguration()
     ) {
         self.http = http
         self.entitlementFreshness = entitlementFreshness
         self.isFeatureEnabled = isFeatureEnabled
-        self.remoteGateFallback = remoteGateFallback
         self.polling = polling
         self.cache = cache
     }
@@ -67,6 +64,7 @@ public struct RUBillingCompositionDependencies: Sendable {
     public let cache: any CacheRepositoryProtocol
     public let analytics: any MonetizationAnalyticsProtocol
     public let paymentURLOpener: any PaymentURLOpenerProtocol
+    public let deviceContextProvider: any RUBillingDeviceContextProviderProtocol
     public let productMappingPolicy: any RUCatalogProductMappingPolicyProtocol
     public let additionalEntitlementClients: [any RUBillingEntitlementClientProtocol]
     public let clock: CacheClock
@@ -79,6 +77,8 @@ public struct RUBillingCompositionDependencies: Sendable {
         cache: any CacheRepositoryProtocol,
         analytics: any MonetizationAnalyticsProtocol = NoOpMonetizationAnalytics(),
         paymentURLOpener: any PaymentURLOpenerProtocol = UIApplicationPaymentURLOpener(),
+        deviceContextProvider: any RUBillingDeviceContextProviderProtocol =
+            SystemRUBillingDeviceContextProvider(),
         productMappingPolicy: any RUCatalogProductMappingPolicyProtocol =
             ExactOnlyRUCatalogProductMappingPolicy(),
         additionalEntitlementClients: [any RUBillingEntitlementClientProtocol] = [],
@@ -99,6 +99,7 @@ public struct RUBillingCompositionDependencies: Sendable {
         self.cache = cache
         self.analytics = NonBlockingMonetizationAnalytics.wrapping(analytics)
         self.paymentURLOpener = paymentURLOpener
+        self.deviceContextProvider = deviceContextProvider
         self.productMappingPolicy = productMappingPolicy
         self.additionalEntitlementClients = additionalEntitlementClients
         self.clock = clock

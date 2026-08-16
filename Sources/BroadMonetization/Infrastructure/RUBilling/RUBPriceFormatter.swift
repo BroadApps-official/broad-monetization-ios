@@ -4,7 +4,7 @@ public struct RUBPriceFormatter: Sendable {
     public init() {}
 
     /// Formatting locale affects presentation only. It is never used for RU
-    /// eligibility, which remains exclusively App Store storefront based.
+    /// eligibility, which is decided separately by the RU billing gate.
     public func string(from money: Money) -> String? {
         guard money.currencyCode == "RUB" else {
             return nil

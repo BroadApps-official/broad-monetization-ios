@@ -23,7 +23,7 @@ public extension StartSelectedRUCheckoutUseCaseProtocol {
 }
 
 /// Resolves the selected occurrence to an exact backend catalog row before the
-/// checkout coordinator performs its independent live-storefront gate.
+/// checkout coordinator independently rechecks `ru_pay` and the iPhone context.
 actor StartSelectedRUCheckoutUseCase:
     StartSelectedRUCheckoutUseCaseProtocol {
     private let catalogRepository: any RUCatalogRepositoryProtocol
