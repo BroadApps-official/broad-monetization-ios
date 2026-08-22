@@ -32,7 +32,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
     public let closeDelay: TimeInterval?
     public let uiVariantID: PaywallUIVariantID?
     public let specialOffer: SpecialOfferRemoteConfiguration?
-    private(set) var authorizesFinancialFeatures: Bool
+    private(set) var authorizesRUBillingPresentation: Bool
 
     public init(
         isRUBillingEnabled: Bool? = nil,
@@ -60,7 +60,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         self.closeDelay = closeDelay
         self.uiVariantID = uiVariantID
         self.specialOffer = specialOffer
-        authorizesFinancialFeatures = false
+        authorizesRUBillingPresentation = false
     }
 
     init(
@@ -70,7 +70,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         closeDelay: TimeInterval?,
         uiVariantID: PaywallUIVariantID?,
         specialOffer: SpecialOfferRemoteConfiguration?,
-        authorizesFinancialFeatures: Bool
+        authorizesRUBillingPresentation: Bool
     ) {
         if let closeDelay {
             precondition(
@@ -85,7 +85,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         self.closeDelay = closeDelay
         self.uiVariantID = uiVariantID
         self.specialOffer = specialOffer
-        self.authorizesFinancialFeatures = authorizesFinancialFeatures
+        self.authorizesRUBillingPresentation = authorizesRUBillingPresentation
     }
 
     public init(from decoder: any Decoder) throws {
@@ -111,7 +111,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
                 SpecialOfferRemoteConfiguration.self,
                 forKey: .specialOffer
             ),
-            authorizesFinancialFeatures: false
+            authorizesRUBillingPresentation: false
         )
     }
 
@@ -132,15 +132,16 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
     func qualified(
         by provenance: PaywallRemoteConfigurationProvenance
     ) -> RemotePaywallConfiguration {
-        let isAuthorized = provenance.authorizesTimeSensitiveFeatures
+        let authorizesProviderFeatureGates =
+            provenance.authorizesProviderManagedFeatureGates
         return RemotePaywallConfiguration(
             ruBillingGateDecision: ruBillingGateDecision,
             isAutomaticRevenueViewEnabled: isAutomaticRevenueViewEnabled,
             accessPolicy: accessPolicy,
             closeDelay: closeDelay,
             uiVariantID: uiVariantID,
-            specialOffer: isAuthorized ? specialOffer : nil,
-            authorizesFinancialFeatures: isAuthorized
+            specialOffer: authorizesProviderFeatureGates ? specialOffer : nil,
+            authorizesRUBillingPresentation: authorizesProviderFeatureGates
         )
     }
 

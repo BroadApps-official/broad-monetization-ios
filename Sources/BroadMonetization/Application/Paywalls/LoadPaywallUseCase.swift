@@ -69,6 +69,9 @@ public actor LoadPaywallUseCase: LoadPaywallUseCaseProtocol {
 
         switch fallback {
         case let .usable(paywall), let .empty(paywall, _):
+            // The returned payload is the resolved fallback candidate. Its
+            // Remote Config belongs to `fallbackPlacementID` (normally main),
+            // while `origin` still records the originally requested placement.
             return await succeed(paywall, context: analyticsContext)
         case let .unavailable(error, _):
             let finalError = primaryFailure.error ?? error
@@ -197,6 +200,9 @@ private extension LoadPaywallUseCase {
             ),
             products: paywall.products,
             remoteConfiguration: paywall.remoteConfiguration,
+            // Once BroadMonetization restores a payload from its own cache, it
+            // must lose every positive provider-gate capability even if the
+            // original Adapty presentation was provider-managed.
             remoteConfigurationProvenance: catalogSource == .cache
                 ? .platformCache
                 : paywall.remoteConfigurationProvenance,

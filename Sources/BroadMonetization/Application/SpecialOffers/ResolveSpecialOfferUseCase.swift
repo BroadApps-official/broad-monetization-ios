@@ -123,12 +123,11 @@ private extension ResolveSpecialOfferUseCase {
             return unavailable(.paywallUnavailable)
         }
 
-        // A cached or provider-unqualified payload can keep an ordinary paywall
-        // usable offline, but it cannot prove that a time-sensitive offer is
-        // still enabled remotely. Adapty's public placement API may silently
-        // substitute SDK cache/fallback data, so catalog source alone is not
-        // sufficient evidence of freshness.
-        guard paywall.remoteConfigurationProvenance.authorizesTimeSensitiveFeatures else {
+        // The current Adapty payload may drive its provider-owned campaign even
+        // when the SDK transparently used its managed cache. A payload restored
+        // by BroadMonetization itself, or one with unknown legacy provenance,
+        // cannot enable the campaign.
+        guard paywall.remoteConfigurationProvenance.authorizesProviderManagedFeatureGates else {
             await end(paywall, using: presentationLifecycle)
             return unavailable(.disabledByRemoteConfiguration)
         }

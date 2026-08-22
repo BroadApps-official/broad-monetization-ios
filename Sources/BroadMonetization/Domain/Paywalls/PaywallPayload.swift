@@ -11,8 +11,11 @@ public enum PaywallFallbackReason: String, Codable, Equatable, Sendable {
 }
 
 /// Describes what the platform can prove about the payload carrying remote
-/// configuration. Ordinary product display may use every value, while
-/// time-sensitive feature gates must require `verifiedFreshRemote`.
+/// configuration.
+///
+/// Remote feature gates decide which presentation the app may offer. They do
+/// not prove a purchase, token balance or premium entitlement. Financial access
+/// is always resolved independently by the authoritative entitlement engine.
 public enum PaywallRemoteConfigurationProvenance: String, Codable, Equatable, Sendable {
     /// A host-controlled transport proved that this exact response came from a
     /// remote authority for the current request.
@@ -28,8 +31,18 @@ public enum PaywallRemoteConfigurationProvenance: String, Codable, Equatable, Se
     /// introduced, and for custom repositories that have not qualified it yet.
     case legacyUnqualified = "legacy-unqualified"
 
-    public var authorizesTimeSensitiveFeatures: Bool {
-        self == .verifiedFreshRemote
+    /// Whether the payload may drive feature flags owned by the paywall
+    /// provider, such as `special_offer` and the presentation of `ru_pay`
+    /// methods. Adapty's public SDK may return its managed cache without
+    /// exposing the origin, so its current payload remains a valid provider
+    /// decision. A payload restored by BroadMonetization itself never is.
+    public var authorizesProviderManagedFeatureGates: Bool {
+        switch self {
+        case .verifiedFreshRemote, .providerCacheFallbackPossible:
+            true
+        case .platformCache, .legacyUnqualified:
+            false
+        }
     }
 }
 

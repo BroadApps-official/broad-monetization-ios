@@ -116,11 +116,11 @@ public struct SpecialOfferResolution: Equatable, Sendable {
         countdown: SpecialOfferCountdownAuthorization?
     ) -> SpecialOfferPresentationAuthorization {
         guard let paywall,
-              paywall.remoteConfigurationProvenance.authorizesTimeSensitiveFeatures,
+              paywall.remoteConfigurationProvenance.authorizesProviderManagedFeatureGates,
               paywall.remoteConfiguration.specialOffer?.isEnabled == true
         else {
             preconditionFailure(
-                "Special-offer presentation requires an explicitly enabled verified payload"
+                "Special-offer presentation requires an enabled provider-managed payload"
             )
         }
         return SpecialOfferPresentationAuthorization(

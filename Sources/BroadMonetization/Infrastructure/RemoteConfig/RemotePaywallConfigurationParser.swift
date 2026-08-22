@@ -28,7 +28,7 @@ public struct RemotePaywallConfigurationParser: Sendable {
                 .flatMap(validIdentifier)
                 .map(PaywallUIVariantID.init(rawValue:)),
             specialOffer: parseSpecialOffer(dictionary),
-            authorizesFinancialFeatures: false
+            authorizesRUBillingPresentation: false
         )
     }
 }

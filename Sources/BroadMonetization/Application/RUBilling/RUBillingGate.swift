@@ -29,9 +29,10 @@ public struct RUBillingGate: Sendable {
             // A kill switch is safe to honor even from provider/local cache.
             return false
         case .enabled:
-            // Cached or otherwise unqualified positive values never authorize
-            // a financial feature.
-            return remoteConfiguration.authorizesFinancialFeatures
+            // This only authorizes presenting a configured checkout method.
+            // The backend and entitlement engine remain the authorities for
+            // payment status and premium access.
+            return remoteConfiguration.authorizesRUBillingPresentation
         case .absent:
             // RU billing is never enabled without an explicit `ru_pay = true`.
             return false

@@ -3,8 +3,10 @@ public actor LastValidRemoteConfigurationStore {
 
     public init() {}
 
-    /// Missing ordinary fields retain their last valid value. Special offer is different:
-    /// an absent fresh gate means the optional feature is off and must not be resurrected.
+    /// Missing ordinary UI fields retain their last valid value. `ru_pay` and
+    /// `special_offer` are different: only the current provider payload may
+    /// enable them, so an absent, malformed, or false value must never be
+    /// resurrected from a previous response.
     public func resolve(
         _ parsed: RemotePaywallConfiguration,
         for placementID: PlacementID
@@ -18,7 +20,7 @@ public actor LastValidRemoteConfigurationStore {
             closeDelay: parsed.closeDelay ?? previous?.closeDelay,
             uiVariantID: parsed.uiVariantID ?? previous?.uiVariantID,
             specialOffer: parsed.specialOffer,
-            authorizesFinancialFeatures: false
+            authorizesRUBillingPresentation: false
         )
         configurations[placementID] = resolved
         return resolved
