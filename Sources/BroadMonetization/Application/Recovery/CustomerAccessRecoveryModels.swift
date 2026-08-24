@@ -1,15 +1,17 @@
 import BroadCore
 
-/// Result of asking the application's backend to reconcile every known token
-/// purchase for the current account and return its authoritative balance.
+/// Result of asking the application's backend for the current authenticated
+/// account's authoritative token balance.
 public enum TokenAccountRecoveryOutcome: Equatable, Sendable {
     case restored(TokenBalanceSnapshot)
     case unavailable(AppError)
 }
 
 public protocol RecoverTokenAccountUseCaseProtocol: Sendable {
-    /// The backend must reconcile both Apple and RU token ledgers before it
-    /// returns the balance. The device never reconstructs a balance locally.
+    /// Fetches one full balance snapshot for the authenticated app account.
+    /// StoreKit transaction and RU checkout identifiers belong to fulfillment
+    /// duplicate protection; the device does not submit an ID list or rebuild
+    /// the balance during ordinary recovery.
     func callAsFunction() async -> TokenAccountRecoveryOutcome
 }
 

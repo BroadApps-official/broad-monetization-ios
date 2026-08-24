@@ -2,8 +2,9 @@ import BroadCore
 import Foundation
 
 /// Verified StoreKit evidence sent to the application's token backend. The
-/// backend must deduplicate `transactionID`; the device balance is never the
-/// source of truth.
+/// backend atomically processes each `transactionID` once; repeated delivery
+/// returns the same account balance instead of issuing tokens again. The
+/// device balance is never the source of truth.
 public struct TokenTransactionEvidence: Codable, Equatable, Sendable {
     public let transactionID: String
     public let productID: ProductID
@@ -77,8 +78,9 @@ public enum TokenFulfillmentOutcome: Equatable, Sendable {
 }
 
 public protocol TokenFulfillmentRepositoryProtocol: Sendable {
-    /// Sends verified evidence to the app backend. Implementations must make
-    /// the request idempotent by transaction ID and return backend balance.
+    /// Sends verified evidence to the app backend. Implementations atomically
+    /// credit each transaction ID once and return the resulting account
+    /// balance. Normal account recovery is a separate full-snapshot request.
     func fulfill(
         _ request: TokenFulfillmentRequest
     ) async -> TokenFulfillmentOutcome
