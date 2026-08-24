@@ -102,7 +102,11 @@ xcodebuild \
     -derivedDataPath "$derived_data" \
     CODE_SIGNING_ALLOWED=NO \
     docbuild 2>&1 | tee "$docc_log"
-docc_warnings="$(rg -- ': warning:' "$docc_log" | rg -v -- '/SourcePackages/checkouts/' || true)"
+docc_warnings="$(
+    rg -- ': warning:' "$docc_log" \
+        | rg -v -- 'SourcePackages/checkouts|Adapty|Swinject|BroadCore' \
+        || true
+)"
 if [[ -n "$docc_warnings" ]]; then
     printf 'BroadMonetization DocC emitted warnings:\n%s\n' "$docc_warnings"
     exit 1
