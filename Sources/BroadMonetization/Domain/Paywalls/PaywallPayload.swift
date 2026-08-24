@@ -10,42 +10,6 @@ public enum PaywallFallbackReason: String, Codable, Equatable, Sendable {
     case emptyProducts = "empty-products"
 }
 
-/// Describes what the platform can prove about the payload carrying remote
-/// configuration.
-///
-/// Remote feature gates decide which presentation the app may offer. They do
-/// not prove a purchase, token balance or premium entitlement. Financial access
-/// is always resolved independently by the authoritative entitlement engine.
-public enum PaywallRemoteConfigurationProvenance: String, Codable, Equatable, Sendable {
-    /// A host-controlled transport proved that this exact response came from a
-    /// remote authority for the current request.
-    case verifiedFreshRemote = "verified-fresh-remote"
-
-    /// The provider API may silently substitute its own cache or fallback file.
-    case providerCacheFallbackPossible = "provider-cache-fallback-possible"
-
-    /// BroadMonetization deliberately restored the whole paywall from its cache.
-    case platformCache = "platform-cache"
-
-    /// Backward-compatible value for payloads persisted before provenance was
-    /// introduced, and for custom repositories that have not qualified it yet.
-    case legacyUnqualified = "legacy-unqualified"
-
-    /// Whether the payload may drive feature flags owned by the paywall
-    /// provider, such as `special_offer` and the presentation of `ru_pay`
-    /// methods. Adapty's public SDK may return its managed cache without
-    /// exposing the origin, so its current payload remains a valid provider
-    /// decision. A payload restored by BroadMonetization itself never is.
-    public var authorizesProviderManagedFeatureGates: Bool {
-        switch self {
-        case .verifiedFreshRemote, .providerCacheFallbackPossible:
-            true
-        case .platformCache, .legacyUnqualified:
-            false
-        }
-    }
-}
-
 /// Captures both the logical placement requested by the feature and the placement
 /// that actually supplied the payload. Analytics must keep both values.
 public struct PaywallOrigin: Codable, Equatable, Sendable {

@@ -1,8 +1,7 @@
 import Foundation
 
-/// One safety boundary for every host, remote and persisted special-offer
-/// duration. The limit is intentionally much larger than a realistic campaign,
-/// while remaining safely representable by `Duration`, `Date` and UI counters.
+/// Compatibility boundary for legacy duration fields. The platform resolver no
+/// longer uses these values for eligibility, expiration or its display timer.
 public enum SpecialOfferDurationPolicy: Sendable {
     public static let maximumDuration: TimeInterval = 10 * 365 * 24 * 60 * 60
 
@@ -11,8 +10,10 @@ public enum SpecialOfferDurationPolicy: Sendable {
     }
 }
 
-/// Host-owned opt-in configuration. Passing `nil` means the feature does not exist
-/// for that app and must not trigger loading, timers, persistence or fallback values.
+/// Host-owned opt-in configuration. Passing `nil` means the feature does not
+/// exist for that app and must not trigger paywall, cache or network work.
+/// `windowDuration` and `cooldownDuration` remain decodable for existing hosts,
+/// but the standard resolver intentionally ignores them.
 public struct SpecialOfferConfiguration: Codable, Equatable, Sendable {
     public let placementID: PlacementID
     public let windowDuration: TimeInterval?
@@ -80,7 +81,8 @@ public struct SpecialOfferConfiguration: Codable, Equatable, Sendable {
     }
 }
 
-/// Typed values parsed from a special-offer remote payload.
+/// Typed values parsed from a special-offer remote payload. `isEnabled` is the
+/// only campaign gate. Legacy duration values do not control presentation.
 /// Every display value is optional: the platform never invents crossed prices,
 /// multipliers or period text when a project did not configure them.
 public struct SpecialOfferRemoteConfiguration: Codable, Equatable, Sendable {

@@ -100,11 +100,10 @@ private extension RemotePaywallConfigurationParser {
         )
 
         return SpecialOfferRemoteConfiguration(
-            // A present but malformed duration must not silently turn a timed
-            // campaign into an untimed one or fall back to stale host terms.
-            isEnabled: parseSpecialOfferGate(in: dictionary)
-                && windowDuration.isValid
-                && cooldownDuration.isValid,
+            // `special_offer` is the only campaign gate. Legacy duration fields
+            // are retained as optional metadata for source compatibility, but
+            // malformed values cannot disable the provider's explicit flag.
+            isEnabled: parseSpecialOfferGate(in: dictionary),
             windowDuration: windowDuration.value,
             cooldownDuration: cooldownDuration.value,
             crossedPrice: value(in: dictionary, aliases: keys.crossedPrice)
@@ -139,7 +138,7 @@ private extension RemotePaywallConfigurationParser {
         }
 
         // The kill switch always wins. Conflicting or malformed aliases are
-        // otherwise fail-closed because this gate authorizes a timed campaign.
+        // otherwise fail-closed because this flag authorizes a presentation.
         if parsedValues.contains(false) {
             return false
         }

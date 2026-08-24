@@ -268,8 +268,8 @@ private extension AdaptyPaywallRepository {
             products: mappedProducts,
             remoteConfiguration: remoteConfiguration,
             // Adapty owns the current payload and may transparently satisfy the
-            // request from its managed cache. This provenance authorizes
-            // provider feature gates, but never proves a financial entitlement.
+            // request from its managed cache. This provenance authorizes the
+            // Special Offer flag, but not RU Billing or an entitlement.
             remoteConfigurationProvenance: .providerCacheFallbackPossible,
             fetchedAt: clock.now()
         )

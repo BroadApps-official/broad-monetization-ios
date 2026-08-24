@@ -132,16 +132,17 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
     func qualified(
         by provenance: PaywallRemoteConfigurationProvenance
     ) -> RemotePaywallConfiguration {
-        let authorizesProviderFeatureGates =
-            provenance.authorizesProviderManagedFeatureGates
-        return RemotePaywallConfiguration(
+        RemotePaywallConfiguration(
             ruBillingGateDecision: ruBillingGateDecision,
             isAutomaticRevenueViewEnabled: isAutomaticRevenueViewEnabled,
             accessPolicy: accessPolicy,
             closeDelay: closeDelay,
             uiVariantID: uiVariantID,
-            specialOffer: authorizesProviderFeatureGates ? specialOffer : nil,
-            authorizesRUBillingPresentation: authorizesProviderFeatureGates
+            specialOffer: provenance.authorizesSpecialOfferPresentation
+                ? specialOffer
+                : nil,
+            authorizesRUBillingPresentation: provenance
+                .authorizesRUBillingPresentation
         )
     }
 

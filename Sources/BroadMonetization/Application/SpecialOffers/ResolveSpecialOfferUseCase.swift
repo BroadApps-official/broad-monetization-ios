@@ -8,40 +8,40 @@ public actor ResolveSpecialOfferUseCase: ResolveSpecialOfferUseCaseProtocol {
         let task: Task<SpecialOfferResolution, Never>
     }
 
-    private struct EffectiveTime {
-        let wallClock: Date
-        let trustedTime: SpecialOfferTrustedTime?
-
-        static let untimed = EffectiveTime(
-            wallClock: .distantPast,
-            trustedTime: nil
-        )
-    }
-
     private let loadPaywallUseCase: any LoadPaywallUseCaseProtocol
-    private let stateRepository: any SpecialOfferStateRepositoryProtocol
     private let presentationLifecycle: any PaywallPresentationLifecycleProtocol
-    private let clock: SpecialOfferClock
 
     private var inFlightResolutions: [PlacementID: InFlightResolution] = [:]
 
+    /// Preferred initializer. The platform campaign is authorized by the
+    /// current Adapty payload and does not need persisted timing state.
     public init(
         loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
-        stateRepository: any SpecialOfferStateRepositoryProtocol,
-        presentationLifecycle: any PaywallPresentationLifecycleProtocol,
-        clock: SpecialOfferClock = .untrusted
+        presentationLifecycle: any PaywallPresentationLifecycleProtocol
     ) {
         self.loadPaywallUseCase = loadPaywallUseCase
-        self.stateRepository = stateRepository
         self.presentationLifecycle = presentationLifecycle
-        self.clock = clock
+    }
+
+    /// Source-compatible initializer for applications created before the
+    /// recurring display countdown replaced real campaign expiration.
+    public init(
+        loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
+        stateRepository _: any SpecialOfferStateRepositoryProtocol,
+        presentationLifecycle: any PaywallPresentationLifecycleProtocol,
+        clock _: SpecialOfferClock = .untrusted
+    ) {
+        self.init(
+            loadPaywallUseCase: loadPaywallUseCase,
+            presentationLifecycle: presentationLifecycle
+        )
     }
 
     public func callAsFunction(
         configuration: SpecialOfferConfiguration?
     ) async -> SpecialOfferResolution {
-        // This guard deliberately precedes every dependency access. A project that
-        // passes nil performs no paywall/cache/network/timer/persistence work.
+        // This guard deliberately precedes every dependency access. A project
+        // that passes nil performs no paywall, cache or network work.
         guard let configuration else {
             return SpecialOfferResolution(
                 state: .unavailable(.notConfigured),
@@ -58,16 +58,12 @@ public actor ResolveSpecialOfferUseCase: ResolveSpecialOfferUseCaseProtocol {
 
         let identifier = UUID()
         let loadPaywallUseCase = loadPaywallUseCase
-        let stateRepository = stateRepository
         let presentationLifecycle = presentationLifecycle
-        let clock = clock
         let task = Task<SpecialOfferResolution, Never> {
             await Self.resolveConfiguredOffer(
                 configuration,
                 loadPaywallUseCase: loadPaywallUseCase,
-                stateRepository: stateRepository,
-                presentationLifecycle: presentationLifecycle,
-                clock: clock
+                presentationLifecycle: presentationLifecycle
             )
         }
         let inFlight = InFlightResolution(
@@ -108,10 +104,11 @@ private extension ResolveSpecialOfferUseCase {
     static func resolveConfiguredOffer(
         _ configuration: SpecialOfferConfiguration,
         loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
-        stateRepository: any SpecialOfferStateRepositoryProtocol,
-        presentationLifecycle: any PaywallPresentationLifecycleProtocol,
-        clock: SpecialOfferClock
+        presentationLifecycle: any PaywallPresentationLifecycleProtocol
     ) async -> SpecialOfferResolution {
+        // The repository first obtains the paywall and all of its products,
+        // preserving provider order and exact raw-product references. Only then
+        // does this resolver decide whether the second presentation is allowed.
         let loadOutcome = await loadPaywallUseCase(
             PaywallLoadRequest(placementID: configuration.placementID)
         )
@@ -123,213 +120,22 @@ private extension ResolveSpecialOfferUseCase {
             return unavailable(.paywallUnavailable)
         }
 
-        // The current Adapty payload may drive its provider-owned campaign even
-        // when the SDK transparently used its managed cache. A payload restored
-        // by BroadMonetization itself, or one with unknown legacy provenance,
-        // cannot enable the campaign.
-        guard paywall.remoteConfigurationProvenance.authorizesProviderManagedFeatureGates else {
-            await end(paywall, using: presentationLifecycle)
-            return unavailable(.disabledByRemoteConfiguration)
-        }
-
-        // The current provider payload is the gate. A missing/invalid/disabled
-        // value never resurrects a previous offer, including when `.main`
-        // supplied fallback.
-        guard let remoteConfiguration = paywall.remoteConfiguration.specialOffer,
-              remoteConfiguration.isEnabled
+        guard paywall.remoteConfigurationProvenance
+            .authorizesSpecialOfferPresentation
         else {
             await end(paywall, using: presentationLifecycle)
             return unavailable(.disabledByRemoteConfiguration)
         }
 
-        guard case let .loaded(persistedState) = await stateRepository.state(
-            for: configuration
-        ) else {
+        // `special_offer = true` in the current provider payload is the whole
+        // campaign gate. Display countdown, persisted dates and server time do
+        // not participate in eligibility.
+        guard paywall.remoteConfiguration.specialOffer?.isEnabled == true else {
             await end(paywall, using: presentationLifecycle)
-            return unavailable(.persistenceUnavailable)
-        }
-        let windowDuration = remoteConfiguration.windowDuration ?? configuration.windowDuration
-        let cooldownDuration = remoteConfiguration.cooldownDuration ?? configuration.cooldownDuration
-        guard let time = await currentTime(
-            state: persistedState,
-            windowDuration: windowDuration,
-            cooldownDuration: cooldownDuration,
-            clock: clock
-        ) else {
-            await end(paywall, using: presentationLifecycle)
-            return unavailable(.untrustedTime)
+            return unavailable(.disabledByRemoteConfiguration)
         }
 
-        let resolution = await resolveState(
-            persistedState,
-            paywall: paywall,
-            configuration: configuration,
-            windowDuration: windowDuration,
-            cooldownDuration: cooldownDuration,
-            time: time,
-            stateRepository: stateRepository
-        )
-        if resolution.paywall == nil {
-            await end(paywall, using: presentationLifecycle)
-        }
-        return resolution
-    }
-
-    private static func currentTime(
-        state: SpecialOfferState,
-        windowDuration: TimeInterval?,
-        cooldownDuration: TimeInterval?,
-        clock: SpecialOfferClock
-    ) async -> EffectiveTime? {
-        let requiresTrustedTime = windowDuration != nil
-            || cooldownDuration != nil
-            || state.hasTemporalBoundary
-        guard requiresTrustedTime else {
-            // This value cannot open or extend a timed window. It only lets the
-            // shared state machine process an untimed offer.
-            return .untimed
-        }
-        guard case let .synchronized(reading) = await clock.reading() else {
-            return nil
-        }
-        return EffectiveTime(
-            wallClock: reading.date,
-            trustedTime: reading
-        )
-    }
-
-    private static func resolveState(
-        _ state: SpecialOfferState,
-        paywall: PaywallPayload,
-        configuration: SpecialOfferConfiguration,
-        windowDuration: TimeInterval?,
-        cooldownDuration: TimeInterval?,
-        time: EffectiveTime,
-        stateRepository: any SpecialOfferStateRepositoryProtocol
-    ) async -> SpecialOfferResolution {
-        switch state {
-        case let .active(window) where time.wallClock < window.startedAt:
-            unavailable(.untrustedTime)
-        case let .active(window) where time.wallClock < window.expiresAt:
-            SpecialOfferResolution(
-                state: .active(window),
-                paywall: paywall,
-                trustedTime: time.trustedTime
-            )
-        case let .active(window):
-            await resolveExpiredWindow(
-                expiredAt: window.expiresAt,
-                paywall: paywall,
-                configuration: configuration,
-                windowDuration: windowDuration,
-                cooldownDuration: cooldownDuration,
-                time: time,
-                stateRepository: stateRepository
-            )
-        case let .expired(expiredAt):
-            await resolveExpiredWindow(
-                expiredAt: expiredAt,
-                paywall: paywall,
-                configuration: configuration,
-                windowDuration: windowDuration,
-                cooldownDuration: cooldownDuration,
-                time: time,
-                stateRepository: stateRepository
-            )
-        case let .cooldown(until) where time.wallClock < until:
-            SpecialOfferResolution(state: .cooldown(until: until), paywall: nil)
-        case .cooldown:
-            await beginWindow(
-                paywall: paywall,
-                configuration: configuration,
-                windowDuration: windowDuration,
-                time: time,
-                stateRepository: stateRepository
-            )
-        case .unavailable(.ineligible):
-            unavailable(.ineligible)
-        case .unavailable, .eligible:
-            await beginWindow(
-                paywall: paywall,
-                configuration: configuration,
-                windowDuration: windowDuration,
-                time: time,
-                stateRepository: stateRepository
-            )
-        }
-    }
-
-    private static func resolveExpiredWindow(
-        expiredAt: Date,
-        paywall: PaywallPayload,
-        configuration: SpecialOfferConfiguration,
-        windowDuration: TimeInterval?,
-        cooldownDuration: TimeInterval?,
-        time: EffectiveTime,
-        stateRepository: any SpecialOfferStateRepositoryProtocol
-    ) async -> SpecialOfferResolution {
-        guard let cooldownDuration else {
-            let state = SpecialOfferState.expired(date: expiredAt)
-            guard await stateRepository.save(state, for: configuration) else {
-                return unavailable(.persistenceUnavailable)
-            }
-            return SpecialOfferResolution(state: state, paywall: nil)
-        }
-
-        let cooldownEnd = expiredAt.addingTimeInterval(cooldownDuration)
-        guard cooldownEnd.timeIntervalSinceReferenceDate.isFinite else {
-            return unavailable(.persistenceUnavailable)
-        }
-        guard time.wallClock >= cooldownEnd else {
-            let state = SpecialOfferState.cooldown(until: cooldownEnd)
-            guard await stateRepository.save(state, for: configuration) else {
-                return unavailable(.persistenceUnavailable)
-            }
-            return SpecialOfferResolution(state: state, paywall: nil)
-        }
-
-        return await beginWindow(
-            paywall: paywall,
-            configuration: configuration,
-            windowDuration: windowDuration,
-            time: time,
-            stateRepository: stateRepository
-        )
-    }
-
-    private static func beginWindow(
-        paywall: PaywallPayload,
-        configuration: SpecialOfferConfiguration,
-        windowDuration: TimeInterval?,
-        time: EffectiveTime,
-        stateRepository: any SpecialOfferStateRepositoryProtocol
-    ) async -> SpecialOfferResolution {
-        guard let windowDuration else {
-            return SpecialOfferResolution(state: .eligible, paywall: paywall)
-        }
-
-        guard let trustedTime = time.trustedTime else {
-            return unavailable(.untrustedTime)
-        }
-        let expiration = time.wallClock.addingTimeInterval(windowDuration)
-        guard expiration.timeIntervalSinceReferenceDate.isFinite,
-              expiration > time.wallClock
-        else {
-            return unavailable(.persistenceUnavailable)
-        }
-        let window = SpecialOfferWindow(
-            startedAt: time.wallClock,
-            expiresAt: expiration
-        )
-        let state = SpecialOfferState.active(window)
-        guard await stateRepository.save(state, for: configuration) else {
-            return unavailable(.persistenceUnavailable)
-        }
-        return SpecialOfferResolution(
-            state: state,
-            paywall: paywall,
-            trustedTime: trustedTime
-        )
+        return SpecialOfferResolution(state: .eligible, paywall: paywall)
     }
 
     static func isExpectedOrigin(
@@ -358,16 +164,5 @@ private extension ResolveSpecialOfferUseCase {
         await lifecycle.presentationDidEnd(
             PaywallAnalyticsContext(paywall: paywall)
         )
-    }
-}
-
-private extension SpecialOfferState {
-    var hasTemporalBoundary: Bool {
-        switch self {
-        case .active, .expired, .cooldown:
-            true
-        case .unavailable, .eligible:
-            false
-        }
     }
 }
