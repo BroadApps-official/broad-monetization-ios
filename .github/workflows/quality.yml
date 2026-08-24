@@ -1,0 +1,33 @@
+name: Module quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  module-gate:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install ripgrep
+        run: brew install ripgrep
+      - name: Run full standalone module gate
+        run: bash Scripts/module_gate.sh
+      - name: Package DocC archive
+        if: github.ref == 'refs/heads/main'
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            .build/DerivedData/Build/Products/Debug-iphonesimulator/BroadMonetization.doccarchive \
+            .build/BroadMonetization.doccarchive.zip
+      - name: Upload DocC archive
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: BroadMonetization-docc
+          path: .build/BroadMonetization.doccarchive.zip
+          if-no-files-found: error

@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "module": "BroadMonetization",
+  "product": "BroadMonetization",
+  "sandbox": "BroadMonetizationSandbox",
+  "minimumIOS": "17.0",
+  "swiftTools": "6.0",
+  "allowedBroadImports": ["BroadCore"],
+  "requiresPrivacyManifest": false,
+  "realPaymentsExecuted": false
+}

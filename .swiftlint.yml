@@ -1,0 +1,144 @@
+included:
+  - Sources
+  - Examples/BroadMonetizationSandbox/Sources
+
+excluded:
+  - .build
+  - DerivedData
+  - Examples/BroadMonetizationSandbox/BroadMonetizationSandbox.xcodeproj
+
+opt_in_rules:
+  - closure_spacing
+  - contains_over_filter_is_empty
+  - empty_count
+  - first_where
+  - redundant_nil_coalescing
+  - shorthand_optional_binding
+
+line_length:
+  warning: 140
+  error: 180
+  ignores_comments: true
+  ignores_urls: true
+
+function_parameter_count:
+  warning: 8
+  error: 10
+
+type_name:
+  min_length: 2
+
+custom_rules:
+  resolver_inside_view:
+    name: "Resolver inside View"
+    included: ".*View\\.swift"
+    regex: "resolver\\.resolve\\s*\\("
+    message: "Resolve dependencies only in the composition root and pass them through init."
+    severity: error
+
+  dependency_construction_inside_view:
+    name: "Dependency construction inside View"
+    included: ".*View\\.swift"
+    regex: "\\b[A-Za-z][A-Za-z0-9]*(Repository|UseCase|ViewModel)\\s*\\("
+    message: "Views must receive repositories, use cases and view models through init."
+    severity: error
+
+  swiftui_inside_domain_or_data:
+    name: "SwiftUI inside Domain or Data"
+    included: ".*/(Domain|Data)/.*\\.swift"
+    regex: "\\bimport\\s+SwiftUI\\b"
+    message: "Domain and Data must not import SwiftUI."
+    severity: error
+
+  sdk_inside_presentation:
+    name: "SDK inside Presentation"
+    included: ".*/Presentation/.*\\.swift"
+    regex: "\\bimport\\s+(Adapty|StoreKit)\\b"
+    message: "Presentation must use domain contracts instead of Adapty or StoreKit."
+    severity: error
+
+  system_font_outside_tokens:
+    name: "System font outside tokens"
+    included: ".*\\.swift"
+    excluded: ".*/(Tokens|AppTokens)\\.swift"
+    regex: "\\.system\\s*\\("
+    message: "Define system fonts inside tokens and use the token from UI."
+    severity: error
+
+  review_inside_onboarding:
+    name: "Review request inside onboarding"
+    included: ".*/Onboarding[^/]*/.*\\.swift"
+    regex: "(requestReview\\s*\\(|SKStoreReviewController|AppStore\\.requestReview)"
+    message: "Rate Us and native review requests are not allowed inside onboarding."
+    severity: error
+
+  review_api_outside_adapter:
+    name: "Review API outside adapter"
+    included: ".*\\.swift"
+    excluded: ".*/[^/]*ReviewAdapter\\.swift"
+    regex: "(requestReview\\s*\\(|SKStoreReviewController|AppStore\\.requestReview)"
+    message: "Call native review APIs only from a dedicated ReviewAdapter."
+    severity: error
+
+  att_outside_adapter:
+    name: "ATT outside adapter"
+    included: ".*\\.swift"
+    excluded: ".*/[^/]*TrackingAuthorizationAdapter\\.swift"
+    regex: "\\bimport\\s+AppTrackingTransparency\\b"
+    message: "AppTrackingTransparency may be imported only by TrackingAuthorizationAdapter."
+    severity: error
+
+  user_defaults_outside_store:
+    name: "UserDefaults outside key-value store"
+    included: ".*\\.swift"
+    excluded: ".*/Sources/BroadCore/Infrastructure/Persistence/UserDefaultsKeyValueStore\\.swift"
+    regex: "\\b(UserDefaults|NSUserDefaults|CFPreferences[A-Za-z]*)\\b"
+    message: "Use KeyValueStoreProtocol instead of accessing preference APIs directly."
+    severity: error
+
+  console_output_forbidden:
+    name: "Console output forbidden"
+    included: ".*\\.swift"
+    regex: "(^|[^A-Za-z0-9_.])((Swift\\.)?(print|debugPrint|dump)|NSLog|NSLogv|CFShow)\\s*\\(|\\bFileHandle\\.(standardOutput|standardError)\\b"
+    message: "Use BroadLoggerProtocol instead of console output."
+    severity: error
+
+  legacy_os_logging_forbidden:
+    name: "Legacy OS logging forbidden"
+    included: ".*\\.swift"
+    regex: "\\b(os_log|os_logv|os_signpost|OSSignposter)\\b"
+    message: "Use the typed BroadLoggerProtocol and OSLogBroadLogger adapter."
+    severity: error
+
+  oslog_outside_adapter:
+    name: "OSLog outside adapter"
+    included: ".*\\.swift"
+    excluded: ".*/Sources/BroadCore/Infrastructure/Logging/OSLogBroadLogger\\.swift"
+    regex: "(^|\\n)\\s*(@[A-Za-z_][A-Za-z0-9_]*(\\([^\\n)]*\\))?\\s+)*import(\\s+(class|enum|func|struct|protocol|typealias|var|let))?\\s+(OSLog|os)(\\.|\\s*($|\\n))|\\bOSLog\\.[A-Za-z_][A-Za-z0-9_]*\\b|\\bos\\.(Logger|OSLog[A-Za-z0-9_]*|OSSignpost[A-Za-z0-9_]*)\\b"
+    message: "OSLog APIs may be used only by the canonical OSLogBroadLogger adapter."
+    severity: error
+
+  raw_error_description_forbidden:
+    name: "Raw error description forbidden"
+    included: ".*\\.swift"
+    regex: "\\.localizedDescription\\b|String\\s*\\(\\s*describing:\\s*error\\b"
+    message: "Map errors to typed safe fields instead of exposing raw descriptions."
+    severity: error
+
+  hardcoded_paywall_price:
+    name: "Hardcoded paywall price"
+    included: ".*/Paywall[^/]*/.*\\.swift"
+    regex: '(?i)"[^"\\n]*(\\$|€|£|₽|USD|EUR|RUB)[^"\\n]*"'
+    match_kinds:
+      - string
+    message: "Read paywall prices from the product model."
+    severity: error
+
+  hardcoded_paywall_sku:
+    name: "Hardcoded paywall SKU"
+    included: ".*/Paywall[^/]*/.*\\.swift"
+    regex: '(?i)"[^"\\n]*(weekly|monthly|yearly|lifetime)[._-][^"\\n]*"'
+    match_kinds:
+      - string
+    message: "Do not hardcode product identifiers inside paywall UI."
+    severity: error
