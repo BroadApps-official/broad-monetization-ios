@@ -51,9 +51,9 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
 
         self.isRUBillingEnabled = isRUBillingEnabled
         ruBillingGateDecision = switch isRUBillingEnabled {
-        case true: .enabled
-        case false: .disabled
-        case nil: .absent
+        case .some(true): .enabled
+        case .some(false): .disabled
+        case .none: .absent
         }
         self.isAutomaticRevenueViewEnabled = isAutomaticRevenueViewEnabled
         self.accessPolicy = accessPolicy
@@ -201,9 +201,9 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         for value: Bool?
     ) -> RemoteRUBillingGateDecision {
         switch value {
-        case true: .enabled
-        case false: .disabled
-        case nil: .absent
+        case .some(true): .enabled
+        case .some(false): .disabled
+        case .none: .absent
         }
     }
 }
