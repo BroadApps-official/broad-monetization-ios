@@ -7,7 +7,8 @@ public struct DisabledRUBillingCheckoutMethodsUseCase: ResolveCheckoutMethodsUse
     ) async -> CheckoutMethodsResolution {
         CheckoutMethodsResolution(
             methods: product.catalogSource == .ruBackend ? [] : [.apple],
-            storefront: nil
+            storefront: nil,
+            ruBillingAvailability: .hostDisabled
         )
     }
 }

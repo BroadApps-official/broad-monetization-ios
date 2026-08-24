@@ -68,6 +68,8 @@ public struct RUBillingCompositionDependencies: Sendable {
     public let productMappingPolicy: any RUCatalogProductMappingPolicyProtocol
     public let additionalEntitlementClients: [any RUBillingEntitlementClientProtocol]
     public let clock: CacheClock
+    public let debugOverrideStore: RUBillingDebugOverrideStore
+    public let logger: any BroadLoggerProtocol
 
     public init(
         subject: EntitlementSubject,
@@ -82,7 +84,9 @@ public struct RUBillingCompositionDependencies: Sendable {
         productMappingPolicy: any RUCatalogProductMappingPolicyProtocol =
             ExactOnlyRUCatalogProductMappingPolicy(),
         additionalEntitlementClients: [any RUBillingEntitlementClientProtocol] = [],
-        clock: CacheClock = .system
+        clock: CacheClock = .system,
+        debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(),
+        logger: any BroadLoggerProtocol = NoOpBroadLogger()
     ) {
         precondition(
             MonetizationIdentifierPolicy.isValid(applicationIdentifier),
@@ -103,6 +107,8 @@ public struct RUBillingCompositionDependencies: Sendable {
         self.productMappingPolicy = productMappingPolicy
         self.additionalEntitlementClients = additionalEntitlementClients
         self.clock = clock
+        self.debugOverrideStore = debugOverrideStore
+        self.logger = logger
     }
 }
 

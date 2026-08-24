@@ -49,12 +49,14 @@ private extension AdaptySDKActivationGate {
         let observerMode: Bool
         let idfaCollectionDisabled: Bool
         let ipAddressCollectionDisabled: Bool
+        let fallbackFileURL: URL?
 
         init(configuration: AdaptyPlatformConfiguration) {
             apiKey = configuration.apiKey
             observerMode = configuration.observerMode
             idfaCollectionDisabled = configuration.idfaCollectionDisabled
             ipAddressCollectionDisabled = configuration.ipAddressCollectionDisabled
+            fallbackFileURL = configuration.fallbackFileURL
         }
     }
 
@@ -353,6 +355,12 @@ private extension AdaptySDKActivationGate {
                     try await Adapty.logout()
                 }
             } else {
+                if let fallbackFileURL = configuration.fallbackFileURL {
+                    // Adapty owns and validates this Dashboard-generated file.
+                    // Register it before activation so the first paywall load
+                    // can use the same provider payload without a second gate.
+                    try await Adapty.setFallback(fileURL: fallbackFileURL)
+                }
                 let builder = AdaptyConfiguration
                     .builder(withAPIKey: configuration.apiKey)
                     .with(

@@ -40,6 +40,7 @@ public struct AdaptyPlatformConfiguration: Sendable {
     public let idfaCollectionDisabled: Bool
     public let ipAddressCollectionDisabled: Bool
     public let paywallLoadTimeout: TimeInterval
+    public let fallbackFileURL: URL?
 
     let apiKey: String
 
@@ -50,17 +51,23 @@ public struct AdaptyPlatformConfiguration: Sendable {
         observerMode: Bool = false,
         idfaCollectionDisabled: Bool = true,
         ipAddressCollectionDisabled: Bool = true,
-        paywallLoadTimeout: TimeInterval = 12
+        paywallLoadTimeout: TimeInterval = 12,
+        fallbackFileURL: URL? = nil
     ) {
         let trimmedKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedAccessLevel = accessLevelID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedFallbackURL = fallbackFileURL?.standardizedFileURL
+        let hasValidFallbackURL = normalizedFallbackURL.map {
+            $0.isFileURL && $0.pathExtension.lowercased() == "json"
+        } ?? true
         guard !trimmedKey.isEmpty,
               trimmedKey == apiKey,
               apiKey.utf8.count <= 16 * 1024,
               !trimmedAccessLevel.isEmpty,
               trimmedAccessLevel == accessLevelID,
               paywallLoadTimeout.isFinite,
-              (1 ... 60).contains(paywallLoadTimeout)
+              (1 ... 60).contains(paywallLoadTimeout),
+              hasValidFallbackURL
         else {
             return nil
         }
@@ -72,6 +79,7 @@ public struct AdaptyPlatformConfiguration: Sendable {
         self.idfaCollectionDisabled = idfaCollectionDisabled
         self.ipAddressCollectionDisabled = ipAddressCollectionDisabled
         self.paywallLoadTimeout = paywallLoadTimeout
+        self.fallbackFileURL = normalizedFallbackURL
     }
 }
 
@@ -93,7 +101,8 @@ extension AdaptyCustomerIdentity: CustomStringConvertible, CustomDebugStringConv
 extension AdaptyPlatformConfiguration: CustomStringConvertible, CustomDebugStringConvertible,
     CustomReflectable {
     public var description: String {
-        "AdaptyPlatformConfiguration(apiKey: <redacted>, accessLevel: configured)"
+        let fallback = fallbackFileURL == nil ? "not-configured" : "configured"
+        return "AdaptyPlatformConfiguration(apiKey: <redacted>, accessLevel: configured, fallback: \(fallback))"
     }
 
     public var debugDescription: String {
@@ -101,6 +110,13 @@ extension AdaptyPlatformConfiguration: CustomStringConvertible, CustomDebugStrin
     }
 
     public var customMirror: Mirror {
-        Mirror(self, children: ["apiKey": "<redacted>"], displayStyle: .struct)
+        Mirror(
+            self,
+            children: [
+                "apiKey": "<redacted>",
+                "fallback": fallbackFileURL == nil ? "not-configured" : "configured"
+            ],
+            displayStyle: .struct
+        )
     }
 }

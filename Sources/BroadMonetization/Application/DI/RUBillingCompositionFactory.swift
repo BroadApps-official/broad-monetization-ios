@@ -43,7 +43,8 @@ public struct RUBillingCompositionFactory: Sendable {
         )
         let gate = RUBillingGate(
             isFeatureEnabled: configuration.isFeatureEnabled,
-            deviceContextProvider: dependencies.deviceContextProvider
+            deviceContextProvider: dependencies.deviceContextProvider,
+            debugOverrideStore: dependencies.debugOverrideStore
         )
 
         return RUBillingServices(
@@ -81,7 +82,9 @@ private extension RUBillingCompositionFactory {
                 catalogRepository: catalog,
                 productMatcher: matcher,
                 isFeatureEnabled: configuration.isFeatureEnabled,
-                deviceContextProvider: dependencies.deviceContextProvider
+                deviceContextProvider: dependencies.deviceContextProvider,
+                debugOverrideStore: dependencies.debugOverrideStore,
+                logger: dependencies.logger
             )
         )
     }

@@ -7,13 +7,37 @@ public enum CheckoutMethod: String, Codable, CaseIterable, Equatable, Sendable {
     case card
 }
 
+public enum RUBillingAvailabilityReason: String, Equatable, Sendable {
+    case available
+    case productNotEligible = "product-not-eligible"
+    case hostDisabled = "host-disabled"
+    case debugForcedEnabled = "debug-forced-enabled"
+    case debugForcedDisabled = "debug-forced-disabled"
+    case remoteFlagAbsent = "remote-flag-absent"
+    case remoteFlagDisabled = "remote-flag-disabled"
+    case remoteFlagInvalid = "remote-flag-invalid"
+    case unqualifiedRemoteConfiguration = "unqualified-remote-configuration"
+    case deviceContextNotRussian = "device-context-not-russian"
+    case catalogUnavailable = "catalog-unavailable"
+    case productNotMatched = "product-not-matched"
+    case methodsUnavailable = "methods-unavailable"
+}
+
+extension RUBillingAvailabilityReason {
+    var allowsRUBilling: Bool {
+        self == .available || self == .debugForcedEnabled
+    }
+}
+
 public struct CheckoutMethodsResolution: Equatable, Sendable {
     public let methods: [CheckoutMethod]
     public let storefront: Storefront?
+    public let ruBillingAvailability: RUBillingAvailabilityReason
 
     public init(
         methods: [CheckoutMethod],
-        storefront: Storefront?
+        storefront: Storefront?,
+        ruBillingAvailability: RUBillingAvailabilityReason
     ) {
         precondition(
             Set(methods).count == methods.count,
@@ -22,6 +46,23 @@ public struct CheckoutMethodsResolution: Equatable, Sendable {
 
         self.methods = methods
         self.storefront = storefront
+        self.ruBillingAvailability = ruBillingAvailability
+    }
+
+    /// Keeps existing host adapters source-compatible. New adapters should
+    /// pass an explicit typed reason so Debug Status and OSLog can explain the
+    /// decision precisely.
+    public init(
+        methods: [CheckoutMethod],
+        storefront: Storefront?
+    ) {
+        self.init(
+            methods: methods,
+            storefront: storefront,
+            ruBillingAvailability: methods.contains(.sbp) || methods.contains(.card)
+                ? .available
+                : .hostDisabled
+        )
     }
 }
 
