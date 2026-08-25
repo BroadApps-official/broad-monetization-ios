@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title description">
+  <title id="title">Как provenance управляет Special Offer и RU Billing</title>
+  <desc id="description">Provider payload Adapty может включить Special Offer. RU Billing требует verified-fresh remote payload. Кеш BroadMonetization разрешён только для обычного paywall.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="0.55" stop-color="#EFF6FF"/>
+      <stop offset="1" stop-color="#F0FDFA"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-25%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#64748B" flood-opacity="0.18"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#64748B"/>
+    </marker>
+  </defs>
+
+  <rect width="1280" height="680" rx="34" fill="url(#background)"/>
+  <text x="52" y="58" fill="#0F172A" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="29" font-weight="800">Какой кеш может управлять Remote Config</text>
+  <text x="52" y="89" fill="#475569" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="16">Сначала смотрим, кто вернул paywall. От этого зависят права флагов special_offer и ru_pay.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="52" y="132" width="316" height="210" rx="26" fill="#ECFDF5" stroke="#10B981" stroke-width="3"/>
+    <rect x="428" y="132" width="410" height="210" rx="26" fill="#EFF6FF" stroke="#3B82F6" stroke-width="3"/>
+    <rect x="898" y="132" width="330" height="210" rx="26" fill="#F0FDFA" stroke="#14B8A6" stroke-width="3"/>
+  </g>
+
+  <text x="82" y="172" fill="#047857" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="15" font-weight="800">ТЕКУЩИЙ ОТВЕТ SDK ADAPTY</text>
+  <rect x="82" y="198" width="76" height="36" rx="18" fill="#D1FAE5"/>
+  <text x="120" y="221" text-anchor="middle" fill="#065F46" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="13" font-weight="700">сеть</text>
+  <text x="168" y="221" fill="#64748B" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="800">ИЛИ</text>
+  <rect x="198" y="198" width="140" height="36" rx="18" fill="#D1FAE5"/>
+  <text x="268" y="221" text-anchor="middle" fill="#065F46" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="700">кеш SDK Adapty</text>
+  <rect x="82" y="245" width="256" height="36" rx="18" fill="#D1FAE5"/>
+  <text x="210" y="268" text-anchor="middle" fill="#065F46" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12" font-weight="700">ИЛИ Dashboard fallback Adapty</text>
+  <text x="82" y="307" fill="#334155" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14">Один provider payload, без второго REST.</text>
+  <text x="82" y="328" fill="#334155" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14">ru_pay читается из этой же поставки.</text>
+
+  <line x1="380" y1="237" x2="414" y2="237" stroke="#64748B" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="458" y="172" fill="#1D4ED8" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="15" font-weight="800">ОДНА СВЯЗАННАЯ ПОСТАВКА</text>
+  <circle cx="474" cy="213" r="6" fill="#3B82F6"/>
+  <text x="493" y="219" fill="#0F172A" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" font-weight="700">продукты</text>
+  <circle cx="474" cy="255" r="6" fill="#8B5CF6"/>
+  <text x="493" y="261" fill="#0F172A" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" font-weight="700">variation эксперимента</text>
+  <circle cx="474" cy="297" r="6" fill="#10B981"/>
+  <text x="493" y="303" fill="#0F172A" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" font-weight="700">Remote Config</text>
+
+  <line x1="850" y1="237" x2="884" y2="237" stroke="#64748B" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="928" y="172" fill="#0F766E" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="15" font-weight="800">МОЖНО ПОКАЗАТЬ</text>
+  <text x="928" y="216" fill="#065F46" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="800">✓ обычный paywall</text>
+  <text x="928" y="258" fill="#065F46" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="800">✓ Special Offer</text>
+  <text x="928" y="300" fill="#BE123C" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="800">✕ RU без fresh proof</text>
+  <text x="928" y="324" fill="#475569" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="12">Special Offer — при корректном true</text>
+
+  <g filter="url(#shadow)">
+    <rect x="52" y="388" width="316" height="176" rx="26" fill="#FFF7ED" stroke="#F59E0B" stroke-width="3"/>
+    <rect x="428" y="388" width="410" height="176" rx="26" fill="#F8FAFC" stroke="#94A3B8" stroke-width="3"/>
+    <rect x="898" y="388" width="330" height="176" rx="26" fill="#FFF1F2" stroke="#F43F5E" stroke-width="3"/>
+  </g>
+
+  <text x="82" y="430" fill="#B45309" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="15" font-weight="800">КЕШ BROADMONETIZATION</text>
+  <text x="82" y="469" fill="#0F172A" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" font-weight="700">Сохранённая платформой копия</text>
+  <text x="82" y="499" fill="#475569" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14">Нужна для безопасного показа,</text>
+  <text x="82" y="522" fill="#475569" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14">когда новый ответ недоступен.</text>
+
+  <line x1="380" y1="476" x2="414" y2="476" stroke="#64748B" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="458" y="430" fill="#475569" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="15" font-weight="800">БЕЗОПАСНЫЙ РЕЗЕРВ</text>
+  <text x="458" y="471" fill="#0F172A" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" font-weight="700">Продукты можно показать</text>
+  <text x="458" y="502" fill="#475569" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14">Но прошлый положительный флаг</text>
+  <text x="458" y="525" fill="#475569" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="14">не должен включить финансовый UI.</text>
+
+  <line x1="850" y1="476" x2="884" y2="476" stroke="#64748B" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="928" y="430" fill="#BE123C" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="15" font-weight="800">ОГРАНИЧЕНИЕ</text>
+  <text x="928" y="469" fill="#166534" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" font-weight="800">✓ обычный paywall</text>
+  <text x="928" y="502" fill="#BE123C" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" font-weight="800">✕ Special Offer</text>
+  <text x="928" y="535" fill="#BE123C" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="17" font-weight="800">✕ RU Billing</text>
+
+  <rect x="52" y="602" width="1176" height="88" rx="18" fill="#EEF2FF" stroke="#6366F1" stroke-width="2"/>
+  <text x="640" y="632" text-anchor="middle" fill="#3730A3" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="16" font-weight="800">Release: ru_pay только с verified freshness · Debug: follow / force-on / force-off</text>
+  <text x="640" y="663" text-anchor="middle" fill="#475569" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="15" font-weight="700">Remote Config управляет показом, но покупку и premium всегда подтверждают backend/entitlement</text>
+</svg>

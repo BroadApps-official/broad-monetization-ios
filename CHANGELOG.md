@@ -4,7 +4,21 @@
 
 ## Unreleased
 
-Пока нет изменений.
+### Changed
+
+- README восстановил актуальные operational guides из последней полной
+  platform-инструкции: Adapty paywall/placement baseline, Remote Config
+  provenance, Special Offer, RU Billing, token purchases и recovery;
+- app UI screenshots теперь помечены как reference поведения, а не готовый
+  дизайн или hardcoded catalog;
+- устаревшая umbrella-installation и зависимость от private monolith не
+  перенесены.
+
+### Почему
+
+После федерации repository хорошо описывал API, но потерял важную product и
+financial context. Новый README снова отвечает на частые вопросы рядом с кодом,
+не ослабляя fail-closed authority и не публикуя app-owned secrets/IDs.
 
 ## 1.0.0
 
