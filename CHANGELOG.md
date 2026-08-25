@@ -6,6 +6,8 @@
 
 ### Changed
 
+- верх README теперь ведёт в актуальную cross-module карту создания
+  приложения, а monetization-детали остаются рядом с owner-кодом;
 - README восстановил актуальные operational guides из последней полной
   platform-инструкции: Adapty paywall/placement baseline, Remote Config
   provenance, Special Offer, RU Billing, token purchases и recovery;

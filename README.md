@@ -20,6 +20,7 @@ Adapty/StoreKit adapters, entitlements, purchase/restore coordination, Special
 Offer, RU Billing и safe analytics.
 
 [Документация BroadApps iOS](https://broadapps-ios-docs.nkhsnv.chatgpt.site) ·
+[Создание приложения](https://broadapps-ios-docs.nkhsnv.chatgpt.site/docs/app-creation) ·
 [Changelog](CHANGELOG.md) ·
 [Публичный API](Documentation/PublicAPI.md) ·
 [Как предложить правку](CONTRIBUTING.md)
