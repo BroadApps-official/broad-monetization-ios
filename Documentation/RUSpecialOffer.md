@@ -72,9 +72,8 @@ authoritative entitlement/backend result `active`.
 ## Таймеры
 
 Модуль не назначает RU Special Offer общий таймер. Persistent eligibility и
-визуальный countdown — разные app-owned policy. Не копируйте значения одного
-reference приложения как platform default.
+визуальный countdown — разные app-owned policy. Их значения передаёт владелец
+задачи текущего приложения.
 
-Полный reference-аудит 232, инструкция разработчику и prompt для агента:
+Полная инструкция разработчику и prompt для агента:
 [публичная документация](https://broadapps-ios-docs.nkhsnv.chatgpt.site/docs/ru-special-offer).
-

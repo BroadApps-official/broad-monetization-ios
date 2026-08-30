@@ -228,15 +228,15 @@ let coupons = RUCatalogSections(catalog: payload).coupons
 
 Host отдельно задаёт campaign gate, optional Apple placement, exact coupon ID
 и две независимые политики времени: eligibility-window и визуальный countdown.
-Модуль не сортирует coupon products по периоду/цене и не копирует timer из
-reference app.
+Модуль не сортирует coupon products по периоду/цене и не назначает значения
+таймеров вместо host app.
 
 СБП/карта дополнительно требуют обычный strict RU gate. Возврат из hosted
 checkout оставляет pending, пока authoritative entitlement/backend не вернул
 `active`.
 
 [Полная инструкция →](Documentation/RUSpecialOffer.md) ·
-[Публичная страница с аудитом 232 →](https://broadapps-ios-docs.nkhsnv.chatgpt.site/docs/ru-special-offer)
+[Публичная инструкция разработчику →](https://broadapps-ios-docs.nkhsnv.chatgpt.site/docs/ru-special-offer)
 
 ## Token purchases и recovery
 
