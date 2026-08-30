@@ -33,6 +33,18 @@ public protocol AdaptyIdentityProviderProtocol: Sendable {
     ) async -> AdaptyCustomerIdentity?
 }
 
+/// Standard identity provider for apps that let Adapty manage an anonymous
+/// customer. Signed-in apps can inject their own provider instead.
+public struct AdaptyAnonymousIdentityProvider: AdaptyIdentityProviderProtocol {
+    public init() {}
+
+    public func identity(
+        for _: EntitlementSubject
+    ) async -> AdaptyCustomerIdentity? {
+        nil
+    }
+}
+
 public struct AdaptyPlatformConfiguration: Sendable {
     public let subject: EntitlementSubject
     public let accessLevelID: String
@@ -44,6 +56,40 @@ public struct AdaptyPlatformConfiguration: Sendable {
 
     let apiKey: String
 
+    /// Basic Adapty setup. Loading and presenting paywalls needs the public SDK
+    /// key and placement registry; an Adapty access level is not required.
+    public init?(
+        apiKey: String,
+        subject: EntitlementSubject = .anonymous,
+        observerMode: Bool = false,
+        idfaCollectionDisabled: Bool = true,
+        ipAddressCollectionDisabled: Bool = true,
+        paywallLoadTimeout: TimeInterval = 12,
+        fallbackFileURL: URL? = nil
+    ) {
+        guard let validated = Self.validatedInput(
+            apiKey: apiKey,
+            accessLevelID: "",
+            paywallLoadTimeout: paywallLoadTimeout,
+            fallbackFileURL: fallbackFileURL,
+            requiresAccessLevel: false
+        ) else {
+            return nil
+        }
+
+        self.apiKey = validated.apiKey
+        accessLevelID = validated.accessLevelID
+        self.subject = subject
+        self.observerMode = observerMode
+        self.idfaCollectionDisabled = idfaCollectionDisabled
+        self.ipAddressCollectionDisabled = ipAddressCollectionDisabled
+        self.paywallLoadTimeout = paywallLoadTimeout
+        self.fallbackFileURL = validated.fallbackFileURL
+    }
+
+    /// Advanced compatibility setup for hosts that expose an Adapty access
+    /// level to their own entitlement adapter. Ordinary paywall loading does
+    /// not need this value.
     public init?(
         apiKey: String,
         accessLevelID: String,
@@ -54,6 +100,41 @@ public struct AdaptyPlatformConfiguration: Sendable {
         paywallLoadTimeout: TimeInterval = 12,
         fallbackFileURL: URL? = nil
     ) {
+        guard let validated = Self.validatedInput(
+            apiKey: apiKey,
+            accessLevelID: accessLevelID,
+            paywallLoadTimeout: paywallLoadTimeout,
+            fallbackFileURL: fallbackFileURL,
+            requiresAccessLevel: true
+        ) else {
+            return nil
+        }
+
+        self.apiKey = validated.apiKey
+        self.accessLevelID = validated.accessLevelID
+        self.subject = subject
+        self.observerMode = observerMode
+        self.idfaCollectionDisabled = idfaCollectionDisabled
+        self.ipAddressCollectionDisabled = ipAddressCollectionDisabled
+        self.paywallLoadTimeout = paywallLoadTimeout
+        self.fallbackFileURL = validated.fallbackFileURL
+    }
+}
+
+private extension AdaptyPlatformConfiguration {
+    struct ValidatedInput {
+        let apiKey: String
+        let accessLevelID: String
+        let fallbackFileURL: URL?
+    }
+
+    static func validatedInput(
+        apiKey: String,
+        accessLevelID: String,
+        paywallLoadTimeout: TimeInterval,
+        fallbackFileURL: URL?,
+        requiresAccessLevel: Bool
+    ) -> ValidatedInput? {
         let trimmedKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedAccessLevel = accessLevelID.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedFallbackURL = fallbackFileURL?.standardizedFileURL
@@ -63,7 +144,7 @@ public struct AdaptyPlatformConfiguration: Sendable {
         guard !trimmedKey.isEmpty,
               trimmedKey == apiKey,
               apiKey.utf8.count <= 16 * 1024,
-              !trimmedAccessLevel.isEmpty,
+              !requiresAccessLevel || !trimmedAccessLevel.isEmpty,
               trimmedAccessLevel == accessLevelID,
               paywallLoadTimeout.isFinite,
               (1 ... 60).contains(paywallLoadTimeout),
@@ -72,14 +153,11 @@ public struct AdaptyPlatformConfiguration: Sendable {
             return nil
         }
 
-        self.apiKey = apiKey
-        self.accessLevelID = accessLevelID
-        self.subject = subject
-        self.observerMode = observerMode
-        self.idfaCollectionDisabled = idfaCollectionDisabled
-        self.ipAddressCollectionDisabled = ipAddressCollectionDisabled
-        self.paywallLoadTimeout = paywallLoadTimeout
-        self.fallbackFileURL = normalizedFallbackURL
+        return ValidatedInput(
+            apiKey: apiKey,
+            accessLevelID: accessLevelID,
+            fallbackFileURL: normalizedFallbackURL
+        )
     }
 }
 
@@ -102,7 +180,8 @@ extension AdaptyPlatformConfiguration: CustomStringConvertible, CustomDebugStrin
     CustomReflectable {
     public var description: String {
         let fallback = fallbackFileURL == nil ? "not-configured" : "configured"
-        return "AdaptyPlatformConfiguration(apiKey: <redacted>, accessLevel: configured, fallback: \(fallback))"
+        let accessLevel = accessLevelID.isEmpty ? "not-configured" : "configured"
+        return "AdaptyPlatformConfiguration(apiKey: <redacted>, accessLevel: \(accessLevel), fallback: \(fallback))"
     }
 
     public var debugDescription: String {

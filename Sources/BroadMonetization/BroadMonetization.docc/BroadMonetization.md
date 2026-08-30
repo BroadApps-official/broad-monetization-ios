@@ -24,7 +24,18 @@ Provider-neutral monetization contracts and production adapters for BroadApps iP
 - ``SubscriptionPurchaseManager``
 - ``TokenPurchaseManager``
 - ``RUBillingGate``
+- ``RUBillingDeviceContext``
+- ``Storefront``
+- ``RUCatalogProduct``
+- ``RUCatalogSections``
+- ``ResolveRUCatalogProductUseCase``
+- ``FlatRUCatalogResponseDecoder``
+- ``RUBillingWireAdapters``
 
 ### Composition
 
 - ``BroadMonetizationAssembly``
+- ``AdaptyPlatformConfiguration``
+- ``AdaptyPlacementRegistry``
+- ``AdaptyMonetizationFactory``
+- ``AdaptyAnonymousIdentityProvider``

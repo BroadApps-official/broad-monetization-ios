@@ -4,6 +4,15 @@
 
 ## Unreleased
 
+### Added
+
+- базовый `AdaptyPlatformConfiguration(apiKey:)` без обязательного access level;
+- `AdaptyAnonymousIdentityProvider` и короткий initializer
+  `AdaptyMonetizationFactory` для стандартного anonymous-приложения;
+- `FlatRUCatalogResponseDecoder` и
+  `RUBillingWireAdapters.broadAppsFlatCatalog(supportedMethods:)` для текущего
+  плоского backend catalog без app-specific копирования decoder.
+
 ### Changed
 
 - верх README теперь ведёт в актуальную cross-module карту создания
@@ -15,12 +24,28 @@
   дизайн или hardcoded catalog;
 - устаревшая umbrella-installation и зависимость от private monolith не
   перенесены.
+- базовый маршрут Adapty теперь описан как public SDK key + placements; custom
+  identity и authoritative entitlement adapters вынесены в advanced path;
+- подтверждено, что subscription и token paywall получают весь provider array,
+  а Special Offer использует только `special_offer = true` и визуальный
+  циклический таймер 24 часа без schedule/server clock;
+- RU regional gate теперь использует App Store Storefront `RU/RUS` **или**
+  регион iPhone `RU/RUS`; язык больше не включает RU Billing;
+- текущий Storefront повторно проверяется непосредственно перед RU checkout;
+- RU catalog product сохраняет optional backend title и credits, исходный
+  порядок и все occurrences.
+- RU Special Offer закреплён как coupon-секция существующего каталога и
+  checkout: campaign/timers остаются app-owned, product выбирается только по
+  exact ID, browser return требует authoritative entitlement result; отдельные
+  targets и второй payment engine не добавлены.
 
 ### Почему
 
 После федерации repository хорошо описывал API, но потерял важную product и
 financial context. Новый README снова отвечает на частые вопросы рядом с кодом,
-не ослабляя fail-closed authority и не публикуя app-owned secrets/IDs.
+не ослабляя fail-closed authority и не публикуя app-owned secrets/IDs. Новое
+региональное правило синхронизирует платформу с текущим product decision, а
+готовый flat decoder убирает повторяющиеся app-owned костыли.
 
 ## 1.0.0
 

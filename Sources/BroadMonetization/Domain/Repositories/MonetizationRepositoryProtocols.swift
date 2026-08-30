@@ -23,7 +23,8 @@ public protocol RemoteConfigRepositoryProtocol: Sendable {
 }
 
 public protocol StorefrontRepositoryProtocol: Sendable {
-    /// Informational App Store metadata. It does not authorize RU billing.
+    /// Current App Store storefront. A Russian value is one positive regional
+    /// signal; it never replaces the mandatory explicit `ru_pay = true`.
     func currentStorefront() async -> StorefrontResolution
 }
 
@@ -32,7 +33,8 @@ public protocol LiveStorefrontRepositoryProtocol: Sendable {
     func liveCurrentStorefront() async -> StorefrontResolution
 }
 
-/// A non-authoritative value suitable for explanatory UI only.
+/// A cached hint suitable for explanatory UI only. It must never authorize a
+/// checkout when both live storefront and iPhone region are non-Russian.
 public protocol StorefrontHintRepositoryProtocol: Sendable {
     func cachedStorefrontHint() async -> StorefrontResolution
 }

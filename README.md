@@ -28,7 +28,7 @@ Offer, RU Billing и safe analytics.
 **Быстрый маршрут:** [установка](#installation) ·
 [Adapty setup](#базовая-настройка-adapty) ·
 [Special Offer](#special-offer-где-теперь-стоит-gate) ·
-[RU Billing](#ru-billing) · [tokens](#token-purchases-и-recovery) ·
+[RU Billing](#ru-billing) · [RU Special Offer](#спешл-оффер-ru-billing) · [tokens](#token-purchases-и-recovery) ·
 [проверка](#проверка)
 
 ## Что делает модуль
@@ -74,6 +74,30 @@ dependencies: [
 Реальные keys, product IDs и placement IDs принадлежат host app. Модуль хранит
 typed contract и fallback policy, но не вшивает строки конкретного проекта.
 
+Для обычного anonymous-приложения базовая настройка состоит из public SDK key и
+placement mapping:
+
+```swift
+let adapty = AdaptyPlatformConfiguration(apiKey: appConfiguration.adaptyPublicKey)!
+let placements = AdaptyPlacementRegistry(
+    main: AdaptyPlacementID(rawValue: appConfiguration.mainPlacement),
+    mappings: [
+        .tokens: AdaptyPlacementID(rawValue: appConfiguration.tokensPlacement),
+        .specialOffer: AdaptyPlacementID(rawValue: appConfiguration.specialOfferPlacement)
+    ]
+)
+
+let factory = AdaptyMonetizationFactory(
+    configuration: adapty,
+    placementRegistry: placements,
+    messages: appOwnedMessages
+)
+```
+
+Access level и собственный `AdaptyIdentityProviderProtocol` для этого маршрута
+не нужны. Они остаются advanced API только для приложения с собственной
+signed-in identity или отдельным authoritative entitlement adapter.
+
 | Что настраивается | Базовое правило для нового app |
 |---|---|
 | Product без trial | Командная naming convention — суффикс `nottrial` слитно, например `weekly_9.99_nottrial`; runtime на имя не полагается |
@@ -82,34 +106,22 @@ typed contract и fallback policy, но не вшивает строки кон�
 | Fallback | Базовые placements связываются с paywall `main`; фактический fallback фиксируется в payload context |
 | Products | `getPaywall → getPaywallProducts → 1:1 mapping → raw registry`; без filter/sort/dedup |
 
-Минимальный безопасный Remote Config для **нового приложения с выключенными
-опциональными features**:
+Пример payload для **нового приложения с выключенным Special Offer**:
 
 ```json
 {
-  "ru_pay": false,
-  "auto_revenue_view": false,
   "special_offer": false
 }
 ```
 
-Этот JSON нельзя копировать поверх действующего Dashboard: уже подключённый RU
-Billing сохраняет product-решение владельца. Release не имеет app-default
-`ru_pay = true` и принимает положительное разрешение только из
-`.verifiedFreshRemote`.
+Этот JSON нельзя копировать поверх действующего Dashboard: реальный payload и
+его остальные поля принадлежат конкретному приложению.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="Documentation/Assets/README/remote-config-cache-flow-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="Documentation/Assets/README/remote-config-cache-flow-light.svg">
-  <img alt="Разные права provider payload и platform cache для special_offer и ru_pay" src="Documentation/Assets/README/remote-config-cache-flow-light.svg" width="100%">
+  <img alt="Public SDK key и placement проходят через Adapty в полный paywall payload" src="Documentation/Assets/README/remote-config-cache-flow-light.svg" width="100%">
 </picture>
-
-| Provenance | Обычный paywall | `special_offer` | `ru_pay` |
-|---|---:|---:|---:|
-| Текущий Adapty payload: network или SDK cache | да | по своему `true` | нет без fresh proof |
-| Dashboard fallback, зарегистрированный через SDK | да | по своему `true` | нет |
-| Host-controlled verified-fresh remote | да | по своему `true` | по `true` |
-| Persistent cache BroadMonetization | да | нет | нет |
 
 ## Special Offer: где теперь стоит gate
 
@@ -120,19 +132,22 @@ Adapty.getPaywall
   → Adapty.getPaywallProducts
   → mapping всего provider array без filter/sort/dedup
   → storage exact raw-product references
-  → Special Offer provenance + special_offer gate
-  → presentation authorization
+  → special_offer = true из загруженного payload
+  → второй paywall
 ```
 
 `ResolveSpecialOfferUseCase` получает уже целый `PaywallPayload` с products и
-только после этого проверяет `special_offer = true`. Current provider
-payload, включая provider-managed fallback/cache, может разрешить
-Special Offer. BroadMonetization platform cache не может заново включить
-его. RU Billing остаётся строже и требует verified-fresh payload.
+только после этого проверяет `special_offer = true`. Приложение не добавляет
+в этот базовый flow verifier, второй REST transport или повторную загрузку.
 
 24-часовой countdown — только visual loop
 `24:00:00 → 00:00:00 → 24:00:00`; ноль не скрывает offer и не блокирует
 purchase.
+
+Никакого schedule, server clock или скрытого окна показа стандартный flow не
+добавляет: единственный gate — `special_offer = true`, а таймер всегда является
+циклической визуализацией на 24 часа. Динамический таймер остаётся отдельной
+будущей задачей и не связан с правилами RU Billing.
 
 <table>
   <tr>
@@ -150,7 +165,8 @@ purchase.
 </table>
 
 Скриншоты показывают **последовательность**, а не обязательный дизайн. Тексты,
-изображения, продукты, таймер и скидка остаются app-owned.
+изображения, число карточек и скидка остаются app-owned; цикл таймера задаёт
+платформа.
 
 ## RU Billing
 
@@ -158,14 +174,69 @@ RU methods показываются, только если одновремен�
 
 1. host app зарегистрировал RU Billing adapters;
 2. verified-fresh provider payload содержит `ru_pay = true`;
-3. регион iPhone — `RU/RUS` **или** первый preferred language — Russian;
+3. App Store storefront — `RU/RUS` **или** регион iPhone — `RU/RUS`;
 4. RU catalog не пуст и точно сопоставлен выбранному product;
 5. backend authorization/kill switch разрешает checkout;
 6. entitlement не подтверждает уже активный premium.
 
+Язык приложения, системный язык, клавиатура, IP и timezone не включают RU
+Billing. Если Storefront временно недоступен, достаточно российского региона
+iPhone; при нероссийском регионе flow остаётся закрытым. Перед созданием
+checkout Storefront и gate проверяются повторно.
+
 SDK cache, Dashboard fallback и persistent cache BroadMonetization не
 авторизуют СБП/карту. Возврат из внешней формы не является success: он запускает
 backend reconciliation, а неопределённый результат остаётся `pending`.
+
+### Продукты RU Billing с backend
+
+Adapty placement остаётся источником Apple products и `ru_pay`. RU price,
+backend product ID и доступные карта/СБП приходят из backend catalog. Модуль не
+сортирует, не сокращает и не объединяет ответ: UI получает все occurrences в
+backend order. Конкретное приложение может отдельно выбрать собственное
+подмножество.
+
+Для текущего плоского ответа `{ "products": [...] }` используйте готовый wire
+adapter и явно укажите подтверждённые backend methods:
+
+```swift
+let ruWire = RUBillingWireAdapters.broadAppsFlatCatalog(
+    supportedMethods: [.sbp, .card]
+)
+```
+
+Decoder принимает `productId` или `product_id`, `title`, `kind`, `period`,
+`price`, `currency`, `credits` и optional exact App Store product ID. Числовой
+`price` считается суммой в основных единицах валюты. Если backend отдаёт
+копейки, другую envelope-модель или раздельные endpoints подписок и токенов,
+host передаёт собственный `RUCatalogResponseDecoderProtocol`.
+
+Сопоставление выполняется только по exact ID либо явной app-owned mapping
+policy. По цене или периоду продукт не угадывается. Отсутствующий, `false` или
+некорректный `ru_pay` всегда закрывает RU methods — российский регион не
+подставляет `true` автоматически.
+
+## Спешл оффер RU Billing
+
+Для coupon-offer не нужен отдельный target или второй payment manager.
+`RUCatalogProductKind.coupon` и `RUCatalogSections.coupons` выделяют все
+предложения из того же RU catalog, сохраняя backend order и duplicates.
+
+```swift
+let coupons = RUCatalogSections(catalog: payload).coupons
+```
+
+Host отдельно задаёт campaign gate, optional Apple placement, exact coupon ID
+и две независимые политики времени: eligibility-window и визуальный countdown.
+Модуль не сортирует coupon products по периоду/цене и не копирует timer из
+reference app.
+
+СБП/карта дополнительно требуют обычный strict RU gate. Возврат из hosted
+checkout оставляет pending, пока authoritative entitlement/backend не вернул
+`active`.
+
+[Полная инструкция →](Documentation/RUSpecialOffer.md) ·
+[Публичная страница с аудитом 232 →](https://broadapps-ios-docs.nkhsnv.chatgpt.site/docs/ru-special-offer)
 
 ## Token purchases и recovery
 

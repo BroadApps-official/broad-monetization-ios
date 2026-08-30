@@ -42,19 +42,21 @@ public struct ResolveCheckoutMethodsUseCase: ResolveCheckoutMethodsUseCaseProtoc
 
         var methods: [CheckoutMethod] = product.catalogSource == .ruBackend ? [] : [.apple]
 
+        let storefront: Storefront? = switch await storefrontRepository.currentStorefront() {
+        case let .available(value): value
+        case .unavailable: nil
+        }
+
         let gateReason = gate.availabilityReason(
-            remoteConfiguration: remoteConfiguration
+            remoteConfiguration: remoteConfiguration,
+            storefront: storefront
         )
         guard gateReason.allowsRUBilling else {
             return resolution(
                 methods: methods,
-                storefront: nil,
+                storefront: storefront,
                 reason: gateReason
             )
-        }
-        let storefront: Storefront? = switch await storefrontRepository.currentStorefront() {
-        case let .available(value): value
-        case .unavailable: nil
         }
         guard case let .loaded(catalog) = await catalogRepository.loadCatalog() else {
             return resolution(

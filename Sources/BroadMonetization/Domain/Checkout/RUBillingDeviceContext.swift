@@ -1,10 +1,20 @@
 import Foundation
 
-/// The two device signals used to decide whether RU payment methods may be
-/// offered. The first preferred language is the active system language.
+/// Device metadata used by the RU billing gate.
+///
+/// Only the selected iPhone region participates in eligibility. The language
+/// remains available for source compatibility and presentation, but it must
+/// never enable a financial route.
 public struct RUBillingDeviceContext: Equatable, Sendable {
     public let regionCode: String?
     public let primaryLanguageIdentifier: String?
+
+    public init(regionCode: String?) {
+        self.init(
+            regionCode: regionCode,
+            primaryLanguageIdentifier: nil
+        )
+    }
 
     public init(
         regionCode: String?,
@@ -17,14 +27,13 @@ public struct RUBillingDeviceContext: Equatable, Sendable {
         )
     }
 
-    /// One matching signal is enough: Russian device region OR Russian system
-    /// language. Adapty's `ru_pay` remains a separate mandatory gate.
+    /// `true` only when the region selected on the iPhone is Russian.
+    ///
+    /// App Store storefront eligibility is evaluated separately by
+    /// `RUBillingGate`. Adapty's explicit `ru_pay = true` remains mandatory.
     public var isRussian: Bool {
         regionCode == "RU"
             || regionCode == "RUS"
-            || primaryLanguageIdentifier == "ru"
-            || primaryLanguageIdentifier?.hasPrefix("ru-") == true
-            || primaryLanguageIdentifier?.hasPrefix("ru_") == true
     }
 }
 

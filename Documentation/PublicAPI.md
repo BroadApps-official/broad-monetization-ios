@@ -314,7 +314,7 @@
 | Initializer | `init(catalog: RUCatalogPayload)` |
 | Initializer | `init(catalog: RUCatalogWireAdapters, checkout: RUCheckoutWireAdapters, paymentStatus: RUPaymentStatusWireAdapters, cancellation: RUCancellationWireAdapters, entitlement: RUEntitlementWireAdapters)` |
 | Initializer | `init(catalog: TimeInterval = 15, checkout: TimeInterval = 15, paymentStatus: TimeInterval = 10, entitlementStatus: TimeInterval = 10, cancellation: TimeInterval = 15)` |
-| Initializer | `init(catalogProductID: RUCatalogProductID, kind: RUCatalogProductKind, appStoreProductID: ProductID?, price: Money?, displayPrice: String?, subscriptionPeriod: SubscriptionPeriod, supportedMethods: [CheckoutMethod])` |
+| Initializer | `init(catalogProductID: RUCatalogProductID, kind: RUCatalogProductKind, appStoreProductID: ProductID?, price: Money?, displayPrice: String?, subscriptionPeriod: SubscriptionPeriod, supportedMethods: [CheckoutMethod], title: String? = nil, credits: Int? = nil)` |
 | Initializer | `init(catalogRepository: any RUCatalogRepositoryProtocol, matcher: RUCatalogProductMatcher = RUCatalogProductMatcher())` |
 | Initializer | `init(checkout: any CheckoutSelectedProductUseCaseProtocol, restorePurchases: any RestorePurchasesUseCaseProtocol)` |
 | Initializer | `init(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID, productID: RUCatalogProductID, checkoutMethod: CheckoutMethod, paywallPresentationID: PaywallPresentationID? = nil, paywallVariationID: PaywallVariationID? = nil, requestedPlacementID: PlacementID? = nil, resolvedPlacementID: PlacementID? = nil, startedAt: Date, expiresAt: Date?)` |
@@ -329,6 +329,7 @@
 | Initializer | `init(configuration: AdaptyPlatformConfiguration, identityProvider: any AdaptyIdentityProviderProtocol, context: AdaptyRepositoryContext, paywallRepository: any PaywallRepositoryProtocol, messages: AdaptyMonetizationMessages, clock: CacheClock = .system)` |
 | Initializer | `init(configuration: AdaptyPlatformConfiguration, identityProvider: any AdaptyIdentityProviderProtocol, placementRegistry: AdaptyPlacementRegistry, context: AdaptyRepositoryContext, remoteConfigurationParser: RemotePaywallConfigurationParser = .init(), remoteConfigurationStore: LastValidRemoteConfigurationStore = .init(), messages: AdaptyMonetizationMessages, clock: CacheClock = .system, retainedConfigurationLimit: Int = 32)` |
 | Initializer | `init(configuration: AdaptyPlatformConfiguration, identityProvider: any AdaptyIdentityProviderProtocol, placementRegistry: AdaptyPlacementRegistry, messages: AdaptyMonetizationMessages, remoteConfigurationParser: RemotePaywallConfigurationParser = .init(), remoteConfigurationStore: LastValidRemoteConfigurationStore = .init(), context: AdaptyRepositoryContext = .init())` |
+| Initializer | `init(configuration: AdaptyPlatformConfiguration, placementRegistry: AdaptyPlacementRegistry, messages: AdaptyMonetizationMessages, remoteConfigurationParser: RemotePaywallConfigurationParser = .init(), remoteConfigurationStore: LastValidRemoteConfigurationStore = .init(), context: AdaptyRepositoryContext = .init())` |
 | Initializer | `init(configuration: PrimaryBackendHTTPConfiguration, authorizationProvider: any SubjectAuthorizationProviderProtocol)` |
 | Initializer | `init(configuration: RUBillingCompositionConfiguration, dependencies: RUBillingCompositionDependencies, wire: RUBillingWireAdapters = .broadApps)` |
 | Initializer | `init(configuration: RUBillingHTTPConfiguration, endpoint: RUBillingEndpointPath? = nil, subject: EntitlementSubject, authorizationProvider: any SubjectAuthorizationProviderProtocol, authorizationBinding: SubjectAuthorizationBinding, requestEncoder: any RUCancellationRequestEncoderProtocol = BroadAppsRUBillingWireContract(), responseDecoder: any RUCancellationResponseDecoderProtocol = BroadAppsRUBillingWireContract())` |
@@ -381,6 +382,7 @@
 | Initializer | `init(purchaseRepository: any PurchaseRepositoryProtocol, evidenceProvider: any TokenTransactionEvidenceProviderProtocol, fulfillmentRepository: any TokenFulfillmentRepositoryProtocol, pendingStore: any PendingTokenPurchaseStoreProtocol, analytics: any MonetizationAnalyticsProtocol = NoOpMonetizationAnalytics(), operationGate: MonetizationOperationGate, inProgressError: AppError? = nil, unavailableError: AppError? = nil, unsupportedProductError: AppError? = nil)` |
 | Initializer | `init(rawValue: String)` |
 | Initializer | `init(reading: @escaping () async -> SpecialOfferClockReading)` |
+| Initializer | `init(regionCode: String?)` |
 | Initializer | `init(regionCode: String?, primaryLanguageIdentifier: String?)` |
 | Initializer | `init(registrations: [EntitlementSourceRegistration], subject: EntitlementSubject, cache: any EntitlementCacheProtocol, timeoutPolicy: TimeoutPolicy, clock: CacheClock = .system, aggregator: EntitlementAggregator = EntitlementAggregator(), analytics: any MonetizationAnalyticsProtocol = NoOpMonetizationAnalytics())` |
 | Initializer | `init(remote: any RUCatalogRepositoryProtocol, cache: any CacheRepositoryProtocol, subject: EntitlementSubject, authorizationBinding: SubjectAuthorizationBinding, freshTimeToLive: TimeInterval = 15 * 60, maximumStaleAge: TimeInterval = 24 * 60 * 60, clock: CacheClock = .system)` |
@@ -428,11 +430,13 @@
 | Initializer | `init(subject: EntitlementSubject, isActive: Bool, expiresAt: Date?, isLifetime: Bool = false)` |
 | Initializer | `init(subject: EntitlementSubject, isActive: Bool, expiresAt: Date?, isLifetime: Bool, subscriptionID: RUSubscriptionID? = nil, planName: String? = nil, isAutoRenewalCancelled: Bool = false)` |
 | Initializer | `init(subscriptionID: RUSubscriptionID?, planName: String?, isActive: Bool, expiresAt: Date?, isLifetime: Bool, isAutoRenewalCancelled: Bool)` |
+| Initializer | `init(supportedMethods: [CheckoutMethod])` |
 | Initializer | `init(timeToLive: TimeInterval, offlineActiveGrace: TimeInterval)` |
 | Initializer | `init(transactionID: String, productID: ProductID, signedTransaction: String, purchasedAt: Date)` |
 | Initializer | `init(unit: SubscriptionPeriod.Unit, count: Int?)` |
 | Initializer | `init(verifiers: [any AppleEntitlementVerifierProtocol])` |
 | Initializer | `init?(apiKey: String, accessLevelID: String, subject: EntitlementSubject, observerMode: Bool = false, idfaCollectionDisabled: Bool = true, ipAddressCollectionDisabled: Bool = true, paywallLoadTimeout: TimeInterval = 12, fallbackFileURL: URL? = nil)` |
+| Initializer | `init?(apiKey: String, subject: EntitlementSubject = .anonymous, observerMode: Bool = false, idfaCollectionDisabled: Bool = true, ipAddressCollectionDisabled: Bool = true, paywallLoadTimeout: TimeInterval = 12, fallbackFileURL: URL? = nil)` |
 | Initializer | `init?(rawValue: String)` |
 | Initializer | `init?(subject: EntitlementSubject, bearerToken: String)` |
 | Initializer | `init?(subject: EntitlementSubject, customerUserID: String, appAccountToken: UUID? = nil)` |
@@ -443,11 +447,13 @@
 | Instance Method | `func activate() async -> MonetizationActivationOutcome` |
 | Instance Method | `func adaptyPlacement(for logicalPlacement: PlacementID) -> AdaptyPlacementID?` |
 | Instance Method | `func allows(remoteConfiguration: RemotePaywallConfiguration) -> Bool` |
+| Instance Method | `func allows(remoteConfiguration: RemotePaywallConfiguration, storefront: Storefront?) -> Bool` |
 | Instance Method | `func applicationDidBecomeActive() async -> PendingApplePurchaseOutcome` |
 | Instance Method | `func applicationDidBecomeActive() async -> RUPaymentReturnOutcome` |
 | Instance Method | `func assemble(container: Container)` |
 | Instance Method | `func authorization(for subject: EntitlementSubject) async -> SubjectBoundAuthorization?` |
 | Instance Method | `func availabilityReason(remoteConfiguration: RemotePaywallConfiguration) -> RUBillingAvailabilityReason` |
+| Instance Method | `func availabilityReason(remoteConfiguration: RemotePaywallConfiguration, storefront: Storefront?) -> RUBillingAvailabilityReason` |
 | Instance Method | `func begin(context: PurchaseAnalyticsContext) -> Bool` |
 | Instance Method | `func begin(context: PurchaseAnalyticsContext) async -> Bool` |
 | Instance Method | `func begin(context: PurchaseAnalyticsContext, productKind: MonetizationProductKind) -> Bool` |
@@ -507,6 +513,7 @@
 | Instance Method | `func financialOperationStatusChanges() -> AsyncStream<Void>` |
 | Instance Method | `func fulfill(_ request: TokenFulfillmentRequest) async -> TokenFulfillmentOutcome` |
 | Instance Method | `func hasPendingMonetizationOperation() async -> Bool` |
+| Instance Method | `func identity(for _: EntitlementSubject) async -> AdaptyCustomerIdentity?` |
 | Instance Method | `func identity(for subject: EntitlementSubject) async -> AdaptyCustomerIdentity?` |
 | Instance Method | `func invalidate()` |
 | Instance Method | `func isFinancialOperationBlocked() async -> Bool` |
@@ -651,6 +658,7 @@
 | Instance Property | `let countdown: SpecialOfferCountdownAuthorization?` |
 | Instance Property | `let countryCode: String` |
 | Instance Property | `let coupons: [RUCatalogProduct]` |
+| Instance Property | `let credits: Int?` |
 | Instance Property | `let crossedPrice: String?` |
 | Instance Property | `let crossedPrice: [String]` |
 | Instance Property | `let crossedValue: Decimal?` |
@@ -942,6 +950,7 @@
 | Protocol | `protocol TokenTransactionEvidenceProviderProtocol : Sendable` |
 | Protocol | `protocol TrackPaywallEventUseCaseProtocol : Sendable` |
 | Structure | `struct ActivateMonetizationUseCase` |
+| Structure | `struct AdaptyAnonymousIdentityProvider` |
 | Structure | `struct AdaptyAppleEntitlementConfiguration` |
 | Structure | `struct AdaptyAppleEntitlementVerifier` |
 | Structure | `struct AdaptyCustomerIdentity` |
@@ -989,6 +998,7 @@
 | Structure | `struct Entry` |
 | Structure | `struct ExactOnlyRUCatalogProductMappingPolicy` |
 | Structure | `struct FallbackRUSubscriptionRepository` |
+| Structure | `struct FlatRUCatalogResponseDecoder` |
 | Structure | `struct LoadRUSubscriptionStatusUseCase` |
 | Structure | `struct MonetizationAnalyticsFailure` |
 | Structure | `struct MonetizationAttemptID` |
@@ -1110,6 +1120,7 @@
 | Structure | `struct Verified` |
 | Structure | `struct VerifiedApplePurchaseTransaction` |
 | Type Method | `nonisolated static func wrapping(_ analytics: any MonetizationAnalyticsProtocol) -> any MonetizationAnalyticsProtocol` |
+| Type Method | `static func broadAppsFlatCatalog(supportedMethods: [CheckoutMethod]) -> RUBillingWireAdapters` |
 | Type Method | `static func custom(_ rawValue: String) -> PlacementID` |
 | Type Method | `static func custom(unit: String, count: Int? = nil) -> SubscriptionPeriod` |
 | Type Method | `static func day(_ count: Int = 1) -> SubscriptionPeriod` |

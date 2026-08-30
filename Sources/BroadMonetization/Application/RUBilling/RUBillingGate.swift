@@ -17,11 +17,34 @@ public struct RUBillingGate: Sendable {
     public func allows(
         remoteConfiguration: RemotePaywallConfiguration
     ) -> Bool {
-        availabilityReason(remoteConfiguration: remoteConfiguration).allowsRUBilling
+        allows(
+            remoteConfiguration: remoteConfiguration,
+            storefront: nil
+        )
+    }
+
+    public func allows(
+        remoteConfiguration: RemotePaywallConfiguration,
+        storefront: Storefront?
+    ) -> Bool {
+        availabilityReason(
+            remoteConfiguration: remoteConfiguration,
+            storefront: storefront
+        ).allowsRUBilling
     }
 
     public func availabilityReason(
         remoteConfiguration: RemotePaywallConfiguration
+    ) -> RUBillingAvailabilityReason {
+        availabilityReason(
+            remoteConfiguration: remoteConfiguration,
+            storefront: nil
+        )
+    }
+
+    public func availabilityReason(
+        remoteConfiguration: RemotePaywallConfiguration,
+        storefront: Storefront?
     ) -> RUBillingAvailabilityReason {
         guard isFeatureEnabled else {
             return .hostDisabled
@@ -29,7 +52,7 @@ public struct RUBillingGate: Sendable {
 
         switch debugOverrideStore.currentMode {
         case .forceEnabled:
-            return deviceContextProvider.currentContext().isRussian
+            return hasRussianRegionalSignal(storefront: storefront)
                 ? .debugForcedEnabled
                 : .deviceContextNotRussian
         case .forceDisabled:
@@ -55,8 +78,15 @@ public struct RUBillingGate: Sendable {
             return .remoteFlagAbsent
         }
 
-        return deviceContextProvider.currentContext().isRussian
+        return hasRussianRegionalSignal(storefront: storefront)
             ? .available
             : .deviceContextNotRussian
+    }
+}
+
+private extension RUBillingGate {
+    func hasRussianRegionalSignal(storefront: Storefront?) -> Bool {
+        storefront?.isRussian == true
+            || deviceContextProvider.currentContext().isRussian
     }
 }

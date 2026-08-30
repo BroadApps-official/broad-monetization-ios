@@ -64,8 +64,11 @@ special_resolution_file="$platform_root/Sources/BroadMonetization/Domain/Special
 special_countdown_file="$platform_root/Sources/BroadMonetization/Domain/SpecialOffers/SpecialOfferCountdownAuthorization.swift"
 remote_parser_file="$platform_root/Sources/BroadMonetization/Infrastructure/RemoteConfig/RemotePaywallConfigurationParser.swift"
 ru_gate_file="$platform_root/Sources/BroadMonetization/Application/RUBilling/RUBillingGate.swift"
+ru_device_context_file="$platform_root/Sources/BroadMonetization/Domain/Checkout/RUBillingDeviceContext.swift"
 ru_debug_override_file="$platform_root/Sources/BroadMonetization/Application/RUBilling/RUBillingDebugOverride.swift"
 ru_resolution_file="$platform_root/Sources/BroadMonetization/Application/RUBilling/ResolveCheckoutMethodsUseCase.swift"
+ru_checkout_flow_file="$platform_root/Sources/BroadMonetization/Application/RUBilling/RUCheckoutFlowCoordinator.swift"
+ru_flat_catalog_file="$platform_root/Sources/BroadMonetization/Infrastructure/RUBilling/FlatRUCatalogResponseDecoder.swift"
 ru_composition_models_file="$platform_root/Sources/BroadMonetization/Application/DI/RUBillingCompositionModels.swift"
 ru_composition_factory_file="$platform_root/Sources/BroadMonetization/Application/DI/RUBillingCompositionFactory.swift"
 adapty_configuration_file="$platform_root/Sources/BroadMonetization/Infrastructure/Adapty/AdaptyPlatformConfiguration.swift"
@@ -157,6 +160,37 @@ require_pattern \
     "Missing ru_pay remains fail-closed" \
     "$ru_gate_file" \
     'case[[:space:]]+\.absent:(?s:.*?)return[[:space:]]+\.remoteFlagAbsent'
+
+require_pattern \
+    "RU Billing accepts a Russian Storefront or Russian iPhone region" \
+    "$ru_gate_file" \
+    'storefront\?\.isRussian[[:space:]]*==[[:space:]]*true(?s:.*?)\|\|[[:space:]]*deviceContextProvider\.currentContext\(\)\.isRussian'
+
+forbid_pattern \
+    "Language never enables RU Billing" \
+    '(primaryLanguageIdentifier[[:space:]]*==|primaryLanguageIdentifier\?\.hasPrefix|preferredLanguages)' \
+    "$ru_device_context_file" \
+    "$platform_root/Sources/BroadMonetization/Infrastructure/RUBilling/SystemRUBillingDeviceContextProvider.swift"
+
+require_pattern \
+    "Checkout method resolution loads Storefront before evaluating the RU gate" \
+    "$ru_resolution_file" \
+    'storefrontRepository\.currentStorefront\(\)(?s:.*?)gate\.availabilityReason\((?s:.*?)storefront:[[:space:]]*storefront'
+
+require_pattern \
+    "Final checkout rechecks the current Storefront" \
+    "$ru_checkout_flow_file" \
+    'storefrontRepository\.currentStorefront\(\)(?s:.*?)gate\.allows\((?s:.*?)storefront:[[:space:]]*storefront'
+
+require_pattern \
+    "Flat backend catalog preserves the response array one-to-one" \
+    "$ru_flat_catalog_file" \
+    'products:[[:space:]]*response\.products\.map\(makeDomainProduct\)'
+
+forbid_pattern \
+    "Flat backend catalog does not sort, deduplicate or truncate products" \
+    '\.(sorted|filter|compactMap|prefix)\(|Dictionary\(' \
+    "$ru_flat_catalog_file"
 
 require_pattern \
     "RU Billing exposes typed modes for custom-named Debug configurations" \

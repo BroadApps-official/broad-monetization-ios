@@ -54,6 +54,7 @@ public struct RUBillingCompositionFactory: Sendable {
                 matcher: matcher
             ),
             checkout: makeCheckoutServices(
+                storefront: storefront,
                 catalog: catalog,
                 pendingStore: pendingStore,
                 matcher: matcher,
@@ -90,6 +91,7 @@ private extension RUBillingCompositionFactory {
     }
 
     func makeCheckoutServices(
+        storefront: CachedStorefrontRepository,
         catalog: CachedRUCatalogRepository,
         pendingStore: PendingRUCheckoutStore,
         matcher: RUCatalogProductMatcher,
@@ -102,6 +104,7 @@ private extension RUBillingCompositionFactory {
             checkout: create,
             authorizationProvider: dependencies.authorizationProvider,
             gate: gate,
+            storefrontRepository: storefront,
             opener: dependencies.paymentURLOpener,
             pendingStore: pendingStore,
             analytics: dependencies.analytics,

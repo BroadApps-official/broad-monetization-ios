@@ -2,6 +2,16 @@ import BroadMonetization
 import SwiftUI
 
 struct MonetizationSandboxView: View {
+    private let basicAdaptyConfiguration = AdaptyPlatformConfiguration(
+        apiKey: "fixture"
+    )
+    private let basicPlacementRegistry = AdaptyPlacementRegistry(
+        main: AdaptyPlacementID(rawValue: "fixture-main"),
+        mappings: [
+            .tokens: AdaptyPlacementID(rawValue: "fixture-tokens"),
+            .specialOffer: AdaptyPlacementID(rawValue: "fixture-special-offer")
+        ]
+    )
     private let parsedConfiguration = RemotePaywallConfigurationParser().parse([
         "special_offer": true,
         "ru_pay": true,
@@ -36,6 +46,18 @@ struct MonetizationSandboxView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("Basic Adapty setup") {
+                    LabeledContent(
+                        "Public key",
+                        value: basicAdaptyConfiguration == nil ? "invalid" : "configured"
+                    )
+                    LabeledContent(
+                        "Main placement",
+                        value: basicPlacementRegistry.contains(.main) ? "configured" : "missing"
+                    )
+                    LabeledContent("Access level", value: "not required")
+                }
+
                 Section("Parsed products first") {
                     LabeledContent("Provider occurrences", value: "\(products.count)")
                     LabeledContent("Order", value: "preserved")

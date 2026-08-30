@@ -8,6 +8,33 @@ public struct AdaptyMonetizationFactory: Sendable {
     private let remoteConfigurationParser: RemotePaywallConfigurationParser
     private let remoteConfigurationStore: LastValidRemoteConfigurationStore
 
+    /// Basic anonymous Adapty composition. The host supplies the SDK
+    /// configuration, placement mapping and localized messages; no custom
+    /// identity adapter is needed.
+    public init(
+        configuration: AdaptyPlatformConfiguration,
+        placementRegistry: AdaptyPlacementRegistry,
+        messages: AdaptyMonetizationMessages,
+        remoteConfigurationParser: RemotePaywallConfigurationParser = .init(),
+        remoteConfigurationStore: LastValidRemoteConfigurationStore = .init(),
+        context: AdaptyRepositoryContext = .init()
+    ) {
+        precondition(
+            configuration.subject == .anonymous,
+            "Basic Adapty composition supports only the anonymous subject"
+        )
+        self.init(
+            configuration: configuration,
+            identityProvider: AdaptyAnonymousIdentityProvider(),
+            placementRegistry: placementRegistry,
+            messages: messages,
+            remoteConfigurationParser: remoteConfigurationParser,
+            remoteConfigurationStore: remoteConfigurationStore,
+            context: context
+        )
+    }
+
+    /// Advanced composition for a host-owned signed-in Adapty identity.
     public init(
         configuration: AdaptyPlatformConfiguration,
         identityProvider: any AdaptyIdentityProviderProtocol,

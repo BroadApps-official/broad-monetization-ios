@@ -13,6 +13,7 @@ actor RUCheckoutFlowCoordinator {
     private let checkout: any CreateRUCheckoutUseCaseProtocol
     private let authorizationProvider: any SubjectAuthorizationProviderProtocol
     private let gate: RUBillingGate
+    private let storefrontRepository: any StorefrontRepositoryProtocol
     private let opener: any PaymentURLOpenerProtocol
     private let pendingStore: any PendingRUCheckoutStoreProtocol
     private let analytics: (any MonetizationAnalyticsProtocol)?
@@ -28,6 +29,7 @@ actor RUCheckoutFlowCoordinator {
         checkout: any CreateRUCheckoutUseCaseProtocol,
         authorizationProvider: any SubjectAuthorizationProviderProtocol,
         gate: RUBillingGate,
+        storefrontRepository: any StorefrontRepositoryProtocol,
         opener: any PaymentURLOpenerProtocol,
         pendingStore: any PendingRUCheckoutStoreProtocol,
         analytics: (any MonetizationAnalyticsProtocol)? = nil,
@@ -42,6 +44,7 @@ actor RUCheckoutFlowCoordinator {
         self.checkout = checkout
         self.authorizationProvider = authorizationProvider
         self.gate = gate
+        self.storefrontRepository = storefrontRepository
         self.opener = opener
         self.pendingStore = pendingStore
         self.analytics = analytics.map(NonBlockingMonetizationAnalytics.wrapping)
@@ -120,7 +123,14 @@ private extension RUCheckoutFlowCoordinator {
     func eligibilityError(
         remoteConfiguration: RemotePaywallConfiguration
     ) async -> AppError? {
-        guard gate.allows(remoteConfiguration: remoteConfiguration) else {
+        let storefront: Storefront? = switch await storefrontRepository.currentStorefront() {
+        case let .available(value): value
+        case .unavailable: nil
+        }
+        guard gate.allows(
+            remoteConfiguration: remoteConfiguration,
+            storefront: storefront
+        ) else {
             return RUBillingSafeErrors.checkoutNotEligible
         }
         return nil
