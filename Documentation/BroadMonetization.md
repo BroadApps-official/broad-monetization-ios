@@ -14,6 +14,28 @@ Access level и custom identity provider не входят в базовую з�
 Независимо от placement модуль передаёт UI все 0…N products без
 filter/sort/dedup.
 
+## Product price presentation
+
+`ProductPricePresenter` считает по массиву продуктов производные цифры, которых
+не отдаёт ни один provider: цену, приведённую к одной неделе, процент экономии
+относительно самого дорогого недельного тарифа и один best-value бейдж.
+Результат — `ProductPricePresentation` с полями `weeklyPrice: Money?`,
+`savingsPercent: Int?` и `isBestValue: Bool`.
+
+Всё fail-closed: продукт без декодированного `Money` или с периодом, который
+нельзя привести к неделям (`custom`/`unknown`), просто теряет эти цифры вместо
+угаданного значения. Модуль возвращает только числа; локализованное
+форматирование остаётся presentation-задачей BroadUIFlows. Массив продуктов не
+фильтруется, не сортируется и не дедуплицируется, порядок сохраняется.
+
+```swift
+let presenter = ProductPricePresenter()
+let rows = presenter.presentations(for: payload.products)
+```
+
+Конвертацию месяцев и лет в недели можно настроить через
+`ProductPricePresenter.PeriodWeights`.
+
 ## Special Offer
 
 `special_offer = true` читается из фактически загруженного payload только после

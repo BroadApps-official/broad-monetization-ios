@@ -367,10 +367,12 @@
 | Initializer | `init(methods: [CheckoutMethod], storefront: Storefront?, ruBillingAvailability: RUBillingAvailabilityReason)` |
 | Initializer | `init(paywall: PaywallPayload)` |
 | Initializer | `init(paywall: PaywallPayload, product: MonetizationProduct)` |
+| Initializer | `init(periodWeights: ProductPricePresenter.PeriodWeights = .standard)` |
 | Initializer | `init(placementID: PlacementID)` |
 | Initializer | `init(placementID: PlacementID, windowDuration: TimeInterval? = nil, cooldownDuration: TimeInterval? = nil)` |
 | Initializer | `init(presentationID: PaywallPresentationID, paywallReference: PaywallReference, variationID: PaywallVariationID? = nil, origin: PaywallOrigin, products: [MonetizationProduct], remoteConfiguration: RemotePaywallConfiguration = .empty, remoteConfigurationProvenance: PaywallRemoteConfigurationProvenance = .legacyUnqualified, fetchedAt: Date)` |
 | Initializer | `init(presentationID: ProductPresentationID, reference: ProductReference, productID: ProductID, commercialFingerprint: String? = nil, kind: MonetizationProductKind, title: String? = nil, subtitle: String? = nil, price: Money? = nil, displayPrice: String? = nil, subscriptionPeriod: SubscriptionPeriod = .unknown, catalogSource: CatalogSource)` |
+| Initializer | `init(presentationID: ProductPresentationID, weeklyPrice: Money? = nil, savingsPercent: Int? = nil, isBestValue: Bool = false)` |
 | Initializer | `init(primary: any RUSubscriptionRepositoryProtocol, legacy: (any RUSubscriptionRepositoryProtocol)?, allowsLegacyFallback: Bool)` |
 | Initializer | `init(product: MonetizationProduct)` |
 | Initializer | `init(productID: ProductID, checkoutMethod: CheckoutMethod, confirmedAt: Date)` |
@@ -435,6 +437,7 @@
 | Initializer | `init(transactionID: String, productID: ProductID, signedTransaction: String, purchasedAt: Date)` |
 | Initializer | `init(unit: SubscriptionPeriod.Unit, count: Int?)` |
 | Initializer | `init(verifiers: [any AppleEntitlementVerifierProtocol])` |
+| Initializer | `init(weeksPerMonth: Decimal = Decimal(string: "4.348")!, weeksPerYear: Decimal = Decimal(string: "52.179")!)` |
 | Initializer | `init?(apiKey: String, accessLevelID: String, subject: EntitlementSubject, observerMode: Bool = false, idfaCollectionDisabled: Bool = true, ipAddressCollectionDisabled: Bool = true, paywallLoadTimeout: TimeInterval = 12, fallbackFileURL: URL? = nil)` |
 | Initializer | `init?(apiKey: String, subject: EntitlementSubject = .anonymous, observerMode: Bool = false, idfaCollectionDisabled: Bool = true, ipAddressCollectionDisabled: Bool = true, paywallLoadTimeout: TimeInterval = 12, fallbackFileURL: URL? = nil)` |
 | Initializer | `init?(rawValue: String)` |
@@ -551,6 +554,7 @@
 | Instance Method | `func presentationDidEnd(_ analyticsContext: PaywallAnalyticsContext) async` |
 | Instance Method | `func presentationDidEnd(_ context: PaywallAnalyticsContext) async` |
 | Instance Method | `func presentationDidEnd(_: PaywallAnalyticsContext) async` |
+| Instance Method | `func presentations(for products: [MonetizationProduct]) -> [ProductPricePresentation]` |
 | Instance Method | `func purchase(_ request: PurchaseRequest) async -> PurchaseAttemptOutcome` |
 | Instance Method | `func purchase(_ selection: ProductSelection, using method: CheckoutMethod = .apple) async -> TokenPurchaseOutcome` |
 | Instance Method | `func purchase(_ selection: ProductSelection, using method: CheckoutMethod, remoteConfiguration: RemotePaywallConfiguration, options: CheckoutOptions = .standard) async -> CheckoutSelectedProductOutcome` |
@@ -703,6 +707,7 @@
 | Instance Property | `let isAdaptyLinked: Bool` |
 | Instance Property | `let isAutoRenewalCancelled: Bool` |
 | Instance Property | `let isAutomaticRevenueViewEnabled: Bool?` |
+| Instance Property | `let isBestValue: Bool` |
 | Instance Property | `let isEnabled: Bool` |
 | Instance Property | `let isFeatureEnabled: Bool` |
 | Instance Property | `let isFromCurrentRefresh: Bool` |
@@ -748,6 +753,7 @@
 | Instance Property | `let pendingApplePurchase: PendingApplePurchaseCoordinator?` |
 | Instance Property | `let pendingCheckoutRetention: TimeInterval` |
 | Instance Property | `let periodText: String?` |
+| Instance Property | `let periodWeights: ProductPricePresenter.PeriodWeights` |
 | Instance Property | `let phase: PendingApplePurchaseIntent.Phase` |
 | Instance Property | `let placementID: PlacementID` |
 | Instance Property | `let planName: String?` |
@@ -815,6 +821,7 @@
 | Instance Property | `let ruBillingGateDecision: RemoteRUBillingGateDecision` |
 | Instance Property | `let ruDetails: RUCheckoutDetails?` |
 | Instance Property | `let ruSubscription: CustomerAccessRecoveryComponent<RUSubscriptionManagementStatus>` |
+| Instance Property | `let savingsPercent: Int?` |
 | Instance Property | `let selectProduct: any SelectProductUseCaseProtocol` |
 | Instance Property | `let selection: ProductSelection` |
 | Instance Property | `let signedTransaction: String` |
@@ -857,6 +864,9 @@
 | Instance Property | `let validatedAt: Date` |
 | Instance Property | `let validatedAt: Date?` |
 | Instance Property | `let variationID: PaywallVariationID?` |
+| Instance Property | `let weeklyPrice: Money?` |
+| Instance Property | `let weeksPerMonth: Decimal` |
+| Instance Property | `let weeksPerYear: Decimal` |
 | Instance Property | `let windowDuration: TimeInterval?` |
 | Instance Property | `nonisolated let monetizationOperationGate: MonetizationOperationGate` |
 | Instance Property | `nonisolated let pendingOperationBlockerKey: PendingOperationBlockerKey` |
@@ -1021,6 +1031,7 @@
 | Structure | `struct PendingOperationBlockerKey` |
 | Structure | `struct PendingRUCheckoutContext` |
 | Structure | `struct PendingTokenPurchaseIntent` |
+| Structure | `struct PeriodWeights` |
 | Structure | `struct PlacementID` |
 | Structure | `struct PrimaryBackendEntitlementRepository` |
 | Structure | `struct PrimaryBackendEntitlementSnapshot` |
@@ -1030,6 +1041,8 @@
 | Structure | `struct ProductAnalyticsContext` |
 | Structure | `struct ProductID` |
 | Structure | `struct ProductPresentationID` |
+| Structure | `struct ProductPricePresentation` |
+| Structure | `struct ProductPricePresenter` |
 | Structure | `struct ProductReference` |
 | Structure | `struct ProductSelection` |
 | Structure | `struct PurchaseAnalyticsContext` |
@@ -1155,6 +1168,7 @@
 | Type Property | `static let settings: PlacementID` |
 | Type Property | `static let specialOffer: PlacementID` |
 | Type Property | `static let standard: CheckoutOptions` |
+| Type Property | `static let standard: ProductPricePresenter.PeriodWeights` |
 | Type Property | `static let tokens: PlacementID` |
 | Type Property | `static let unknown: SubscriptionPeriod` |
 | Type Property | `static let untrusted: SpecialOfferClock` |

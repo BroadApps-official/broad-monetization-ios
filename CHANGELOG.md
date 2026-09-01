@@ -12,6 +12,11 @@
 - `FlatRUCatalogResponseDecoder` и
   `RUBillingWireAdapters.broadAppsFlatCatalog(supportedMethods:)` для текущего
   плоского backend catalog без app-specific копирования decoder.
+- `ProductPricePresentation` и `ProductPricePresenter` — производные цифры для
+  paywall-строки: цена, приведённая к неделе, процент экономии и best-value
+  бейдж. Вычисляются из массива продуктов без filter/sort/dedup и возвращают
+  только числа (`Money`/`Int`); форматирование остаётся presentation-задачей UI.
+  Раньше каждый host считал это сам рядом с кнопкой покупки.
 
 ### Changed
 
