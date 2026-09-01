@@ -44,6 +44,17 @@ let rows = presenter.presentations(for: payload.products)
 Расписание, trusted clock и динамическая длительность не входят в текущий
 contract.
 
+## Debug: локальная покупка
+
+`LocalStoreKitPurchaseRepository` и `LocalStoreKitRestoreRepository` (только под
+`#if DEBUG`) проводят покупку/восстановление через локальный `.storekit` конфиг,
+подключённый к схеме, вместо боевого провайдера. Пейвол и каталог не меняются —
+меняется только касса: debug-сборка завершает покупку без денег и без receipt
+validation. Доступ здесь **не** выдаётся: транзакция настоящая, а премиум
+подтверждает тот же боевой entitlement-путь (`StoreKitAppleEntitlementVerifier`
+против премиум-каталога). Это прод-идентичный тест, а не обход. Локальный конфиг
+подставляется при запуске из Xcode; в Release эти типы не компилируются.
+
 ## RU Billing
 
 RU path разрешён только при host opt-in, explicit valid `ru_pay = true`,

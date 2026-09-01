@@ -1010,6 +1010,8 @@
 | Structure | `struct FallbackRUSubscriptionRepository` |
 | Structure | `struct FlatRUCatalogResponseDecoder` |
 | Structure | `struct LoadRUSubscriptionStatusUseCase` |
+| Structure | `struct LocalStoreKitPurchaseRepository` |
+| Structure | `struct LocalStoreKitRestoreRepository` |
 | Structure | `struct MonetizationAnalyticsFailure` |
 | Structure | `struct MonetizationAttemptID` |
 | Structure | `struct MonetizationFlowErrors` |
