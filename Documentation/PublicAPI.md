@@ -184,6 +184,7 @@
 | Class | `actor AdaptyPaywallRepository` |
 | Class | `actor AdaptyPurchaseRepository` |
 | Class | `actor AdaptyRestoreRepository` |
+| Class | `actor AppleTransactionUpdatesBridge` |
 | Class | `actor CachedRUCatalogRepository` |
 | Class | `actor CachedStorefrontRepository` |
 | Class | `actor CheckoutSelectedProductUseCase` |
@@ -298,6 +299,7 @@
 | Initializer | `init(analytics: any MonetizationAnalyticsProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol)` |
 | Initializer | `init(analyticsContext: PurchaseAnalyticsContext, productKind: MonetizationProductKind, startedAt: Date, reviewRequired: Bool, belongsToCurrentSubject: Bool, phase: PendingApplePurchaseIntent.Phase)` |
 | Initializer | `init(analyticsContext: PurchaseAnalyticsContext, startedAt: Date, evidence: TokenTransactionEvidence?, belongsToCurrentSubject: Bool)` |
+| Initializer | `init(appBundleIdentifier: String)` |
 | Initializer | `init(appBundleIdentifier: String, ownershipPolicy: StoreKitEntitlementOwnershipPolicy, maximumClockSkew: TimeInterval = 0)` |
 | Initializer | `init(applePurchase: any PurchaseSelectedProductUseCaseProtocol, ruCheckout: any StartSelectedRUCheckoutUseCaseProtocol = DisabledSelectedRUCheckoutUseCase(), inProgressError: AppError? = nil, unsupportedProductError: AppError? = nil)` |
 | Initializer | `init(applicationIdentifier: String = "dev.broadapps.fixture")` |
@@ -522,6 +524,7 @@
 | Instance Method | `func hasPendingMonetizationOperation() async -> Bool` |
 | Instance Method | `func identity(for _: EntitlementSubject) async -> AdaptyCustomerIdentity?` |
 | Instance Method | `func identity(for subject: EntitlementSubject) async -> AdaptyCustomerIdentity?` |
+| Instance Method | `func install(_ coordinator: PendingApplePurchaseCoordinator?, ownershipPolicy: StoreKitEntitlementOwnershipPolicy)` |
 | Instance Method | `func invalidate()` |
 | Instance Method | `func isFinancialOperationBlocked() async -> Bool` |
 | Instance Method | `func isSynchronized() async -> Bool` |

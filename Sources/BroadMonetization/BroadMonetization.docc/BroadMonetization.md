@@ -28,6 +28,7 @@ Provider-neutral monetization contracts and production adapters for BroadApps iP
 - ``AdaptySDKProfileIdentityProvider``
 - ``SubscriptionPurchaseManager``
 - ``TokenPurchaseManager``
+- ``AppleTransactionUpdatesBridge``
 - ``RUBillingGate``
 - ``RUBillingDeviceContext``
 - ``Storefront``

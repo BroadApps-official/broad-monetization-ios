@@ -135,6 +135,11 @@ Premium access вычисляется из authoritative sources. Cache даёт
 bounded fallback, но не подменяет server verification. Recovery и token
 fulfillment остаются idempotent app/backend boundaries.
 
+`AppleTransactionUpdatesBridge` — единственный `Transaction.updates` листенер:
+ставится один раз до старта Adapty и форвардит verified purchase-транзакции своего
+bundle в `PendingApplePurchaseCoordinator`, не вызывая `finish()`. Так покупка,
+завершившаяся вне приложения, не теряется. Раньше этот listener писал каждый host.
+
 Для диагностики (например, письмо в поддержку) `EntitlementStatus.supportSubscriptionValue`
 даёт канонический строковый статус (`subscribed`/`not_subscribed`/`unknown`), а
 `ProfileIdentityProviderProtocol` (реализация `AdaptySDKProfileIdentityProvider`)

@@ -49,6 +49,13 @@
   (`subscribed`/`not_subscribed`/`unknown`). Закрывает два поля письма в поддержку,
   которые раньше было нечем заполнить (стояло `unavailable` и ad-hoc строка).
 
+- `AppleTransactionUpdatesBridge` — единственный process-wide листенер
+  `Transaction.updates`: форвардит только verified purchase-транзакции своего
+  bundle (без revocation/upgrade, под ownership policy) в
+  `PendingApplePurchaseCoordinator` и никогда не вызывает `finish()` (это делает
+  провайдер покупок). Ставится один раз до старта Adapty, чтобы не потерять
+  покупку, завершившуюся вне приложения. Убирает app-side listener.
+
 ### Changed
 
 - **Поведение Special Offer (major):** семантика флага кампании теперь
