@@ -24,6 +24,8 @@ jobs:
           fi
       - name: Install ripgrep
         run: brew install ripgrep
+      - name: Validate release metadata
+        run: bash Scripts/check_release_version.sh "$GITHUB_REF_NAME"
       - name: Repeat full standalone module gate
         run: bash Scripts/module_gate.sh
       - name: Create GitHub Release with changelog

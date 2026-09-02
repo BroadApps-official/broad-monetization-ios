@@ -34,6 +34,7 @@ bash "$module_root/Scripts/check_structure.sh"
 
 echo "[2/9] Documentation links and contracts"
 bash "$module_root/Scripts/check_documentation.sh"
+bash "$module_root/Scripts/check_release_version.sh"
 
 echo "[3/9] SwiftFormat"
 bash "$module_root/Scripts/install_swiftformat.sh"
