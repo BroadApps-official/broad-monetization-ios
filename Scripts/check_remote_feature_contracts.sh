@@ -132,9 +132,9 @@ require_pattern \
     'clock\.reading\(\)(?s:.*?)stateRepository\.state\((?s:.*?)stateRepository\.save\('
 
 require_pattern \
-    "Special Offer campaign gate is absence-on (only explicit false stops it)" \
+    "Special Offer requires an explicit true campaign gate" \
     "$special_use_case_file" \
-    'specialOffer\?\.isEnabled[[:space:]]*!=[[:space:]]*false(?s:.*?)SpecialOfferResolution\(state:[[:space:]]*\.eligible,[[:space:]]*paywall:[[:space:]]*paywall\)'
+    'specialOffer\?\.isEnabled[[:space:]]*==[[:space:]]*true(?s:.*?)SpecialOfferResolution\(state:[[:space:]]*\.eligible,[[:space:]]*paywall:[[:space:]]*paywall\)'
 
 require_pattern \
     "Special Offer display timer is a 24-hour recurring cycle" \

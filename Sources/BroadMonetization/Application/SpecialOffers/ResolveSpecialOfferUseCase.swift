@@ -148,9 +148,9 @@ private extension ResolveSpecialOfferUseCase {
             return unavailable(.disabledByRemoteConfiguration)
         }
 
-        // Absence means the campaign is on: only an explicit `special_offer=false`
-        // in the current provider payload stops it.
-        guard paywall.remoteConfiguration.specialOffer?.isEnabled != false else {
+        // The current provider payload must explicitly opt in. Missing, malformed
+        // and false values all fail closed and cannot authorize a presentation.
+        guard paywall.remoteConfiguration.specialOffer?.isEnabled == true else {
             await end(paywall, using: presentationLifecycle)
             return unavailable(.disabledByRemoteConfiguration)
         }

@@ -12,8 +12,10 @@ import Foundation
 /// Everything fails closed: a product without a decoded amount or with a period
 /// that cannot be normalized (``SubscriptionPeriod/Unit/custom(_:)`` or
 /// ``SubscriptionPeriod/Unit/unknown``) simply loses the extras instead of
-/// showing a guessed figure. Rendering the numbers into localized strings stays
-/// a presentation concern for the UI layer; this type carries only figures.
+/// showing a guessed figure. Savings are compared only with products in the same
+/// currency; amounts in different currencies are never compared. Rendering the
+/// numbers into localized strings stays a presentation concern for the UI layer;
+/// this type carries only figures.
 public struct ProductPricePresentation: Equatable, Sendable {
     /// The occurrence this presentation was computed for.
     public let presentationID: ProductPresentationID
@@ -52,6 +54,11 @@ public struct ProductPricePresentation: Equatable, Sendable {
 /// plans of different lengths on a common per-week basis. The provider array is
 /// never filtered, sorted or deduplicated; results are returned in input order.
 public struct ProductPricePresenter: Sendable {
+    private struct WeeklyRate {
+        let amount: Decimal
+        let currencyCode: String
+    }
+
     /// How many weeks a month and a year are treated as when bringing a plan to
     /// a weekly price. Defaults match the average Gregorian month and year so a
     /// yearly plan is not flattered by a naive 4-weeks-a-month assumption.
@@ -86,13 +93,21 @@ public struct ProductPricePresenter: Sendable {
         for products: [MonetizationProduct]
     ) -> [ProductPricePresentation] {
         let rates = products.map(weeklyRate(for:))
-        let reference = rates.compactMap { $0 }.max()
-        let savingsList = rates.map { savings(of: $0, comparedTo: reference) }
+        let references = referenceRatesByCurrency(in: rates)
+        let savingsList: [Int?] = rates.map { rate in
+            guard let rate else {
+                return nil
+            }
+            return savings(
+                of: rate.amount,
+                comparedTo: references[rate.currencyCode]
+            )
+        }
         let bestValueIndex = indexOfBestValue(in: savingsList)
 
         return products.enumerated().map { index, product in
-            let weeklyPrice = rates[index].flatMap { rate in
-                product.price.map { Money(amount: rate, currencyCode: $0.currencyCode) }
+            let weeklyPrice = rates[index].map { rate in
+                Money(amount: rate.amount, currencyCode: rate.currencyCode)
             }
             return ProductPricePresentation(
                 presentationID: product.presentationID,
@@ -120,7 +135,18 @@ public struct ProductPricePresenter: Sendable {
         return bestIndex
     }
 
-    private func weeklyRate(for product: MonetizationProduct) -> Decimal? {
+    private func referenceRatesByCurrency(
+        in rates: [WeeklyRate?]
+    ) -> [String: Decimal] {
+        rates.compactMap { $0 }.reduce(into: [:]) { references, rate in
+            references[rate.currencyCode] = max(
+                references[rate.currencyCode] ?? rate.amount,
+                rate.amount
+            )
+        }
+    }
+
+    private func weeklyRate(for product: MonetizationProduct) -> WeeklyRate? {
         guard
             let money = product.price,
             let weeks = weeks(in: product.subscriptionPeriod),
@@ -129,7 +155,10 @@ public struct ProductPricePresenter: Sendable {
             return nil
         }
 
-        return money.amount / weeks
+        return WeeklyRate(
+            amount: money.amount / weeks,
+            currencyCode: money.currencyCode
+        )
     }
 
     private func weeks(in period: SubscriptionPeriod) -> Decimal? {

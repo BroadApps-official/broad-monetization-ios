@@ -18,10 +18,10 @@ public struct SpecialOfferPresentationAuthorization: Equatable, Sendable {
         window: SpecialOfferWindow? = nil,
         trustedTime: SpecialOfferTrustedTime? = nil
     ) {
-        // Absence means the campaign is on: only an explicit `false` from the
-        // provider payload stops the offer.
+        // Presentation requires an explicit true from the current provider
+        // payload. Absence and false both fail closed.
         guard provenance.authorizesSpecialOfferPresentation,
-              specialOffer?.isEnabled != false
+              specialOffer?.isEnabled == true
         else {
             return nil
         }

@@ -50,11 +50,11 @@ public struct SpecialOfferResolution: Equatable, Sendable {
         window: SpecialOfferWindow?,
         trustedTime: SpecialOfferTrustedTime?
     ) -> SpecialOfferPresentationAuthorization {
-        // Absence means the campaign is on: only an explicit `false` stops it.
+        // A presentable resolution requires the provider's explicit opt-in.
         guard let paywall,
               paywall.remoteConfigurationProvenance
               .authorizesSpecialOfferPresentation,
-              paywall.remoteConfiguration.specialOffer?.isEnabled != false
+              paywall.remoteConfiguration.specialOffer?.isEnabled == true
         else {
             preconditionFailure(
                 "Special-offer presentation requires an authorized provider payload"

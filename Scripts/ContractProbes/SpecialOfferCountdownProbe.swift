@@ -62,6 +62,19 @@ enum SpecialOfferRuntimeProbe {
         else {
             fatalError("Platform cache must not authorize Special Offer or RU Billing")
         }
+
+        let missingGateConfiguration = RemotePaywallConfiguration.empty.qualified(
+            by: .providerCacheFallbackPossible
+        )
+        guard missingGateConfiguration.specialOffer == nil,
+              SpecialOfferPresentationAuthorization(
+                  paywallPresentationID: presentationID,
+                  specialOffer: missingGateConfiguration.specialOffer,
+                  provenance: .providerCacheFallbackPossible
+              ) == nil
+        else {
+            fatalError("A missing special_offer gate must fail closed")
+        }
     }
 
     private static func check(

@@ -24,9 +24,11 @@ filter/sort/dedup.
 
 Всё fail-closed: продукт без декодированного `Money` или с периодом, который
 нельзя привести к неделям (`custom`/`unknown`), просто теряет эти цифры вместо
-угаданного значения. Модуль возвращает только числа; локализованное
-форматирование остаётся presentation-задачей BroadUIFlows. Массив продуктов не
-фильтруется, не сортируется и не дедуплицируется, порядок сохраняется.
+угаданного значения. Процент экономии сравнивается только между продуктами в
+одной валюте: суммы в USD, RUB и других валютах никогда не сопоставляются как
+обычные числа. Модуль возвращает только числа; локализованное форматирование
+остаётся presentation-задачей BroadUIFlows. Массив продуктов не фильтруется, не
+сортируется и не дедуплицируется, порядок сохраняется.
 
 ```swift
 let presenter = ProductPricePresenter()
@@ -38,46 +40,23 @@ let rows = presenter.presentations(for: payload.products)
 
 ## Special Offer
 
-Кампания читается из фактически загруженного `PaywallPayload`. Семантика флага —
-absence=on: оффер активен, пока провайдер явно не прислал `special_offer=false`.
-Резолвер требует свой непустой пейвол, разрешённый именно этим placement
-(fallback/подменённый main отклоняется).
+Кампания читается из фактически загруженного `PaywallPayload`. Решение всегда
+сводится к одной проверке:
 
-Два режима `ResolveSpecialOfferUseCase`:
-
-- **Untimed** (preferred init) — оффер показывается, пока грузится разрешённый
-  собственный пейвол; окно/часы не консультируются, countdown визуально зациклен.
-- **Timed** (init с `stateRepository:` + `clock:`) — включает кадэнс «сутки через
-  сутки». Резолвер берёт доверенное серверное время из `SpecialOfferClock`, ведёт
-  окно через `SpecialOfferStateRepositoryProtocol` и отдаёт `.active(SpecialOfferWindow)`
-  (показ на каждом закрытии в течение окна) с реальным countdown, затем
-  `.cooldown(until:)`; без доверенного времени — `.untrustedTime` (fail-closed).
-  Длительности берутся из конфигурации или дефолтов 24ч
-  (`defaultWindowDuration`/`defaultCooldownDuration`).
-
-Доверенные часы даёт `ServerSynchronizedSpecialOfferClock`: host скармливает ему
-серверный `Date` из заголовка ответов backend (`HTTPServerDate.date(from:)`), а
-`makeSpecialOfferClock()` отдаёт готовый `SpecialOfferClock` для timed-инициализатора.
-Offset персистится, high-water монотонный (откат назад запрещён).
-
-Сборка timed-оффера:
-
-```swift
-let clock = ServerSynchronizedSpecialOfferClock(store: keyValueStore)
-// из HTTP-слоя приложения: await clock.record(HTTPServerDate.date(from: response) ?? Date())
-let resolve = ResolveSpecialOfferUseCase(
-    loadPaywallUseCase: loadPaywall,
-    stateRepository: PersistedSpecialOfferStateRepository(store: keyValueStore),
-    presentationLifecycle: lifecycle,
-    clock: clock.makeSpecialOfferClock()
-)
+```text
+special_offer == true → всегда показать Special Offer
+всё остальное         → не показывать Special Offer
 ```
 
-Резолвер отдаёт `SpecialOfferResolution` с `presentationAuthorization`; его
-`countdown` уже несёт реальный остаток окна, и `BroadSpecialOfferMetadataView`
-(BroadUIFlows) показывает его без доработок. **Оркестрацию** — *когда* показать
-второй пейвол (обычно при закрытии первого без покупки) и когда его скрыть на
-нуле — ведёт приложение: маршрут презентации у каждого приложения свой.
+Резолвер требует собственный непустой paywall, разрешённый именно этим
+placement; fallback или подменённый `main` отклоняется. Host не добавляет
+другой gate.
+
+Countdown не участвует в eligibility. Это локальный визуальный цикл
+`24:00:00 → 00:00:00 → 24:00:00`: он запускается при первом показе,
+продолжается между следующими открытиями и на нуле сразу начинает новый круг.
+Для него не нужны серверное время, дата окончания или ответ backend. Ноль не
+скрывает экран и не блокирует покупку.
 
 ## Debug: локальная покупка
 
@@ -103,11 +82,12 @@ authoritative entitlement source.
 
 ### Спешл оффер RU Billing
 
-Coupon-flow использует тот же catalog и checkout. `RUCatalogProductKind.coupon`
-и `RUCatalogSections.coupons` сохраняют весь backend-массив. Host передаёт
-campaign gate, exact coupon ID, optional Apple placement и отдельные
-eligibility/countdown policies. Отдельный target, скрытый product ranking и
-второй entitlement engine не нужны.
+Coupon-flow добавляется только после полностью работающего обычного RU Billing
+и использует тот же catalog и checkout. `RUCatalogProductKind.coupon` и
+`RUCatalogSections.coupons` сохраняют весь backend-массив. Единственный gate —
+`special_offer = true`; host также передаёт exact coupon ID и optional Apple
+placement. Локальный countdown не влияет на показ. Отдельный target, скрытый
+product ranking и второй entitlement engine не нужны.
 
 [Полный контракт →](RUSpecialOffer.md)
 
