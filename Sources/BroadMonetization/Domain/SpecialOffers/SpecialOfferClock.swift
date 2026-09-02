@@ -1,8 +1,7 @@
 import Foundation
 
-/// A trusted wall-clock value paired with the monotonic instant at which the
-/// host observed it. Keeping the pair prevents async persistence/network work
-/// from extending a countdown after the trusted reading was captured.
+/// Compatibility value retained for hosts compiled against the former timed
+/// Special Offer API. The standard resolver and visual countdown ignore it.
 public struct SpecialOfferTrustedTime: Equatable, Sendable {
     public let date: Date
     let observedAt: ContinuousClock.Instant
@@ -16,15 +15,12 @@ public struct SpecialOfferTrustedTime: Equatable, Sendable {
     }
 }
 
-/// A wall-clock reading that the host either obtained from a trusted remote
-/// source or could not verify. Device `Date()` must never be promoted through
-/// `trusted(_:)`: users can change it and extend a persisted timed offer.
+/// Compatibility reading retained for the former timed Special Offer API.
 public enum SpecialOfferClockReading: Equatable, Sendable {
     case synchronized(SpecialOfferTrustedTime)
     case untrusted
 
-    /// Capture this immediately when a trusted server-synchronized Date is
-    /// available. The monotonic instant travels with the value across awaits.
+    /// Wraps a finite legacy date. This value does not authorize presentation.
     public static func trusted(_ date: Date) -> SpecialOfferClockReading {
         guard date.timeIntervalSinceReferenceDate.isFinite else {
             return .untrusted
@@ -38,11 +34,9 @@ public enum SpecialOfferClockReading: Equatable, Sendable {
     }
 }
 
-/// Host boundary for server-synchronized special-offer time.
-///
-/// The default is deliberately fail-closed. Apps that use timed offers must
-/// inject a provider backed by trusted server time or a rollback-detecting
-/// synchronization layer. Untimed offers do not consult this clock.
+/// Compatibility boundary retained for the former timed Special Offer API.
+/// The standard resolver ignores this clock: only `special_offer = true` from
+/// the current provider payload authorizes presentation.
 public struct SpecialOfferClock: Sendable {
     private let readingProvider: @Sendable () async -> SpecialOfferClockReading
 

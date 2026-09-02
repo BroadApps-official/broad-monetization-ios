@@ -205,7 +205,6 @@
 | Class | `actor RUPaymentReturnCoordinator` |
 | Class | `actor ResolveSpecialOfferUseCase` |
 | Class | `actor RestorePurchasesUseCase` |
-| Class | `actor ServerSynchronizedSpecialOfferClock` |
 | Class | `actor SubscriptionPurchaseManager` |
 | Class | `actor TokenPurchaseManager` |
 | Class | `actor VersionedEntitlementCache` |
@@ -229,7 +228,6 @@
 | Enumeration | `enum EntitlementSourceResolution` |
 | Enumeration | `enum EntitlementState` |
 | Enumeration | `enum EntitlementStatus` |
-| Enumeration | `enum HTTPServerDate` |
 | Enumeration | `enum Kind` |
 | Enumeration | `enum MonetizationActivationOutcome` |
 | Enumeration | `enum MonetizationAnalyticsEvent` |
@@ -289,6 +287,7 @@
 | Enumeration | `enum Unit` |
 | Enumeration | `enum VerifiedApplePurchaseReason` |
 | Initializer | `convenience init(entitlementEngine: EntitlementEngine, services: BroadMonetizationServices? = nil)` |
+| Initializer | `convenience init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, stateRepository: any SpecialOfferStateRepositoryProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol, clock: SpecialOfferClock = .untrusted)` |
 | Initializer | `init()` |
 | Initializer | `init(acceptsOfferAndPersonalDataProcessing: Bool, acceptsRecurringCharge: Bool, receiptEmail: String? = nil)` |
 | Initializer | `init(activate: any ActivateMonetizationUseCaseProtocol, loadPaywall: any LoadPaywallUseCaseProtocol, selectProduct: any SelectProductUseCaseProtocol, purchaseProduct: any PurchaseSelectedProductUseCaseProtocol, restorePurchases: any RestorePurchasesUseCaseProtocol, analytics: any MonetizationAnalyticsProtocol, paywallPresentationLifecycle: any PaywallPresentationLifecycleProtocol, checkoutProduct: (any CheckoutSelectedProductUseCaseProtocol)? = nil, operationGate: MonetizationOperationGate? = nil, pendingApplePurchase: PendingApplePurchaseCoordinator? = nil)` |
@@ -361,7 +360,6 @@
 | Initializer | `init(keys: RemoteConfigKeyRegistry = .broadApps)` |
 | Initializer | `init(kind: PendingOperationBlockerKey.Kind, applicationIdentifier: String)` |
 | Initializer | `init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol)` |
-| Initializer | `init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, stateRepository: any SpecialOfferStateRepositoryProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol, clock: SpecialOfferClock = .untrusted)` |
 | Initializer | `init(main: AdaptyPlacementID, mappings: [PlacementID : AdaptyPlacementID] = [:])` |
 | Initializer | `init(mappingPolicy: any RUCatalogProductMappingPolicyProtocol = ExactOnlyRUCatalogProductMappingPolicy())` |
 | Initializer | `init(mappings: [ProductID : RUCatalogProductID])` |
@@ -418,7 +416,6 @@
 | Initializer | `init(startedAt: Date, expiresAt: Date)` |
 | Initializer | `init(state: SpecialOfferState, paywall: PaywallPayload?, trustedTime: SpecialOfferTrustedTime? = nil)` |
 | Initializer | `init(store: any KeyValueStoreProtocol)` |
-| Initializer | `init(store: any KeyValueStoreProtocol, now: @escaping () -> Date = { Date() })` |
 | Initializer | `init(store: any PendingApplePurchaseStoreProtocol, refreshEntitlement: any EntitlementRepositoryProtocol, transactionRecovery: any PendingAppleTransactionRecoveryProtocol, analytics: any MonetizationAnalyticsProtocol, operationGate: MonetizationOperationGate, maximumClockSkew: TimeInterval = 0)` |
 | Initializer | `init(storeKitClient: any StoreKitEntitlementsClientProtocol = StoreKitCurrentEntitlementsClient(), clock: CacheClock = .system)` |
 | Initializer | `init(storefrontRepository: any StorefrontRepositoryProtocol, catalogRepository: any RUCatalogRepositoryProtocol, productMatcher: RUCatalogProductMatcher = RUCatalogProductMatcher(), isFeatureEnabled: Bool, deviceContextProvider: any RUBillingDeviceContextProviderProtocol = SystemRUBillingDeviceContextProvider(), debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(), logger: any BroadLoggerProtocol = NoOpBroadLogger())` |
@@ -527,7 +524,6 @@
 | Instance Method | `func install(_ coordinator: PendingApplePurchaseCoordinator?, ownershipPolicy: StoreKitEntitlementOwnershipPolicy)` |
 | Instance Method | `func invalidate()` |
 | Instance Method | `func isFinancialOperationBlocked() async -> Bool` |
-| Instance Method | `func isSynchronized() async -> Bool` |
 | Instance Method | `func latestEntitlement() -> EntitlementSnapshot?` |
 | Instance Method | `func latestEntitlement() async -> EntitlementSnapshot?` |
 | Instance Method | `func liveCurrentStorefront() async -> StorefrontResolution` |
@@ -569,7 +565,6 @@
 | Instance Method | `func read(for scope: EntitlementCacheScope) async throws -> EntitlementSourceAssertion?` |
 | Instance Method | `func readPaywall(for placementID: PlacementID) async -> PaywallCacheReadOutcome` |
 | Instance Method | `func reading() async -> SpecialOfferClockReading` |
-| Instance Method | `func record(_ date: Date) async` |
 | Instance Method | `func recover(_ intent: PendingApplePurchaseIntent) async -> PendingAppleTransactionRecoveryOutcome` |
 | Instance Method | `func recoverPendingPurchase() async -> TokenPurchaseOutcome?` |
 | Instance Method | `func refreshEntitlement() async -> EntitlementSnapshot` |
@@ -602,7 +597,6 @@
 | Instance Method | `func verifyEntitlement(for subject: EntitlementSubject) async -> EntitlementSourceResolution` |
 | Instance Method | `func write(_ assertion: EntitlementSourceAssertion, for scope: EntitlementCacheScope) async throws` |
 | Instance Method | `func writePaywall(_ paywall: PaywallPayload, for placementID: PlacementID) async -> PaywallCacheWriteOutcome` |
-| Instance Method | `nonisolated func makeSpecialOfferClock() -> SpecialOfferClock` |
 | Instance Method | `nonisolated func registerPendingOperationBlocker(_ blocker: any PendingOperationBlockerProtocol)` |
 | Instance Property | `let acceptsAutoRenewal: Bool` |
 | Instance Property | `let acceptsOfferAndPersonalDataProcessing: Bool` |
@@ -1151,7 +1145,6 @@
 | Type Method | `static func broadAppsFlatCatalog(supportedMethods: [CheckoutMethod]) -> RUBillingWireAdapters` |
 | Type Method | `static func custom(_ rawValue: String) -> PlacementID` |
 | Type Method | `static func custom(unit: String, count: Int? = nil) -> SubscriptionPeriod` |
-| Type Method | `static func date(from response: HTTPURLResponse) -> Date?` |
 | Type Method | `static func day(_ count: Int = 1) -> SubscriptionPeriod` |
 | Type Method | `static func fingerprinted(_ fingerprint: EntitlementSubjectFingerprint) -> EntitlementSubject` |
 | Type Method | `static func generated() -> MonetizationAttemptID` |
@@ -1170,10 +1163,8 @@
 | Type Property | `static let ctr: PlacementID` |
 | Type Property | `static let currentVersion: Int` |
 | Type Property | `static let cycleDuration: TimeInterval` |
-| Type Property | `static let defaultCooldownDuration: TimeInterval` |
 | Type Property | `static let defaultMaximumRetention: TimeInterval` |
 | Type Property | `static let defaultSchemaIdentifier: String` |
-| Type Property | `static let defaultWindowDuration: TimeInterval` |
 | Type Property | `static let discount: PlacementID` |
 | Type Property | `static let empty: RemotePaywallConfiguration` |
 | Type Property | `static let feature: PlacementID` |

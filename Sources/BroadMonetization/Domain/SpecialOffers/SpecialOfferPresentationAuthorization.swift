@@ -14,9 +14,7 @@ public struct SpecialOfferPresentationAuthorization: Equatable, Sendable {
     init?(
         paywallPresentationID: PaywallPresentationID,
         specialOffer: SpecialOfferRemoteConfiguration?,
-        provenance: PaywallRemoteConfigurationProvenance,
-        window: SpecialOfferWindow? = nil,
-        trustedTime: SpecialOfferTrustedTime? = nil
+        provenance: PaywallRemoteConfigurationProvenance
     ) {
         // Presentation requires an explicit true from the current provider
         // payload. Absence and false both fail closed.
@@ -27,13 +25,6 @@ public struct SpecialOfferPresentationAuthorization: Equatable, Sendable {
         }
 
         self.paywallPresentationID = paywallPresentationID
-        if let window, let trustedTime {
-            countdown = SpecialOfferCountdownAuthorization(
-                window: window,
-                trustedTime: trustedTime
-            )
-        } else {
-            countdown = SpecialOfferCountdownAuthorization()
-        }
+        countdown = SpecialOfferCountdownAuthorization()
     }
 }

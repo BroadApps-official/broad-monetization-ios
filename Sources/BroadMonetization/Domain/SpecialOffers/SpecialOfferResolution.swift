@@ -10,28 +10,15 @@ public struct SpecialOfferResolution: Equatable, Sendable {
         paywall: PaywallPayload?,
         trustedTime: SpecialOfferTrustedTime? = nil
     ) {
+        _ = trustedTime
         let authorization: SpecialOfferPresentationAuthorization?
         switch state {
-        case .eligible:
+        case .eligible, .active:
             precondition(
                 paywall != nil,
                 "A presentable special offer requires its paywall payload"
             )
-            authorization = Self.makeAuthorization(
-                paywall: paywall,
-                window: nil,
-                trustedTime: nil
-            )
-        case let .active(window):
-            precondition(
-                paywall != nil,
-                "A presentable special offer requires its paywall payload"
-            )
-            authorization = Self.makeAuthorization(
-                paywall: paywall,
-                window: window,
-                trustedTime: trustedTime
-            )
+            authorization = Self.makeAuthorization(paywall: paywall)
         case .unavailable, .expired, .cooldown:
             precondition(
                 paywall == nil,
@@ -46,9 +33,7 @@ public struct SpecialOfferResolution: Equatable, Sendable {
     }
 
     private static func makeAuthorization(
-        paywall: PaywallPayload?,
-        window: SpecialOfferWindow?,
-        trustedTime: SpecialOfferTrustedTime?
+        paywall: PaywallPayload?
     ) -> SpecialOfferPresentationAuthorization {
         // A presentable resolution requires the provider's explicit opt-in.
         guard let paywall,
@@ -63,9 +48,7 @@ public struct SpecialOfferResolution: Equatable, Sendable {
         guard let authorization = SpecialOfferPresentationAuthorization(
             paywallPresentationID: paywall.presentationID,
             specialOffer: paywall.remoteConfiguration.specialOffer,
-            provenance: paywall.remoteConfigurationProvenance,
-            window: window,
-            trustedTime: trustedTime
+            provenance: paywall.remoteConfigurationProvenance
         ) else {
             preconditionFailure(
                 "Special-offer presentation requires an authorized provider payload"

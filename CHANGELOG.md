@@ -45,9 +45,9 @@
 - Special Offer остаётся fail-closed: показ разрешает только явный
   `special_offer=true` из текущего provider payload; `false`, отсутствие и
   невалидное значение оффер не включают. Это единственный gate: при `true`
-  Special Offer показывается всегда. Резолвер дополнительно требует свой
-  непустой пейвол, разрешённый именно этим placement
-  (fallback/подменённый main отклоняется).
+  Special Offer показывается всегда. Если provider разрешил configured
+  fallback, gate читается из фактически загруженного payload без
+  дополнительного eligibility-условия.
 - верх README теперь ведёт в актуальную cross-module карту создания
   приложения, а monetization-детали остаются рядом с owner-кодом;
 - README восстановил актуальные operational guides из последней полной

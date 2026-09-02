@@ -4,6 +4,7 @@ import Foundation
 enum SpecialOfferRuntimeProbe {
     static func main() {
         checkRemoteFeatureCapabilities()
+        checkRepeatedPresentationsShareCycle()
         check(elapsed: 0, expected: 86400)
         check(elapsed: 1, expected: 86399)
         check(elapsed: 86399, expected: 1)
@@ -14,6 +15,14 @@ enum SpecialOfferRuntimeProbe {
             "PASS: provider payload authorizes Special Offer without weakening RU Billing; "
                 + "countdown loops 24:00:00 -> 00:00:00 -> 24:00:00"
         )
+    }
+
+    private static func checkRepeatedPresentationsShareCycle() {
+        let first = SpecialOfferCountdownAuthorization()
+        let reopened = SpecialOfferCountdownAuthorization()
+        guard first == reopened else {
+            fatalError("Reopening Special Offer must continue the same local countdown cycle")
+        }
     }
 
     private static func checkRemoteFeatureCapabilities() {

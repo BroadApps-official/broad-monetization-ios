@@ -1,8 +1,8 @@
 import BroadCore
 import Foundation
 
-/// Persists only configured offer lifecycle state. There is no API that accepts
-/// an optional configuration, which keeps the `nil` feature path outside storage.
+/// Compatibility repository for hosts that still migrate former lifecycle
+/// snapshots. The standard resolver does not read or write this state.
 public actor PersistedSpecialOfferStateRepository: SpecialOfferStateRepositoryProtocol {
     private struct Snapshot: Codable, Equatable {
         static let currentSchemaVersion = 1

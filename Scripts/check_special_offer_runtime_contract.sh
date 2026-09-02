@@ -11,7 +11,6 @@ xcrun swiftc \
     "$platform_root/Sources/BroadMonetization/Domain/Paywalls/PaywallRemoteConfigurationProvenance.swift" \
     "$platform_root/Sources/BroadMonetization/Domain/Paywalls/RemotePaywallConfiguration.swift" \
     "$platform_root/Sources/BroadMonetization/Domain/SpecialOffers/SpecialOfferModels.swift" \
-    "$platform_root/Sources/BroadMonetization/Domain/SpecialOffers/SpecialOfferClock.swift" \
     "$platform_root/Sources/BroadMonetization/Domain/SpecialOffers/SpecialOfferCountdownAuthorization.swift" \
     "$platform_root/Sources/BroadMonetization/Domain/SpecialOffers/SpecialOfferPresentationAuthorization.swift" \
     "$platform_root/Scripts/ContractProbes/SpecialOfferCountdownProbe.swift" \
