@@ -204,6 +204,7 @@
 | Class | `actor RUPaymentReturnCoordinator` |
 | Class | `actor ResolveSpecialOfferUseCase` |
 | Class | `actor RestorePurchasesUseCase` |
+| Class | `actor ServerSynchronizedSpecialOfferClock` |
 | Class | `actor SubscriptionPurchaseManager` |
 | Class | `actor TokenPurchaseManager` |
 | Class | `actor VersionedEntitlementCache` |
@@ -227,6 +228,7 @@
 | Enumeration | `enum EntitlementSourceResolution` |
 | Enumeration | `enum EntitlementState` |
 | Enumeration | `enum EntitlementStatus` |
+| Enumeration | `enum HTTPServerDate` |
 | Enumeration | `enum Kind` |
 | Enumeration | `enum MonetizationActivationOutcome` |
 | Enumeration | `enum MonetizationAnalyticsEvent` |
@@ -414,6 +416,7 @@
 | Initializer | `init(startedAt: Date, expiresAt: Date)` |
 | Initializer | `init(state: SpecialOfferState, paywall: PaywallPayload?, trustedTime: SpecialOfferTrustedTime? = nil)` |
 | Initializer | `init(store: any KeyValueStoreProtocol)` |
+| Initializer | `init(store: any KeyValueStoreProtocol, now: @escaping () -> Date = { Date() })` |
 | Initializer | `init(store: any PendingApplePurchaseStoreProtocol, refreshEntitlement: any EntitlementRepositoryProtocol, transactionRecovery: any PendingAppleTransactionRecoveryProtocol, analytics: any MonetizationAnalyticsProtocol, operationGate: MonetizationOperationGate, maximumClockSkew: TimeInterval = 0)` |
 | Initializer | `init(storeKitClient: any StoreKitEntitlementsClientProtocol = StoreKitCurrentEntitlementsClient(), clock: CacheClock = .system)` |
 | Initializer | `init(storefrontRepository: any StorefrontRepositoryProtocol, catalogRepository: any RUCatalogRepositoryProtocol, productMatcher: RUCatalogProductMatcher = RUCatalogProductMatcher(), isFeatureEnabled: Bool, deviceContextProvider: any RUBillingDeviceContextProviderProtocol = SystemRUBillingDeviceContextProvider(), debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(), logger: any BroadLoggerProtocol = NoOpBroadLogger())` |
@@ -520,6 +523,7 @@
 | Instance Method | `func identity(for subject: EntitlementSubject) async -> AdaptyCustomerIdentity?` |
 | Instance Method | `func invalidate()` |
 | Instance Method | `func isFinancialOperationBlocked() async -> Bool` |
+| Instance Method | `func isSynchronized() async -> Bool` |
 | Instance Method | `func latestEntitlement() -> EntitlementSnapshot?` |
 | Instance Method | `func latestEntitlement() async -> EntitlementSnapshot?` |
 | Instance Method | `func liveCurrentStorefront() async -> StorefrontResolution` |
@@ -561,6 +565,7 @@
 | Instance Method | `func read(for scope: EntitlementCacheScope) async throws -> EntitlementSourceAssertion?` |
 | Instance Method | `func readPaywall(for placementID: PlacementID) async -> PaywallCacheReadOutcome` |
 | Instance Method | `func reading() async -> SpecialOfferClockReading` |
+| Instance Method | `func record(_ date: Date) async` |
 | Instance Method | `func recover(_ intent: PendingApplePurchaseIntent) async -> PendingAppleTransactionRecoveryOutcome` |
 | Instance Method | `func recoverPendingPurchase() async -> TokenPurchaseOutcome?` |
 | Instance Method | `func refreshEntitlement() async -> EntitlementSnapshot` |
@@ -593,6 +598,7 @@
 | Instance Method | `func verifyEntitlement(for subject: EntitlementSubject) async -> EntitlementSourceResolution` |
 | Instance Method | `func write(_ assertion: EntitlementSourceAssertion, for scope: EntitlementCacheScope) async throws` |
 | Instance Method | `func writePaywall(_ paywall: PaywallPayload, for placementID: PlacementID) async -> PaywallCacheWriteOutcome` |
+| Instance Method | `nonisolated func makeSpecialOfferClock() -> SpecialOfferClock` |
 | Instance Method | `nonisolated func registerPendingOperationBlocker(_ blocker: any PendingOperationBlockerProtocol)` |
 | Instance Property | `let acceptsAutoRenewal: Bool` |
 | Instance Property | `let acceptsOfferAndPersonalDataProcessing: Bool` |
@@ -1138,6 +1144,7 @@
 | Type Method | `static func broadAppsFlatCatalog(supportedMethods: [CheckoutMethod]) -> RUBillingWireAdapters` |
 | Type Method | `static func custom(_ rawValue: String) -> PlacementID` |
 | Type Method | `static func custom(unit: String, count: Int? = nil) -> SubscriptionPeriod` |
+| Type Method | `static func date(from response: HTTPURLResponse) -> Date?` |
 | Type Method | `static func day(_ count: Int = 1) -> SubscriptionPeriod` |
 | Type Method | `static func fingerprinted(_ fingerprint: EntitlementSubjectFingerprint) -> EntitlementSubject` |
 | Type Method | `static func generated() -> MonetizationAttemptID` |

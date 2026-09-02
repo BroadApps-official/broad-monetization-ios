@@ -36,6 +36,12 @@
   window-store и server-clock. `SpecialOfferCountdownAuthorization.isExpired` и
   `sleepUntilExpiration()` больше не deprecated — для timed-окна они реальны.
 
+- `ServerSynchronizedSpecialOfferClock` и `HTTPServerDate` — доверенные серверные
+  часы для timed спец-оффера: offset из `Date`-заголовка ответов backend
+  (`HTTPServerDate.date(from:)` -> `record(_:)`), монотонный high-water с запретом
+  отката, персист через `KeyValueStoreProtocol`, мост `makeSpecialOfferClock()`.
+  Приложениям больше не нужно писать свой server clock.
+
 ### Changed
 
 - **Поведение Special Offer (major):** семантика флага кампании теперь

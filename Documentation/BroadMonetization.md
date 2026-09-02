@@ -55,6 +55,11 @@ absence=on: оффер активен, пока провайдер явно не
   Длительности берутся из конфигурации или дефолтов 24ч
   (`defaultWindowDuration`/`defaultCooldownDuration`).
 
+Доверенные часы даёт `ServerSynchronizedSpecialOfferClock`: host скармливает ему
+серверный `Date` из заголовка ответов backend (`HTTPServerDate.date(from:)`), а
+`makeSpecialOfferClock()` отдаёт готовый `SpecialOfferClock` для timed-инициализатора.
+Offset персистится, high-water монотонный (откат назад запрещён).
+
 ## Debug: локальная покупка
 
 `LocalStoreKitPurchaseRepository` и `LocalStoreKitRestoreRepository` (только под

@@ -17,6 +17,8 @@ Provider-neutral monetization contracts and production adapters for BroadApps iP
 - ``SpecialOfferResolution``
 - ``SpecialOfferPresentationAuthorization``
 - ``SpecialOfferCountdownAuthorization``
+- ``ServerSynchronizedSpecialOfferClock``
+- ``HTTPServerDate``
 
 ### Entitlements and checkout
 
