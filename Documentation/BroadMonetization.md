@@ -60,6 +60,25 @@ absence=on: оффер активен, пока провайдер явно не
 `makeSpecialOfferClock()` отдаёт готовый `SpecialOfferClock` для timed-инициализатора.
 Offset персистится, high-water монотонный (откат назад запрещён).
 
+Сборка timed-оффера:
+
+```swift
+let clock = ServerSynchronizedSpecialOfferClock(store: keyValueStore)
+// из HTTP-слоя приложения: await clock.record(HTTPServerDate.date(from: response) ?? Date())
+let resolve = ResolveSpecialOfferUseCase(
+    loadPaywallUseCase: loadPaywall,
+    stateRepository: PersistedSpecialOfferStateRepository(store: keyValueStore),
+    presentationLifecycle: lifecycle,
+    clock: clock.makeSpecialOfferClock()
+)
+```
+
+Резолвер отдаёт `SpecialOfferResolution` с `presentationAuthorization`; его
+`countdown` уже несёт реальный остаток окна, и `BroadSpecialOfferMetadataView`
+(BroadUIFlows) показывает его без доработок. **Оркестрацию** — *когда* показать
+второй пейвол (обычно при закрытии первого без покупки) и когда его скрыть на
+нуле — ведёт приложение: маршрут презентации у каждого приложения свой.
+
 ## Debug: локальная покупка
 
 `LocalStoreKitPurchaseRepository` и `LocalStoreKitRestoreRepository` (только под
