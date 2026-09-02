@@ -135,6 +135,12 @@ Premium access вычисляется из authoritative sources. Cache даёт
 bounded fallback, но не подменяет server verification. Recovery и token
 fulfillment остаются idempotent app/backend boundaries.
 
+Для диагностики (например, письмо в поддержку) `EntitlementStatus.supportSubscriptionValue`
+даёт канонический строковый статус (`subscribed`/`not_subscribed`/`unknown`), а
+`ProfileIdentityProviderProtocol` (реализация `AdaptySDKProfileIdentityProvider`)
+читает текущий Adapty profile ID — без создания нового профиля, `nil` если SDK ещё
+не активирован. Host сам подставляет свой placeholder вместо `nil`.
+
 ## Проверка
 
 ```bash

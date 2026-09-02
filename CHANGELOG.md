@@ -42,6 +42,13 @@
   отката, персист через `KeyValueStoreProtocol`, мост `makeSpecialOfferClock()`.
   Приложениям больше не нужно писать свой server clock.
 
+- `ProfileIdentityProviderProtocol` + `AdaptySDKProfileIdentityProvider`
+  — чтение текущего Adapty profile ID для диагностики (поле письма в поддержку) без
+  создания нового профиля; `nil` fail-safe, если SDK не активирован. Плюс
+  `EntitlementStatus.supportSubscriptionValue` — канонический строковый статус
+  (`subscribed`/`not_subscribed`/`unknown`). Закрывает два поля письма в поддержку,
+  которые раньше было нечем заполнить (стояло `unavailable` и ad-hoc строка).
+
 ### Changed
 
 - **Поведение Special Offer (major):** семантика флага кампании теперь

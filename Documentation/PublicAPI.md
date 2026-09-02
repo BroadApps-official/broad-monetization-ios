@@ -501,6 +501,7 @@
 | Instance Method | `func contains(_ logicalPlacement: PlacementID) -> Bool` |
 | Instance Method | `func currentContext() -> RUBillingDeviceContext` |
 | Instance Method | `func currentEntitlements(for productIDs: Set<String>) async -> [StoreKitCurrentEntitlementRecord]` |
+| Instance Method | `func currentProfileID() async -> String?` |
 | Instance Method | `func currentStatus() async -> EntitlementStatus` |
 | Instance Method | `func currentStorefront() async -> StorefrontResolution` |
 | Instance Method | `func decodeCancellationOutcome(from data: Data) throws -> RUSubscriptionCancellationOutcome` |
@@ -902,6 +903,7 @@
 | Instance Property | `var productID: ProductID { get }` |
 | Instance Property | `var remainingTimeInterval: TimeInterval { get }` |
 | Instance Property | `var shouldAttemptFallback: Bool { get }` |
+| Instance Property | `var supportSubscriptionValue: String { get }` |
 | Instance Property | `var usedFallback: Bool { get }` |
 | Protocol | `protocol ActivateMonetizationUseCaseProtocol : Sendable` |
 | Protocol | `protocol AdaptyEntitlementProfileClientProtocol : Sendable` |
@@ -929,6 +931,7 @@
 | Protocol | `protocol PendingRUCheckoutStoreProtocol : PendingOperationBlockerProtocol` |
 | Protocol | `protocol PendingTokenPurchaseStoreProtocol : PendingOperationBlockerProtocol` |
 | Protocol | `protocol PrimaryBackendEntitlementClientProtocol : Sendable` |
+| Protocol | `protocol ProfileIdentityProviderProtocol : Sendable` |
 | Protocol | `protocol PurchaseRepositoryProtocol : Sendable` |
 | Protocol | `protocol PurchaseSelectedProductUseCaseProtocol : Sendable` |
 | Protocol | `protocol RUBillingDeviceContextProviderProtocol : Sendable` |
@@ -980,6 +983,7 @@
 | Structure | `struct AdaptyPlacementRegistry` |
 | Structure | `struct AdaptyPlatformConfiguration` |
 | Structure | `struct AdaptySDKEntitlementProfileClient` |
+| Structure | `struct AdaptySDKProfileIdentityProvider` |
 | Structure | `struct AppOwnedRUCatalogProductMappingPolicy` |
 | Structure | `struct AppleEntitlementRepository` |
 | Structure | `struct AppleEntitlementSourceConfiguration` |

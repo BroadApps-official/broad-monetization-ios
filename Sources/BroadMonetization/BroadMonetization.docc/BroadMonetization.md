@@ -23,6 +23,9 @@ Provider-neutral monetization contracts and production adapters for BroadApps iP
 ### Entitlements and checkout
 
 - ``EntitlementEngine``
+- ``EntitlementStatus``
+- ``ProfileIdentityProviderProtocol``
+- ``AdaptySDKProfileIdentityProvider``
 - ``SubscriptionPurchaseManager``
 - ``TokenPurchaseManager``
 - ``RUBillingGate``
