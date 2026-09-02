@@ -14,13 +14,60 @@ Access level и custom identity provider не входят в базовую з�
 Независимо от placement модуль передаёт UI все 0…N products без
 filter/sort/dedup.
 
+## Product price presentation
+
+`ProductPricePresenter` считает по массиву продуктов производные цифры, которых
+не отдаёт ни один provider: цену, приведённую к одной неделе, процент экономии
+относительно самого дорогого недельного тарифа и один best-value бейдж.
+Результат — `ProductPricePresentation` с полями `weeklyPrice: Money?`,
+`savingsPercent: Int?` и `isBestValue: Bool`.
+
+Всё fail-closed: продукт без декодированного `Money` или с периодом, который
+нельзя привести к неделям (`custom`/`unknown`), просто теряет эти цифры вместо
+угаданного значения. Процент экономии сравнивается только между продуктами в
+одной валюте: суммы в USD, RUB и других валютах никогда не сопоставляются как
+обычные числа. Модуль возвращает только числа; локализованное форматирование
+остаётся presentation-задачей BroadUIFlows. Массив продуктов не фильтруется, не
+сортируется и не дедуплицируется, порядок сохраняется.
+
+```swift
+let presenter = ProductPricePresenter()
+let rows = presenter.presentations(for: payload.products)
+```
+
+Конвертацию месяцев и лет в недели можно настроить через
+`ProductPricePresenter.PeriodWeights`.
+
 ## Special Offer
 
-`special_offer = true` читается из фактически загруженного payload только после
-получения полного `PaywallPayload`. Duration/cooldown — legacy metadata, а
-24-часовой countdown — recurring visual timer, не eligibility boundary.
-Расписание, trusted clock и динамическая длительность не входят в текущий
-contract.
+Кампания читается из фактически загруженного `PaywallPayload`. Решение всегда
+сводится к одной проверке:
+
+```text
+special_offer == true → всегда показать Special Offer
+всё остальное         → не показывать Special Offer
+```
+
+Резолвер требует собственный непустой paywall, разрешённый именно этим
+placement; fallback или подменённый `main` отклоняется. Host не добавляет
+другой gate.
+
+Countdown не участвует в eligibility. Это локальный визуальный цикл
+`24:00:00 → 00:00:00 → 24:00:00`: он запускается при первом показе,
+продолжается между следующими открытиями и на нуле сразу начинает новый круг.
+Для него не нужны серверное время, дата окончания или ответ backend. Ноль не
+скрывает экран и не блокирует покупку.
+
+## Debug: локальная покупка
+
+`LocalStoreKitPurchaseRepository` и `LocalStoreKitRestoreRepository` (только под
+`#if DEBUG`) проводят покупку/восстановление через локальный `.storekit` конфиг,
+подключённый к схеме, вместо боевого провайдера. Пейвол и каталог не меняются —
+меняется только касса: debug-сборка завершает покупку без денег и без receipt
+validation. Доступ здесь **не** выдаётся: транзакция настоящая, а премиум
+подтверждает тот же боевой entitlement-путь (`StoreKitAppleEntitlementVerifier`
+против премиум-каталога). Это прод-идентичный тест, а не обход. Локальный конфиг
+подставляется при запуске из Xcode; в Release эти типы не компилируются.
 
 ## RU Billing
 
@@ -35,11 +82,12 @@ authoritative entitlement source.
 
 ### Спешл оффер RU Billing
 
-Coupon-flow использует тот же catalog и checkout. `RUCatalogProductKind.coupon`
-и `RUCatalogSections.coupons` сохраняют весь backend-массив. Host передаёт
-campaign gate, exact coupon ID, optional Apple placement и отдельные
-eligibility/countdown policies. Отдельный target, скрытый product ranking и
-второй entitlement engine не нужны.
+Coupon-flow добавляется только после полностью работающего обычного RU Billing
+и использует тот же catalog и checkout. `RUCatalogProductKind.coupon` и
+`RUCatalogSections.coupons` сохраняют весь backend-массив. Единственный gate —
+`special_offer = true`; host также передаёт exact coupon ID и optional Apple
+placement. Локальный countdown не влияет на показ. Отдельный target, скрытый
+product ranking и второй entitlement engine не нужны.
 
 [Полный контракт →](RUSpecialOffer.md)
 
@@ -66,6 +114,17 @@ let wire = RUBillingWireAdapters.broadAppsFlatCatalog(
 Premium access вычисляется из authoritative sources. Cache даёт
 bounded fallback, но не подменяет server verification. Recovery и token
 fulfillment остаются idempotent app/backend boundaries.
+
+`AppleTransactionUpdatesBridge` — единственный `Transaction.updates` листенер:
+ставится один раз до старта Adapty и форвардит verified purchase-транзакции своего
+bundle в `PendingApplePurchaseCoordinator`, не вызывая `finish()`. Так покупка,
+завершившаяся вне приложения, не теряется. Раньше этот listener писал каждый host.
+
+Для диагностики (например, письмо в поддержку) `EntitlementStatus.supportSubscriptionValue`
+даёт канонический строковый статус (`subscribed`/`not_subscribed`/`unknown`), а
+`ProfileIdentityProviderProtocol` (реализация `AdaptySDKProfileIdentityProvider`)
+читает текущий Adapty profile ID — без создания нового профиля, `nil` если SDK ещё
+не активирован. Host сам подставляет свой placeholder вместо `nil`.
 
 ## Проверка
 

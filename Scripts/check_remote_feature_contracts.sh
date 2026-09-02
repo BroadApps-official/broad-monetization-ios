@@ -126,13 +126,13 @@ forbid_pattern \
     'isEnabled:(?s:.{0,250})(windowDuration|cooldownDuration)\.isValid' \
     "$remote_parser_file"
 
-forbid_pattern \
-    "Special Offer resolution has no state, clock, window or cooldown gate" \
-    '(stateRepository\.(state|save)|clock\.reading|currentTime\(|resolveState\(|beginWindow\(|resolveExpiredWindow\()' \
-    "$special_use_case_file"
+require_pattern \
+    "Timed Special Offer resolution runs the trusted-clock cadence engine" \
+    "$special_use_case_file" \
+    'clock\.reading\(\)(?s:.*?)stateRepository\.state\((?s:.*?)stateRepository\.save\('
 
 require_pattern \
-    "Special Offer resolution reaches presentation after provider flag true" \
+    "Special Offer requires an explicit true campaign gate" \
     "$special_use_case_file" \
     'specialOffer\?\.isEnabled[[:space:]]*==[[:space:]]*true(?s:.*?)SpecialOfferResolution\(state:[[:space:]]*\.eligible,[[:space:]]*paywall:[[:space:]]*paywall\)'
 

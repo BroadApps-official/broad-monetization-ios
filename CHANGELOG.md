@@ -12,9 +12,42 @@
 - `FlatRUCatalogResponseDecoder` и
   `RUBillingWireAdapters.broadAppsFlatCatalog(supportedMethods:)` для текущего
   плоского backend catalog без app-specific копирования decoder.
+- `ProductPricePresentation` и `ProductPricePresenter` — производные цифры для
+  paywall-строки: цена, приведённая к неделе, процент экономии и best-value
+  бейдж. Вычисляются из массива продуктов без filter/sort/dedup и возвращают
+  только числа (`Money`/`Int`); экономия сравнивается только внутри одной валюты,
+  форматирование остаётся presentation-задачей UI. Раньше каждый host считал это
+  сам рядом с кнопкой покупки.
+- `LocalStoreKitPurchaseRepository` и `LocalStoreKitRestoreRepository`
+  (только `#if DEBUG`) — покупка/восстановление через локальный `.storekit`
+  конфиг схемы вместо боевого провайдера. Пейвол и каталог остаются прежними,
+  меняется только касса: debug-сборка проводит покупку без денег и без receipt
+  validation. Доступ здесь не выдаётся — транзакция настоящая, а премиум
+  подтверждает тот же боевой entitlement-путь. Это прод-идентичный debug-путь,
+  не bypass. В Release не компилируется. Заменяет самодельный local-purchase
+  repository, который debug-сборки писали сами.
+- `ProfileIdentityProviderProtocol` + `AdaptySDKProfileIdentityProvider`
+  — чтение текущего Adapty profile ID для диагностики (поле письма в поддержку) без
+  создания нового профиля; `nil` fail-safe, если SDK не активирован. Плюс
+  `EntitlementStatus.supportSubscriptionValue` — канонический строковый статус
+  (`subscribed`/`not_subscribed`/`unknown`). Закрывает два поля письма в поддержку,
+  которые раньше было нечем заполнить (стояло `unavailable` и ad-hoc строка).
+
+- `AppleTransactionUpdatesBridge` — единственный process-wide листенер
+  `Transaction.updates`: форвардит только verified purchase-транзакции своего
+  bundle (без revocation/upgrade, под ownership policy) в
+  `PendingApplePurchaseCoordinator` и никогда не вызывает `finish()` (это делает
+  провайдер покупок). Ставится один раз до старта Adapty, чтобы не потерять
+  покупку, завершившуюся вне приложения. Убирает app-side listener.
 
 ### Changed
 
+- Special Offer остаётся fail-closed: показ разрешает только явный
+  `special_offer=true` из текущего provider payload; `false`, отсутствие и
+  невалидное значение оффер не включают. Это единственный gate: при `true`
+  Special Offer показывается всегда. Резолвер дополнительно требует свой
+  непустой пейвол, разрешённый именно этим placement
+  (fallback/подменённый main отклоняется).
 - верх README теперь ведёт в актуальную cross-module карту создания
   приложения, а monetization-детали остаются рядом с owner-кодом;
 - README восстановил актуальные operational guides из последней полной
@@ -34,10 +67,10 @@
 - текущий Storefront повторно проверяется непосредственно перед RU checkout;
 - RU catalog product сохраняет optional backend title и credits, исходный
   порядок и все occurrences.
-- RU Special Offer закреплён как coupon-секция существующего каталога и
-  checkout: campaign/timers остаются app-owned, product выбирается только по
-  exact ID, browser return требует authoritative entitlement result; отдельные
-  targets и второй payment engine не добавлены.
+- RU Special Offer закреплён как дополнение после базовой интеграции RU Billing:
+  экран разрешает только `special_offer = true`, product выбирается по exact ID,
+  а локальный countdown `24 → 0 → 24` не зависит от сервера и не управляет
+  показом; browser return требует authoritative entitlement result.
 
 ### Почему
 

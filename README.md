@@ -137,17 +137,15 @@ Adapty.getPaywall
 ```
 
 `ResolveSpecialOfferUseCase` получает уже целый `PaywallPayload` с products и
-только после этого проверяет `special_offer = true`. Приложение не добавляет
-в этот базовый flow verifier, второй REST transport или повторную загрузку.
+только после этого проверяет `special_offer = true`. Это единственное решение
+о показе: `true` всегда показывает Special Offer, любое другое значение не
+показывает его.
 
-24-часовой countdown — только visual loop
-`24:00:00 → 00:00:00 → 24:00:00`; ноль не скрывает offer и не блокирует
-purchase.
-
-Никакого schedule, server clock или скрытого окна показа стандартный flow не
-добавляет: единственный gate — `special_offer = true`, а таймер всегда является
-циклической визуализацией на 24 часа. Динамический таймер остаётся отдельной
-будущей задачей и не связан с правилами RU Billing.
+24-часовой countdown — отдельный локальный visual loop
+`24:00:00 → 00:00:00 → 24:00:00`. Цикл запускается при первом показе и
+продолжается между следующими открытиями: через час остаётся примерно 23 часа.
+Ноль сразу запускает новый круг, не скрывает offer и не блокирует purchase.
+Серверное время и дата окончания не используются.
 
 <table>
   <tr>
@@ -226,10 +224,11 @@ policy. По цене или периоду продукт не угадывае
 let coupons = RUCatalogSections(catalog: payload).coupons
 ```
 
-Host отдельно задаёт campaign gate, optional Apple placement, exact coupon ID
-и две независимые политики времени: eligibility-window и визуальный countdown.
-Модуль не сортирует coupon products по периоду/цене и не назначает значения
-таймеров вместо host app.
+Сначала host полностью подключает обычный RU Billing: catalog, `ru_pay`,
+регион, checkout и подтверждение Premium. Затем добавляет только различия
+Special Offer: единственный gate `special_offer = true`, optional Apple
+placement, exact coupon ID и локальный visual loop `24 → 0 → 24`. Модуль не
+сортирует coupon products по периоду или цене.
 
 СБП/карта дополнительно требуют обычный strict RU gate. Возврат из hosted
 checkout оставляет pending, пока authoritative entitlement/backend не вернул

@@ -1,5 +1,10 @@
 # Спешл оффер RU Billing
 
+Сначала полностью подключите обычный RU Billing по разделу
+[README](../README.md#ru-billing): catalog, `ru_pay`, регион, checkout,
+reconciliation и подтверждение Premium. Ниже описаны только отличия Special
+Offer.
+
 `BroadMonetization` не создаёт второй платёжный движок для coupon flow. Он
 использует существующие RU catalog, exact product mapping, checkout и
 entitlement reconciliation.
@@ -16,11 +21,10 @@ entitlement reconciliation.
 
 Host app предоставляет:
 
-- campaign/experiment decision;
+- текущий provider payload с единственным gate `special_offer = true`;
 - app-owned catalog configuration и authorization;
 - coupon product ID или decoder подтверждённого legacy marker;
 - optional Apple placement;
-- eligibility-window и visual-countdown policy;
 - SwiftUI и copy.
 
 ## Рекомендуемый catalog contract
@@ -58,22 +62,33 @@ Legacy backend может обозначать coupon полем вроде `wid
 ## Gate и результат покупки
 
 ```text
-campaign разрешён
+special_offer == true
 AND coupon exact-match найден
 AND verified-fresh ru_pay = true
 AND (Storefront RU OR регион iPhone RU)
 → показать СБП/карту
 ```
 
+`special_offer = true` всегда показывает сам экран Special Offer. Любое другое
+значение не показывает его. Остальные строки не являются условиями показа
+экрана: они определяют только наличие RU-способов оплаты и точного продукта.
+
 Apple-вариант может остаться доступным независимо от RU gate. Возврат из
 внешней формы создаёт только pending: Premium открывается после нового
 authoritative entitlement/backend result `active`.
 
-## Таймеры
+## Таймер
 
-Модуль не назначает RU Special Offer общий таймер. Persistent eligibility и
-визуальный countdown — разные app-owned policy. Их значения передаёт владелец
-задачи текущего приложения.
+Таймер — локальная визуализация с одним жёстким циклом:
+
+```text
+24:00:00 → 00:00:00 → 24:00:00 → …
+```
+
+Цикл запускается при первом показе и продолжается между следующими открытиями,
+поэтому через час остаётся примерно `23:00:00`. Он не запрашивает серверное
+время, не является сроком действия и не меняет решение Remote Config. На нуле
+экран и покупка остаются доступны, а отсчёт сразу начинает новый круг.
 
 Полная инструкция разработчику и prompt для агента:
 [публичная документация](https://broadapps-ios-docs.nkhsnv.chatgpt.site/docs/ru-special-offer).
