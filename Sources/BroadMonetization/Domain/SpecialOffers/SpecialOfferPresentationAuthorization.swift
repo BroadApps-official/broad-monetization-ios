@@ -14,15 +14,26 @@ public struct SpecialOfferPresentationAuthorization: Equatable, Sendable {
     init?(
         paywallPresentationID: PaywallPresentationID,
         specialOffer: SpecialOfferRemoteConfiguration?,
-        provenance: PaywallRemoteConfigurationProvenance
+        provenance: PaywallRemoteConfigurationProvenance,
+        window: SpecialOfferWindow? = nil,
+        trustedTime: SpecialOfferTrustedTime? = nil
     ) {
+        // Absence means the campaign is on: only an explicit `false` from the
+        // provider payload stops the offer.
         guard provenance.authorizesSpecialOfferPresentation,
-              specialOffer?.isEnabled == true
+              specialOffer?.isEnabled != false
         else {
             return nil
         }
 
         self.paywallPresentationID = paywallPresentationID
-        countdown = SpecialOfferCountdownAuthorization()
+        if let window, let trustedTime {
+            countdown = SpecialOfferCountdownAuthorization(
+                window: window,
+                trustedTime: trustedTime
+            )
+        } else {
+            countdown = SpecialOfferCountdownAuthorization()
+        }
     }
 }

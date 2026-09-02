@@ -25,9 +25,24 @@
   подтверждает тот же боевой entitlement-путь. Это прод-идентичный debug-путь,
   не bypass. В Release не компилируется. Заменяет самодельный local-purchase
   repository, который debug-сборки писали сами.
+- Timed Special Offer: `ResolveSpecialOfferUseCase.init(loadPaywallUseCase:
+  stateRepository:presentationLifecycle:clock:)` теперь **активирует кадэнс**.
+  Резолвер читает доверенное серверное время из `SpecialOfferClock`, ведёт окно
+  через `SpecialOfferStateRepositoryProtocol` и отдаёт `.active(SpecialOfferWindow)`
+  с реальным countdown (`SpecialOfferCountdownAuthorization(window:trustedTime:)`,
+  `isExpired`), либо `.cooldown/.untrustedTime`. Правило «сутки через сутки»,
+  `defaultWindowDuration`/`defaultCooldownDuration` (24ч). Preferred-init остаётся
+  untimed (старое поведение). Убирает необходимость в app-side coordinator,
+  window-store и server-clock. `SpecialOfferCountdownAuthorization.isExpired` и
+  `sleepUntilExpiration()` больше не deprecated — для timed-окна они реальны.
 
 ### Changed
 
+- **Поведение Special Offer (major):** семантика флага кампании теперь
+  absence=on — оффер активен, пока провайдер явно не прислал `special_offer=false`
+  (раньше требовался явный `true`). Резолвер также требует свой непустой пейвол,
+  разрешённый именно этим placement (fallback/подменённый main отклоняется), —
+  чтобы absence=on не «изобретал» скидку на общем пейволе.
 - верх README теперь ведёт в актуальную cross-module карту создания
   приложения, а monetization-детали остаются рядом с owner-кодом;
 - README восстановил актуальные operational guides из последней полной

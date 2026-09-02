@@ -286,7 +286,6 @@
 | Enumeration | `enum Unit` |
 | Enumeration | `enum VerifiedApplePurchaseReason` |
 | Initializer | `convenience init(entitlementEngine: EntitlementEngine, services: BroadMonetizationServices? = nil)` |
-| Initializer | `convenience init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, stateRepository _: any SpecialOfferStateRepositoryProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol, clock _: SpecialOfferClock = .untrusted)` |
 | Initializer | `init()` |
 | Initializer | `init(acceptsOfferAndPersonalDataProcessing: Bool, acceptsRecurringCharge: Bool, receiptEmail: String? = nil)` |
 | Initializer | `init(activate: any ActivateMonetizationUseCaseProtocol, loadPaywall: any LoadPaywallUseCaseProtocol, selectProduct: any SelectProductUseCaseProtocol, purchaseProduct: any PurchaseSelectedProductUseCaseProtocol, restorePurchases: any RestorePurchasesUseCaseProtocol, analytics: any MonetizationAnalyticsProtocol, paywallPresentationLifecycle: any PaywallPresentationLifecycleProtocol, checkoutProduct: (any CheckoutSelectedProductUseCaseProtocol)? = nil, operationGate: MonetizationOperationGate? = nil, pendingApplePurchase: PendingApplePurchaseCoordinator? = nil)` |
@@ -358,6 +357,7 @@
 | Initializer | `init(keys: RemoteConfigKeyRegistry = .broadApps)` |
 | Initializer | `init(kind: PendingOperationBlockerKey.Kind, applicationIdentifier: String)` |
 | Initializer | `init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol)` |
+| Initializer | `init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, stateRepository: any SpecialOfferStateRepositoryProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol, clock: SpecialOfferClock = .untrusted)` |
 | Initializer | `init(main: AdaptyPlacementID, mappings: [PlacementID : AdaptyPlacementID] = [:])` |
 | Initializer | `init(mappingPolicy: any RUCatalogProductMappingPolicyProtocol = ExactOnlyRUCatalogProductMappingPolicy())` |
 | Initializer | `init(mappings: [ProductID : RUCatalogProductID])` |
@@ -412,7 +412,7 @@
 | Initializer | `init(source: EntitlementSource, subject: EntitlementSubject, freshnessPolicy: EntitlementFreshnessPolicy, repository: any EntitlementSourceRepositoryProtocol)` |
 | Initializer | `init(stalePaywallLoad: AppError, purchaseInProgress: AppError, restoreVerificationUnavailable: AppError)` |
 | Initializer | `init(startedAt: Date, expiresAt: Date)` |
-| Initializer | `init(state: SpecialOfferState, paywall: PaywallPayload?, trustedTime _: SpecialOfferTrustedTime? = nil)` |
+| Initializer | `init(state: SpecialOfferState, paywall: PaywallPayload?, trustedTime: SpecialOfferTrustedTime? = nil)` |
 | Initializer | `init(store: any KeyValueStoreProtocol)` |
 | Initializer | `init(store: any PendingApplePurchaseStoreProtocol, refreshEntitlement: any EntitlementRepositoryProtocol, transactionRecovery: any PendingAppleTransactionRecoveryProtocol, analytics: any MonetizationAnalyticsProtocol, operationGate: MonetizationOperationGate, maximumClockSkew: TimeInterval = 0)` |
 | Initializer | `init(storeKitClient: any StoreKitEntitlementsClientProtocol = StoreKitCurrentEntitlementsClient(), clock: CacheClock = .system)` |
@@ -1156,8 +1156,10 @@
 | Type Property | `static let ctr: PlacementID` |
 | Type Property | `static let currentVersion: Int` |
 | Type Property | `static let cycleDuration: TimeInterval` |
+| Type Property | `static let defaultCooldownDuration: TimeInterval` |
 | Type Property | `static let defaultMaximumRetention: TimeInterval` |
 | Type Property | `static let defaultSchemaIdentifier: String` |
+| Type Property | `static let defaultWindowDuration: TimeInterval` |
 | Type Property | `static let discount: PlacementID` |
 | Type Property | `static let empty: RemotePaywallConfiguration` |
 | Type Property | `static let feature: PlacementID` |

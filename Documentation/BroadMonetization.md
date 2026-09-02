@@ -38,11 +38,22 @@ let rows = presenter.presentations(for: payload.products)
 
 ## Special Offer
 
-`special_offer = true` читается из фактически загруженного payload только после
-получения полного `PaywallPayload`. Duration/cooldown — legacy metadata, а
-24-часовой countdown — recurring visual timer, не eligibility boundary.
-Расписание, trusted clock и динамическая длительность не входят в текущий
-contract.
+Кампания читается из фактически загруженного `PaywallPayload`. Семантика флага —
+absence=on: оффер активен, пока провайдер явно не прислал `special_offer=false`.
+Резолвер требует свой непустой пейвол, разрешённый именно этим placement
+(fallback/подменённый main отклоняется).
+
+Два режима `ResolveSpecialOfferUseCase`:
+
+- **Untimed** (preferred init) — оффер показывается, пока грузится разрешённый
+  собственный пейвол; окно/часы не консультируются, countdown визуально зациклен.
+- **Timed** (init с `stateRepository:` + `clock:`) — включает кадэнс «сутки через
+  сутки». Резолвер берёт доверенное серверное время из `SpecialOfferClock`, ведёт
+  окно через `SpecialOfferStateRepositoryProtocol` и отдаёт `.active(SpecialOfferWindow)`
+  (показ на каждом закрытии в течение окна) с реальным countdown, затем
+  `.cooldown(until:)`; без доверенного времени — `.untrustedTime` (fail-closed).
+  Длительности берутся из конфигурации или дефолтов 24ч
+  (`defaultWindowDuration`/`defaultCooldownDuration`).
 
 ## Debug: локальная покупка
 
