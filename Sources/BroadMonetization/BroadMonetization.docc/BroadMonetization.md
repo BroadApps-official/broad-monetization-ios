@@ -18,6 +18,17 @@ Provider-neutral monetization contracts and production adapters for BroadApps iP
 - ``SpecialOfferPresentationAuthorization``
 - ``SpecialOfferCountdownAuthorization``
 
+### Special Offer campaign
+
+- ``ResolveSpecialOfferCampaignUseCase``
+- ``SpecialOfferCampaignConfiguration``
+- ``SpecialOfferCampaign``
+- ``SpecialOfferCampaignOutcome``
+- ``SpecialOfferCadence``
+- ``SpecialOfferCampaignCoordinator``
+- ``SpecialOfferCampaignAnalyticsRelay``
+- ``PersistedSpecialOfferWindowStore``
+
 ### Entitlements and checkout
 
 - ``EntitlementEngine``
