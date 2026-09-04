@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 1.1.0" src="https://img.shields.io/badge/release-1.1.0-10B981">
+  <img alt="Release 1.2.0" src="https://img.shields.io/badge/release-1.2.0-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -52,7 +52,7 @@ Offer, RU Billing и safe analytics.
 
 | Product | Platform | BroadApps dependency | External dependencies |
 |---|---|---|---|
-| `BroadMonetization` | iOS 17+, iPhone | compatible `BroadCore` from `1.0.0` | Adapty `3.17.3`, Swinject `2.10.0` |
+| `BroadMonetization` | iOS 17+, iPhone | `BroadCore` from `1.2.0` | Adapty `3.17.3`, Swinject `2.10.0` |
 
 Host app подключает этот repository только по надобности. Обязательного
 umbrella package нет. Если app напрямую импортирует `BroadCore`, его product
@@ -64,7 +64,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "1.1.0"
+        from: "1.2.0"
     )
 ]
 ```
