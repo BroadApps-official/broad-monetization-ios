@@ -2,7 +2,7 @@ import BroadCore
 import Foundation
 
 /// Stores the current offer as a single timestamp — the server time at which it
-/// began — through ``KeyValueStoreProtocol``.
+/// began — through `KeyValueStoreProtocol`.
 ///
 /// One value is enough, because ``SpecialOfferCadence`` derives both boundaries
 /// from it. This type adds only the read and the write: a window that starts is

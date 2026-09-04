@@ -17,7 +17,7 @@ import Foundation
 ///
 /// How often an offer may be shown is the platform's rule here, not the host's:
 /// a day of offer, then a quiet day, measured on server time
-/// (``ServerTimeProviderProtocol``) so the cadence cannot be moved with the
+/// (`ServerTimeProviderProtocol`) so the cadence cannot be moved with the
 /// device clock. An active subscription is refused before any paywall, cache or
 /// network work happens, so a paying user never even asks for a discount.
 public actor ResolveSpecialOfferCampaignUseCase: SpecialOfferCampaignResolving {
