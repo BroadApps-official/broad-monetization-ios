@@ -105,9 +105,11 @@ xcodebuild \
     -derivedDataPath "$derived_data" \
     CODE_SIGNING_ALLOWED=NO \
     docbuild 2>&1 | tee "$docc_log"
+# Xcode can repeat third-party DocC diagnostics without their checkout prefix.
+# Fail only for warnings emitted by source files owned by this module.
 docc_warnings="$(
     rg -- ': warning:' "$docc_log" \
-        | rg -v -- 'SourcePackages/checkouts|Adapty|Swinject|BroadCore' \
+        | rg -- '(^|/)Sources/BroadMonetization/' \
         || true
 )"
 if [[ -n "$docc_warnings" ]]; then
