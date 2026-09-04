@@ -9,7 +9,7 @@ public struct RemoteConfigKeyRegistry: Sendable {
         hardPaywall: ["hardPaywall", "hard_paywall", "isHard", "is_hard", "hard"],
         closeDelay: ["closeDelay", "close_delay", "close_delay_seconds"],
         uiVariant: ["ui_variant", "uiVariant"],
-        specialOfferGate: ["specialOffer", "special_offer", "specialoffer", "coupon", "cupon", "kupon"],
+        specialOfferGate: ["special_offer"],
         specialOfferDurationHours: [
             "specialOfferDurationHours",
             "special_offer_duration_hours",

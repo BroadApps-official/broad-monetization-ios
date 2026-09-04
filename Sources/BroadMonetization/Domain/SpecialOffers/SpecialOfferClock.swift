@@ -1,7 +1,8 @@
 import Foundation
 
-/// Compatibility value retained for hosts compiled against the former timed
-/// Special Offer API. The standard resolver and visual countdown ignore it.
+/// A trusted wall-clock value paired with the monotonic instant at which the
+/// host observed it. The pair prevents network and persistence work from
+/// extending an already running offer window.
 public struct SpecialOfferTrustedTime: Equatable, Sendable {
     public let date: Date
     let observedAt: ContinuousClock.Instant
@@ -15,12 +16,12 @@ public struct SpecialOfferTrustedTime: Equatable, Sendable {
     }
 }
 
-/// Compatibility reading retained for the former timed Special Offer API.
+/// A clock reading that can either authorize the timed contract or fail closed.
 public enum SpecialOfferClockReading: Equatable, Sendable {
     case synchronized(SpecialOfferTrustedTime)
     case untrusted
 
-    /// Wraps a finite legacy date. This value does not authorize presentation.
+    /// Captures a finite server-synchronized date and its monotonic anchor.
     public static func trusted(_ date: Date) -> SpecialOfferClockReading {
         guard date.timeIntervalSinceReferenceDate.isFinite else {
             return .untrusted
@@ -34,9 +35,11 @@ public enum SpecialOfferClockReading: Equatable, Sendable {
     }
 }
 
-/// Compatibility boundary retained for the former timed Special Offer API.
-/// The standard resolver ignores this clock: only `special_offer = true` from
-/// the current provider payload authorizes presentation.
+/// Host boundary for server-synchronized Special Offer time.
+///
+/// The standard resolver fails closed while time is untrusted. A host normally
+/// creates this value from BroadCore's `ServerTimeProviderProtocol` after
+/// recording a backend `Date` header.
 public struct SpecialOfferClock: Sendable {
     private let readingProvider: @Sendable () async -> SpecialOfferClockReading
 

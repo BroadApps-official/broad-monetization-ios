@@ -55,6 +55,23 @@ public protocol ResolveCheckoutMethodsUseCaseProtocol: Sendable {
         for product: MonetizationProduct,
         remoteConfiguration: RemotePaywallConfiguration
     ) async -> CheckoutMethodsResolution
+
+    func callAsFunction(
+        for selection: ProductSelection,
+        remoteConfiguration: RemotePaywallConfiguration
+    ) async -> CheckoutMethodsResolution
+}
+
+public extension ResolveCheckoutMethodsUseCaseProtocol {
+    func callAsFunction(
+        for selection: ProductSelection,
+        remoteConfiguration: RemotePaywallConfiguration
+    ) async -> CheckoutMethodsResolution {
+        await callAsFunction(
+            for: selection.product,
+            remoteConfiguration: remoteConfiguration
+        )
+    }
 }
 
 protocol CreateRUCheckoutUseCaseProtocol: Sendable {
@@ -91,4 +108,21 @@ public protocol ResolveSpecialOfferUseCaseProtocol: Sendable {
     func callAsFunction(
         configuration: SpecialOfferConfiguration?
     ) async -> SpecialOfferResolution
+
+    /// Clears the persisted window after a confirmed purchase or restore.
+    @discardableResult
+    func resetCycle(
+        configuration: SpecialOfferConfiguration
+    ) async -> Bool
+}
+
+public extension ResolveSpecialOfferUseCaseProtocol {
+    /// Source-compatible default for custom resolvers. Production resolvers
+    /// should persist the reset and return `true` only after it succeeds.
+    @discardableResult
+    func resetCycle(
+        configuration _: SpecialOfferConfiguration
+    ) async -> Bool {
+        false
+    }
 }

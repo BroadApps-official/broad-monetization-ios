@@ -40,42 +40,36 @@ let rows = presenter.presentations(for: payload.products)
 
 ## Special Offer
 
-Кампания читается из фактически загруженного `PaywallPayload`. Решение всегда
-сводится к одной проверке:
+Основной paywall владеет strict boolean gate, а отдельный placement
+владеет продуктами:
 
 ```text
-special_offer == true → всегда показать Special Offer
-всё остальное         → не показывать Special Offer
+main Remote Config: special_offer == true
+        ↓
+persisted окно 24 часа / cooldown 24 часа
+        ↓
+separate Special Offer placement: все products без filter/sort/dedup
 ```
 
-Если provider разрешил configured fallback, резолвер использует
-фактически загруженный payload и читает gate из него. Host не
-добавляет другой gate.
+Fallback на main не может подменить offer placement. Countdown идёт до
+конца текущего окна, на нуле истекает и закрывает UI. Cooldown начинается
+точно от `expiresAt`. Flag off, confirmed purchase и restore сбрасывают цикл.
 
-Countdown не участвует в eligibility. Это локальный визуальный цикл
-`24:00:00 → 00:00:00 → 24:00:00`: он запускается при первом показе,
-продолжается между следующими открытиями и на нуле сразу начинает новый круг.
-Для него не нужны серверное время, дата окончания или ответ backend. Ноль не
-скрывает экран и не блокирует покупку.
+## Special Offer: compatibility API кампании
 
-## Special Offer: кампания по наличию
+`ResolveSpecialOfferCampaignUseCase` сохранён для source compatibility,
+но больше не задаёт параллельный контракт. Он тоже читает strict boolean
+`special_offer` из Remote Config основного paywall. Только exact `true`
+разрешает загрузку отдельного offer placement; `false`, отсутствие и
+неверный тип закрывают показ и сбрасывают цикл. Fallback не может
+подменить ни main, ни offer.
 
-Второй, параллельный путь. Флаговый резолвер выше не меняется — проект выбирает
-один из двух в композиции, и выше этой границы ничего не двигается.
-
-Здесь кампания — это пейвол своего плейсмента. Она есть, когда provider ответил
-на плейсмент оффера **своим** пейволом, payload — свежий ответ provider (не
-восстановленный из кэша платформы), и в нём есть что купить. Ключ `special_offer`
-в этом режиме не нужен: явный `false` остаётся kill switch и выключает кампанию
-из дашборда без релиза, а отсутствие ключа нейтрально. Это существенно: живые
-кампании в кабинете флага рядом с собой не несут.
-
-Кадэнс держит платформа: сутки оффера, потом тихие сутки
+Кадэнс фиксирован платформой: сутки оффера, потом тихие сутки
 (`SpecialOfferCadence`), и считается он по **серверному времени**
 (`ServerTimeProviderProtocol` из BroadCore). Часы передаются в резолвер
 **параметром без значения по умолчанию** — хост, забывший их отдать, не
 соберётся, а не окажется молча на часах устройства. Пока сервер не ответил,
-`timePolicy` по умолчанию отказывается показывать оффер вообще.
+оффер не показывается.
 
 Активная подписка отсекается **до** любых обращений к пейволу, кэшу и сети:
 платящему нечего продавать со скидкой. Это относится и к подписочному экрану,
@@ -140,12 +134,13 @@ authoritative entitlement source.
 
 ### Спешл оффер RU Billing
 
-Coupon-flow добавляется только после полностью работающего обычного RU Billing
-и использует тот же catalog и checkout. `RUCatalogProductKind.coupon` и
-`RUCatalogSections.coupons` сохраняют весь backend-массив. Единственный gate —
-`special_offer = true`; host также передаёт exact coupon ID и optional Apple
-placement. Локальный countdown не влияет на показ. Отдельный target, скрытый
-product ranking и второй entitlement engine не нужны.
+Backend отмечает Special Offer strict boolean полем
+`isSpecialOffer`. Обычный paywall исключает помеченную строку, а
+Special Offer требует marker и exact case-sensitive ID выбранного
+Adapty product. При отсутствующем, неоднозначном marker или
+несовпадающем ID checkout закрыт. Цена, валюта и `productId`
+берутся из этой точной backend-строки. RU Billing A/B-тесты
+платформой не поддержаны.
 
 [Полный контракт →](RUSpecialOffer.md)
 

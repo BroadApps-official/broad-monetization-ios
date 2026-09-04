@@ -1,7 +1,6 @@
 import Foundation
 
-/// Compatibility boundary for legacy duration fields. The platform resolver no
-/// longer uses these values for eligibility, expiration or its display timer.
+/// Validation boundary for persisted Special Offer durations.
 public enum SpecialOfferDurationPolicy: Sendable {
     public static let maximumDuration: TimeInterval = 10 * 365 * 24 * 60 * 60
 
@@ -12,15 +11,24 @@ public enum SpecialOfferDurationPolicy: Sendable {
 
 /// Host-owned opt-in configuration. Passing `nil` means the feature does not
 /// exist for that app and must not trigger paywall, cache or network work.
-/// `windowDuration` and `cooldownDuration` remain decodable for existing hosts,
-/// but the standard resolver intentionally ignores them.
+///
+/// The gate belongs to the ordinary paywall (`gatePlacementID`, `.main` by
+/// default), while products belong to the separate offer placement
+/// (`placementID`). The standard contract always uses a 24-hour window followed
+/// by a 24-hour cooldown. Legacy duration values remain decodable only so older
+/// host configuration does not break when it moves to the fixed contract.
 public struct SpecialOfferConfiguration: Codable, Equatable, Sendable {
+    public static let standardWindowDuration: TimeInterval = 24 * 60 * 60
+    public static let standardCooldownDuration: TimeInterval = 24 * 60 * 60
+
     public let placementID: PlacementID
+    public let gatePlacementID: PlacementID
     public let windowDuration: TimeInterval?
     public let cooldownDuration: TimeInterval?
 
     public init(
         placementID: PlacementID,
+        gatePlacementID: PlacementID = .main,
         windowDuration: TimeInterval? = nil,
         cooldownDuration: TimeInterval? = nil
     ) {
@@ -28,6 +36,7 @@ public struct SpecialOfferConfiguration: Codable, Equatable, Sendable {
         Self.validateOptionalDuration(cooldownDuration, name: "Special-offer cooldown duration")
 
         self.placementID = placementID
+        self.gatePlacementID = gatePlacementID
         self.windowDuration = windowDuration
         self.cooldownDuration = cooldownDuration
     }
@@ -35,6 +44,10 @@ public struct SpecialOfferConfiguration: Codable, Equatable, Sendable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let placementID = try container.decode(PlacementID.self, forKey: .placementID)
+        let gatePlacementID = try container.decodeIfPresent(
+            PlacementID.self,
+            forKey: .gatePlacementID
+        ) ?? .main
         let windowDuration = try container.decodeIfPresent(
             TimeInterval.self,
             forKey: .windowDuration
@@ -55,6 +68,7 @@ public struct SpecialOfferConfiguration: Codable, Equatable, Sendable {
         }
         self.init(
             placementID: placementID,
+            gatePlacementID: gatePlacementID,
             windowDuration: windowDuration,
             cooldownDuration: cooldownDuration
         )
@@ -81,8 +95,8 @@ public struct SpecialOfferConfiguration: Codable, Equatable, Sendable {
     }
 }
 
-/// Typed values parsed from a special-offer remote payload. `isEnabled` is the
-/// only campaign gate. Legacy duration values do not control presentation.
+/// Typed values parsed from the ordinary paywall's remote payload. `isEnabled`
+/// is the only remote gate. Legacy duration values do not control presentation.
 /// Every display value is optional: the platform never invents crossed prices,
 /// multipliers or period text when a project did not configure them.
 public struct SpecialOfferRemoteConfiguration: Codable, Equatable, Sendable {
@@ -245,6 +259,7 @@ public struct SpecialOfferWindow: Codable, Equatable, Sendable {
 
 public enum SpecialOfferUnavailableReason: String, Codable, Equatable, Sendable {
     case notConfigured = "not-configured"
+    case alreadyEntitled = "already-entitled"
     case disabledByRemoteConfiguration = "disabled-by-remote-configuration"
     case ineligible
     case paywallUnavailable = "paywall-unavailable"

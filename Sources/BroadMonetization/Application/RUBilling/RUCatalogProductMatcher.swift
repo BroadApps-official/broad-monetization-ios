@@ -57,7 +57,11 @@ public struct RUCatalogProductMatcher: Sendable {
         kind: RUCatalogProductKind,
         in catalog: RUCatalogPayload
     ) -> RUCatalogProduct? {
-        let candidates = catalog.products.filter { $0.kind == kind }
+        // Marked Special Offer rows never participate in an ordinary paywall.
+        // The dedicated matcher below is the only path that may select them.
+        let candidates = catalog.products.filter {
+            $0.kind == kind && !$0.isSpecialOffer
+        }
         let requestedID = product.productID.rawValue
 
         if let exact = candidates.first(where: {
@@ -93,5 +97,32 @@ public struct RUCatalogProductMatcher: Sendable {
         case .consumable, .unknown:
             nil
         }
+    }
+
+    /// Resolves a Special Offer only when the exact selected Adapty product is
+    /// backed by a catalog row explicitly marked by the backend. A normal row is
+    /// never substituted when the marker is missing.
+    public func matchSpecialOfferProduct(
+        _ product: MonetizationProduct,
+        in catalog: RUCatalogPayload
+    ) -> RUCatalogProduct? {
+        let requestedID = product.productID.rawValue
+        return catalog.products.first(where: {
+            $0.isSpecialOffer
+                && ($0.catalogProductID.rawValue == requestedID
+                    || $0.appStoreProductID?.rawValue == requestedID)
+        })
+    }
+
+    /// Returns the marked row only when the backend selected exactly one. An
+    /// absent or ambiguous marker fails closed.
+    public func uniqueSpecialOfferProduct(
+        in catalog: RUCatalogPayload
+    ) -> RUCatalogProduct? {
+        let markedProducts = catalog.products.filter(\.isSpecialOffer)
+        guard markedProducts.count == 1 else {
+            return nil
+        }
+        return markedProducts[0]
     }
 }

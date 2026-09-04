@@ -14,6 +14,7 @@ public struct RUCatalogProduct: Identifiable, Codable, Equatable, Sendable {
     public let subscriptionPeriod: SubscriptionPeriod
     public let supportedMethods: [CheckoutMethod]
     public let credits: Int?
+    public let isSpecialOffer: Bool
 
     public init(
         catalogProductID: RUCatalogProductID,
@@ -24,7 +25,8 @@ public struct RUCatalogProduct: Identifiable, Codable, Equatable, Sendable {
         subscriptionPeriod: SubscriptionPeriod,
         supportedMethods: [CheckoutMethod],
         title: String? = nil,
-        credits: Int? = nil
+        credits: Int? = nil,
+        isSpecialOffer: Bool = false
     ) {
         precondition(
             Set(supportedMethods).count == supportedMethods.count,
@@ -48,6 +50,7 @@ public struct RUCatalogProduct: Identifiable, Codable, Equatable, Sendable {
         self.subscriptionPeriod = subscriptionPeriod
         self.supportedMethods = supportedMethods
         self.credits = credits
+        self.isSpecialOffer = isSpecialOffer
     }
 
     public init(from decoder: any Decoder) throws {
@@ -87,7 +90,8 @@ public struct RUCatalogProduct: Identifiable, Codable, Equatable, Sendable {
             ),
             supportedMethods: value.supportedMethods,
             title: value.title,
-            credits: value.credits
+            credits: value.credits,
+            isSpecialOffer: value.isSpecialOffer
         )
     }
 }

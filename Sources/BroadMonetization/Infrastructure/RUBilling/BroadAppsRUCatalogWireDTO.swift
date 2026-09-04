@@ -43,6 +43,7 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
     let displayPrice: String?
     let subscriptionPeriod: BroadAppsRUPeriodDTO?
     let paymentMethods: [String]
+    let isSpecialOffer: Bool
 
     init(
         productID: String,
@@ -51,7 +52,8 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
         price: BroadAppsRUPriceDTO?,
         displayPrice: String?,
         subscriptionPeriod: BroadAppsRUPeriodDTO?,
-        paymentMethods: [String]
+        paymentMethods: [String],
+        isSpecialOffer: Bool
     ) {
         self.productID = productID
         self.kind = kind
@@ -60,6 +62,7 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
         self.displayPrice = displayPrice
         self.subscriptionPeriod = subscriptionPeriod
         self.paymentMethods = paymentMethods
+        self.isSpecialOffer = isSpecialOffer
     }
 
     func with(kind: RUCatalogProductKind) -> BroadAppsRUCatalogProductDTO {
@@ -70,7 +73,8 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
             price: price,
             displayPrice: displayPrice,
             subscriptionPeriod: subscriptionPeriod,
-            paymentMethods: paymentMethods
+            paymentMethods: paymentMethods,
+            isSpecialOffer: isSpecialOffer
         )
     }
 
@@ -82,6 +86,8 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
         case displayPrice = "display_price"
         case subscriptionPeriod = "subscription_period"
         case paymentMethods = "payment_methods"
+        case isSpecialOfferCamel = "isSpecialOffer"
+        case isSpecialOfferSnake = "is_special_offer"
     }
 
     init(from decoder: Decoder) throws {
@@ -93,6 +99,10 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
         displayPrice = try container.decodeIfPresent(String.self, forKey: .displayPrice)
         subscriptionPeriod = try container.decodeIfPresent(BroadAppsRUPeriodDTO.self, forKey: .subscriptionPeriod)
         paymentMethods = try container.decodeIfPresent([String].self, forKey: .paymentMethods) ?? []
+        isSpecialOffer = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .isSpecialOfferCamel
+        ) ?? container.decodeIfPresent(Bool.self, forKey: .isSpecialOfferSnake) ?? false
     }
 }
 

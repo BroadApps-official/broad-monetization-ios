@@ -1,52 +1,63 @@
 import Foundation
 
-/// Authorization for a visual countdown only. It is intentionally independent
-/// from campaign eligibility and repeats forever while the offer is visible:
-/// `24:00:00 → 00:00:00 → 24:00:00`.
+/// Authorization for a countdown bounded by the current 24-hour offer window.
+/// It reaches zero once, expires and never starts another visual loop.
 public struct SpecialOfferCountdownAuthorization: Equatable, Sendable {
-    public static let cycleDuration: TimeInterval = 24 * 60 * 60
+    public static let cycleDuration = SpecialOfferConfiguration.standardWindowDuration
 
-    private static let cycleFrameCount = Int(cycleDuration) + 1
-    private static let sharedStartedAt = ContinuousClock().now
+    private let initialRemainingTime: TimeInterval
+    private let anchor: ContinuousClock.Instant
 
-    private let startedAt: ContinuousClock.Instant
-
-    init(startedAt: ContinuousClock.Instant? = nil) {
-        self.startedAt = startedAt ?? Self.sharedStartedAt
+    init(
+        window: SpecialOfferWindow,
+        trustedTime: SpecialOfferTrustedTime
+    ) {
+        let windowDuration = window.expiresAt.timeIntervalSince(window.startedAt)
+        initialRemainingTime = min(
+            windowDuration,
+            max(0, window.expiresAt.timeIntervalSince(trustedTime.date))
+        )
+        anchor = trustedTime.observedAt
     }
 
     public var remainingTimeInterval: TimeInterval {
         let elapsed = Self.timeInterval(
-            from: startedAt.duration(to: ContinuousClock().now)
+            from: anchor.duration(to: ContinuousClock().now)
         )
-        return Self.remainingTimeInterval(elapsed: elapsed)
+        return Self.remainingTimeInterval(
+            initialRemainingTime: initialRemainingTime,
+            elapsed: elapsed
+        )
     }
 
-    /// Deterministic formatter input used by the runtime contract probe and UI.
-    /// The extra
-    /// frame lets the user see `00:00:00` before the next 24-hour loop.
+    /// Source-compatible deterministic helper for a full standard window.
+    /// Unlike the former visual loop, values after 24 hours remain at zero.
     public static func remainingTimeInterval(
         elapsed: TimeInterval
     ) -> TimeInterval {
-        guard elapsed.isFinite, elapsed > 0 else {
-            return cycleDuration
+        remainingTimeInterval(
+            initialRemainingTime: cycleDuration,
+            elapsed: elapsed
+        )
+    }
+
+    public static func remainingTimeInterval(
+        initialRemainingTime: TimeInterval,
+        elapsed: TimeInterval
+    ) -> TimeInterval {
+        guard initialRemainingTime.isFinite,
+              initialRemainingTime > 0,
+              elapsed.isFinite
+        else {
+            return 0
         }
-
-        let wholeSeconds = Int(elapsed.rounded(.down))
-        let cyclePosition = wholeSeconds % cycleFrameCount
-        return TimeInterval(Int(cycleDuration) - cyclePosition)
+        return max(0, initialRemainingTime - max(0, elapsed))
     }
 
-    /// Compatibility value for integrations that used to stop purchases when a
-    /// real campaign window expired. The visual countdown never expires.
-    @available(*, deprecated, message: "The Special Offer display countdown never expires")
     public var isExpired: Bool {
-        false
+        remainingTimeInterval <= 0
     }
 
-    /// Compatibility helper: waits until the visual counter reaches its next
-    /// zero frame. Reaching zero does not invalidate or hide the offer.
-    @available(*, deprecated, message: "Wait for UI refreshes; Special Offer never expires")
     public func sleepUntilExpiration() async throws {
         try await ContinuousClock().sleep(
             for: .seconds(max(remainingTimeInterval, 0))

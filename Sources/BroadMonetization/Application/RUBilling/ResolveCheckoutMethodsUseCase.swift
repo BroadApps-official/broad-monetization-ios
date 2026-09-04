@@ -32,15 +32,41 @@ public struct ResolveCheckoutMethodsUseCase: ResolveCheckoutMethodsUseCaseProtoc
         for product: MonetizationProduct,
         remoteConfiguration: RemotePaywallConfiguration
     ) async -> CheckoutMethodsResolution {
+        await resolve(
+            product: product,
+            isSpecialOffer: false,
+            remoteConfiguration: remoteConfiguration
+        )
+    }
+
+    public func callAsFunction(
+        for selection: ProductSelection,
+        remoteConfiguration: RemotePaywallConfiguration
+    ) async -> CheckoutMethodsResolution {
+        await resolve(
+            product: selection.product,
+            isSpecialOffer: selection.requestedPlacementID == .specialOffer,
+            remoteConfiguration: remoteConfiguration
+        )
+    }
+}
+
+private extension ResolveCheckoutMethodsUseCase {
+    func resolve(
+        product: MonetizationProduct,
+        isSpecialOffer: Bool,
+        remoteConfiguration: RemotePaywallConfiguration
+    ) async -> CheckoutMethodsResolution {
         guard product.isEligibleForGenericPurchase else {
             return resolution(
                 methods: [],
                 storefront: nil,
-                reason: .productNotEligible
+                reason: .productNotEligible,
+                ruProduct: nil
             )
         }
 
-        var methods: [CheckoutMethod] = product.catalogSource == .ruBackend ? [] : [.apple]
+        let methods: [CheckoutMethod] = product.catalogSource == .ruBackend ? [] : [.apple]
 
         let storefront: Storefront? = switch await storefrontRepository.currentStorefront() {
         case let .available(value): value
@@ -55,27 +81,48 @@ public struct ResolveCheckoutMethodsUseCase: ResolveCheckoutMethodsUseCaseProtoc
             return resolution(
                 methods: methods,
                 storefront: storefront,
-                reason: gateReason
-            )
-        }
-        guard case let .loaded(catalog) = await catalogRepository.loadCatalog() else {
-            return resolution(
-                methods: methods,
-                storefront: storefront,
-                reason: .catalogUnavailable
-            )
-        }
-        guard let matched = productMatcher.matchPremiumEntitlementProduct(
-            product,
-            in: catalog
-        ) else {
-            return resolution(
-                methods: methods,
-                storefront: storefront,
-                reason: .productNotMatched
+                reason: gateReason,
+                ruProduct: nil
             )
         }
 
+        return await resolveCatalog(
+            product: product,
+            isSpecialOffer: isSpecialOffer,
+            methods: methods,
+            storefront: storefront,
+            gateReason: gateReason
+        )
+    }
+
+    func resolveCatalog(
+        product: MonetizationProduct,
+        isSpecialOffer: Bool,
+        methods initialMethods: [CheckoutMethod],
+        storefront: Storefront?,
+        gateReason: RUBillingAvailabilityReason
+    ) async -> CheckoutMethodsResolution {
+        guard case let .loaded(catalog) = await catalogRepository.loadCatalog() else {
+            return resolution(
+                methods: initialMethods,
+                storefront: storefront,
+                reason: .catalogUnavailable,
+                ruProduct: nil
+            )
+        }
+        let matched = isSpecialOffer
+            ? productMatcher.matchSpecialOfferProduct(product, in: catalog)
+            : productMatcher.matchPremiumEntitlementProduct(product, in: catalog)
+        guard let matched else {
+            return resolution(
+                methods: initialMethods,
+                storefront: storefront,
+                reason: .productNotMatched,
+                ruProduct: nil
+            )
+        }
+
+        var methods = initialMethods
         for method in matched.supportedMethods where !methods.contains(method) {
             methods.append(method)
         }
@@ -83,16 +130,16 @@ public struct ResolveCheckoutMethodsUseCase: ResolveCheckoutMethodsUseCaseProtoc
         return resolution(
             methods: methods,
             storefront: storefront,
-            reason: hasRUCheckoutMethod ? gateReason : .methodsUnavailable
+            reason: hasRUCheckoutMethod ? gateReason : .methodsUnavailable,
+            ruProduct: hasRUCheckoutMethod ? matched : nil
         )
     }
-}
 
-private extension ResolveCheckoutMethodsUseCase {
     func resolution(
         methods: [CheckoutMethod],
         storefront: Storefront?,
-        reason: RUBillingAvailabilityReason
+        reason: RUBillingAvailabilityReason,
+        ruProduct: RUCatalogProduct?
     ) -> CheckoutMethodsResolution {
         logger.log(
             .ruBillingAvailabilityEvaluated(
@@ -103,7 +150,8 @@ private extension ResolveCheckoutMethodsUseCase {
         return CheckoutMethodsResolution(
             methods: methods,
             storefront: storefront,
-            ruBillingAvailability: reason
+            ruBillingAvailability: reason,
+            ruProduct: ruProduct
         )
     }
 }

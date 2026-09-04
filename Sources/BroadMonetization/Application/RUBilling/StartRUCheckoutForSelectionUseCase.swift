@@ -69,11 +69,13 @@ actor StartSelectedRUCheckoutUseCase:
         isStarting = true
         defer { isStarting = false }
 
-        guard case let .loaded(catalog) = await catalogRepository.loadCatalog(),
-              let matchedProduct = matcher.matchPremiumEntitlementProduct(
-                  selection.product,
-                  in: catalog
-              ),
+        guard case let .loaded(catalog) = await catalogRepository.loadCatalog() else {
+            return .unavailable(RUBillingSafeErrors.catalogUnavailable)
+        }
+        let matchedProduct = selection.requestedPlacementID == .specialOffer
+            ? matcher.matchSpecialOfferProduct(selection.product, in: catalog)
+            : matcher.matchPremiumEntitlementProduct(selection.product, in: catalog)
+        guard let matchedProduct,
               matchedProduct.supportedMethods.contains(checkoutMethod)
         else {
             return .unavailable(RUBillingSafeErrors.catalogUnavailable)

@@ -2,29 +2,38 @@ import Foundation
 
 public struct SpecialOfferPresentationAuthorization: Equatable, Sendable {
     public let paywallPresentationID: PaywallPresentationID
-    public let countdown: SpecialOfferCountdownAuthorization?
-
-    /// Compatibility property. The display countdown is not an expiration
-    /// boundary, so a platform Special Offer has no runtime expiry date.
-    @available(*, deprecated, message: "Special Offer no longer has a runtime expiration date")
-    public var expiresAt: Date? {
-        nil
-    }
+    public let gatePaywallPresentationID: PaywallPresentationID
+    public let gateRemoteConfiguration: RemotePaywallConfiguration
+    public let remoteConfiguration: SpecialOfferRemoteConfiguration
+    public let countdown: SpecialOfferCountdownAuthorization
+    public let expiresAt: Date
 
     init?(
         paywallPresentationID: PaywallPresentationID,
-        specialOffer: SpecialOfferRemoteConfiguration?,
-        provenance: PaywallRemoteConfigurationProvenance
+        gatePaywallPresentationID: PaywallPresentationID,
+        gateRemoteConfiguration: RemotePaywallConfiguration,
+        provenance: PaywallRemoteConfigurationProvenance,
+        window: SpecialOfferWindow,
+        trustedTime: SpecialOfferTrustedTime
     ) {
-        // Presentation requires an explicit true from the current provider
-        // payload. Absence and false both fail closed.
+        // The gate is intentionally supplied by the ordinary paywall. The
+        // presentation ID belongs to the separate offer payload and cannot be
+        // substituted with that ordinary paywall.
         guard provenance.authorizesSpecialOfferPresentation,
-              specialOffer?.isEnabled == true
+              let specialOffer = gateRemoteConfiguration.specialOffer,
+              specialOffer.isEnabled
         else {
             return nil
         }
 
         self.paywallPresentationID = paywallPresentationID
-        countdown = SpecialOfferCountdownAuthorization()
+        self.gatePaywallPresentationID = gatePaywallPresentationID
+        self.gateRemoteConfiguration = gateRemoteConfiguration
+        remoteConfiguration = specialOffer
+        countdown = SpecialOfferCountdownAuthorization(
+            window: window,
+            trustedTime: trustedTime
+        )
+        expiresAt = window.expiresAt
     }
 }

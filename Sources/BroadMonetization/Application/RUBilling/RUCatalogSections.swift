@@ -34,3 +34,23 @@ public struct ResolveRUCatalogProductUseCase: Sendable {
         return matcher.match(product: product, kind: kind, in: catalog)
     }
 }
+
+public struct ResolveRUSpecialOfferProductUseCase: Sendable {
+    private let catalogRepository: any RUCatalogRepositoryProtocol
+    private let matcher: RUCatalogProductMatcher
+
+    public init(
+        catalogRepository: any RUCatalogRepositoryProtocol,
+        matcher: RUCatalogProductMatcher = RUCatalogProductMatcher()
+    ) {
+        self.catalogRepository = catalogRepository
+        self.matcher = matcher
+    }
+
+    public func callAsFunction() async -> RUCatalogProduct? {
+        guard case let .loaded(catalog) = await catalogRepository.loadCatalog() else {
+            return nil
+        }
+        return matcher.uniqueSpecialOfferProduct(in: catalog)
+    }
+}

@@ -2,6 +2,36 @@
 
 Все заметные изменения BroadMonetization фиксируются здесь с объяснением: что изменилось и почему.
 
+## 1.3.0
+
+### Changed
+
+- Standard Special Offer приведён к контракту Марии: strict boolean gate
+  читается из основного paywall, а все products загружаются из
+  отдельного offer placement без fallback-подмены.
+- Восстановлен фиксированный цикл 24 часа показа / 24 часа cooldown.
+  Countdown истекает на нуле; flag off, confirmed purchase и restore
+  сбрасывают persisted cycle.
+- RU catalog сохраняет strict `isSpecialOffer`; обычный paywall исключает
+  помеченные строки, а Special Offer требует marker и exact ID. RU price,
+  currency и `productId` сохраняются до checkout.
+- Campaign-shaped compatibility API больше не обходит контракт:
+  он тоже читает gate из main, требует доверенное время и
+  использует фиксированный цикл 24/24.
+- Campaign-shaped compatibility API больше не обходит контракт:
+  он тоже читает gate из main, требует доверенное время и
+  использует фиксированный цикл 24/24.
+- Default aliases `coupon`/`kupon` и string/number coercion для Special Offer gate
+  удалены: default key — только `special_offer`, custom exact key по-прежнему
+  передаётся через `RemoteConfigKeyRegistry`.
+
+### Added
+
+- `SpecialOfferCoordinator` и `SpecialOfferAnalyticsRelay` для перехода после
+  закрытия обычного paywall и автоматического сброса цикла по
+  confirmed purchase/restore.
+- `ResolveRUSpecialOfferProductUseCase` и marker-aware checkout resolution.
+
 ## 1.2.0
 
 ### Added

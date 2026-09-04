@@ -1,19 +1,9 @@
 import BroadCore
 import Foundation
 
-/// Decides whether a discounted campaign may be shown right now, from the fact
-/// that a campaign exists rather than from a flag beside it.
-///
-/// The campaign is the paywall of its own placement: when the provider answers
-/// that placement with a paywall of its own and something to sell in it, there is
-/// a campaign. A substituted, cache-restored, empty or explicitly disabled answer
-/// is not. Nothing has to be added to a dashboard beyond the campaign itself,
-/// which is what the flag-driven ``ResolveSpecialOfferUseCase`` requires and what
-/// live campaigns in the field turned out not to carry.
-///
-/// This is a second, parallel path. ``ResolveSpecialOfferUseCase`` is unchanged
-/// and still the right choice for a project whose dashboard does set
-/// `special_offer`; a composition picks one of the two and nothing above it moves.
+/// Compatibility adapter for the campaign-shaped API. It follows the same
+/// contract as ``ResolveSpecialOfferUseCase``: the ordinary paywall owns the
+/// strict boolean gate and the separate campaign placement owns the products.
 ///
 /// How often an offer may be shown is the platform's rule here, not the host's:
 /// a day of offer, then a quiet day, measured on server time
@@ -64,6 +54,25 @@ public actor ResolveSpecialOfferCampaignUseCase: SpecialOfferCampaignResolving {
             return .unavailable(.serverTimeUnavailable)
         }
 
+        let gateOutcome = await loadPaywallUseCase(
+            PaywallLoadRequest(placementID: configuration.gatePlacementID)
+        )
+        guard case let .loaded(gatePaywall) = gateOutcome else {
+            return .unavailable(.placementUnavailable)
+        }
+        guard !gatePaywall.origin.usedFallback,
+              gatePaywall.origin.requestedPlacementID == configuration.gatePlacementID,
+              gatePaywall.origin.resolvedPlacementID == configuration.gatePlacementID,
+              gatePaywall.remoteConfigurationProvenance.authorizesSpecialOfferPresentation
+        else {
+            return await refuse(.substitutedPaywall, endingPresentationOf: gatePaywall)
+        }
+        guard gatePaywall.remoteConfiguration.specialOffer?.isEnabled == true else {
+            await windowRepository.clear()
+            return await refuse(.disabledRemotely, endingPresentationOf: gatePaywall)
+        }
+        await end(gatePaywall)
+
         var lastRefusal = SpecialOfferCampaignRefusal.placementUnavailable
         for placementID in configuration.placementIDs {
             switch await resolve(placementID: placementID, now: now) {
@@ -89,12 +98,7 @@ public actor ResolveSpecialOfferCampaignUseCase: SpecialOfferCampaignResolving {
 
 private extension ResolveSpecialOfferCampaignUseCase {
     func authorizedTime(from reading: ServerTimeReading) -> Date? {
-        switch configuration.timePolicy {
-        case .requireServerTime:
-            reading.isSynchronized ? reading.date : nil
-        case .allowDeviceClock:
-            reading.date
-        }
+        reading.isSynchronized ? reading.date : nil
     }
 
     func resolve(
@@ -124,15 +128,6 @@ private extension ResolveSpecialOfferCampaignUseCase {
             return await refuse(.stalePayload, endingPresentationOf: paywall)
         }
 
-        let remote = paywall.remoteConfiguration.specialOffer
-
-        // The dashboard kill switch, for a dashboard that uses one: an explicit
-        // `false` stops the campaign without a release. Absence means nothing
-        // either way — this path is gated by the campaign, not by a flag.
-        guard remote?.isEnabled != false else {
-            return await refuse(.disabledRemotely, endingPresentationOf: paywall)
-        }
-
         // An empty campaign must not spend the day: the window would open on a
         // screen with nothing on it, and the quiet day that follows would hide
         // the real offer once the placement is filled in.
@@ -142,8 +137,8 @@ private extension ResolveSpecialOfferCampaignUseCase {
 
         let decision = await windowRepository.windowForPresentation(
             now: now,
-            windowDuration: remote?.windowDuration ?? configuration.windowDuration,
-            cooldownDuration: remote?.cooldownDuration ?? configuration.cooldownDuration
+            windowDuration: SpecialOfferCampaignConfiguration.defaultWindowDuration,
+            cooldownDuration: SpecialOfferCampaignConfiguration.defaultCooldownDuration
         )
         switch decision {
         case let .open(window):

@@ -17,6 +17,10 @@ Provider-neutral monetization contracts and production adapters for BroadApps iP
 - ``SpecialOfferResolution``
 - ``SpecialOfferPresentationAuthorization``
 - ``SpecialOfferCountdownAuthorization``
+- ``SpecialOfferCoordinator``
+- ``SpecialOfferAnalyticsRelay``
+- ``SpecialOfferCoordinator``
+- ``SpecialOfferAnalyticsRelay``
 
 ### Special Offer campaign
 
@@ -44,6 +48,8 @@ Provider-neutral monetization contracts and production adapters for BroadApps iP
 - ``RUCatalogProduct``
 - ``RUCatalogSections``
 - ``ResolveRUCatalogProductUseCase``
+- ``ResolveRUSpecialOfferProductUseCase``
+- ``ResolveRUSpecialOfferProductUseCase``
 - ``FlatRUCatalogResponseDecoder``
 - ``RUBillingWireAdapters``
 

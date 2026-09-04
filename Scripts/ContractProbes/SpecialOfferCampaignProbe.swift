@@ -131,6 +131,7 @@ enum SpecialOfferCampaignProbe {
         let configuration = SpecialOfferCampaignConfiguration(placementID: .specialOffer)
         guard configuration.windowDuration == day,
               configuration.cooldownDuration == day,
+              configuration.gatePlacementID == .main,
               configuration.timePolicy == .requireServerTime
         else {
             fatalError(

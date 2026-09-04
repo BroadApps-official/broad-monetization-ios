@@ -10,17 +10,18 @@ public enum SpecialOfferCampaignTimePolicy: String, Codable, Equatable, Sendable
     /// No campaign until a server date has been recorded. The default.
     case requireServerTime = "require-server-time"
 
-    /// Run on the device clock while server time is missing. A deliberate choice
-    /// a project has to write down; it accepts that the window is movable.
+    /// Retained for source compatibility. Campaign resolution still fails
+    /// closed until server time is synchronized.
+    @available(*, deprecated, message: "Special Offer always requires trusted server time")
     case allowDeviceClock = "allow-device-clock"
 }
 
 /// Host-owned configuration of the campaign track.
 ///
-/// Placements are tried in order, so a dashboard that carries the same campaign
-/// under two names (`special_offer` and a plain `offer`, say) needs no extra host
-/// code. Durations are the fallback for a dashboard that says nothing: a campaign
-/// payload that carries its own duration or cooldown overrides them.
+/// The main placement owns the strict boolean gate. Offer placements are tried
+/// in order and cannot be replaced by provider fallback. Duration and time-policy
+/// arguments remain source-compatible, but the resolver enforces fixed 24/24
+/// cadence and trusted server time.
 public struct SpecialOfferCampaignConfiguration: Equatable, Sendable {
     /// One day of offer, then one quiet day. The cadence every BroadApps project
     /// has shipped so far, kept as the default so nobody has to restate it.
@@ -28,12 +29,14 @@ public struct SpecialOfferCampaignConfiguration: Equatable, Sendable {
     public static let defaultCooldownDuration: TimeInterval = 24 * 60 * 60
 
     public let placementIDs: [PlacementID]
+    public let gatePlacementID: PlacementID
     public let windowDuration: TimeInterval
     public let cooldownDuration: TimeInterval
     public let timePolicy: SpecialOfferCampaignTimePolicy
 
     public init(
         placementIDs: [PlacementID],
+        gatePlacementID: PlacementID = .main,
         windowDuration: TimeInterval = Self.defaultWindowDuration,
         cooldownDuration: TimeInterval = Self.defaultCooldownDuration,
         timePolicy: SpecialOfferCampaignTimePolicy = .requireServerTime
@@ -56,19 +59,22 @@ public struct SpecialOfferCampaignConfiguration: Equatable, Sendable {
         )
 
         self.placementIDs = placementIDs
-        self.windowDuration = windowDuration
-        self.cooldownDuration = cooldownDuration
-        self.timePolicy = timePolicy
+        self.gatePlacementID = gatePlacementID
+        self.windowDuration = Self.defaultWindowDuration
+        self.cooldownDuration = Self.defaultCooldownDuration
+        self.timePolicy = .requireServerTime
     }
 
     public init(
         placementID: PlacementID,
+        gatePlacementID: PlacementID = .main,
         windowDuration: TimeInterval = Self.defaultWindowDuration,
         cooldownDuration: TimeInterval = Self.defaultCooldownDuration,
         timePolicy: SpecialOfferCampaignTimePolicy = .requireServerTime
     ) {
         self.init(
             placementIDs: [placementID],
+            gatePlacementID: gatePlacementID,
             windowDuration: windowDuration,
             cooldownDuration: cooldownDuration,
             timePolicy: timePolicy

@@ -223,8 +223,10 @@
 | Class | `actor ResolveSpecialOfferCampaignUseCase` |
 | Class | `actor ResolveSpecialOfferUseCase` |
 | Class | `actor RestorePurchasesUseCase` |
+| Class | `actor SpecialOfferAnalyticsRelay` |
 | Class | `actor SpecialOfferCampaignAnalyticsRelay` |
 | Class | `actor SpecialOfferCampaignCoordinator` |
+| Class | `actor SpecialOfferCoordinator` |
 | Class | `actor SubscriptionPurchaseManager` |
 | Class | `actor TokenPurchaseManager` |
 | Class | `actor VersionedEntitlementCache` |
@@ -312,7 +314,6 @@
 | Enumeration | `enum Unit` |
 | Enumeration | `enum VerifiedApplePurchaseReason` |
 | Initializer | `convenience init(entitlementEngine: EntitlementEngine, services: BroadMonetizationServices? = nil)` |
-| Initializer | `convenience init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, stateRepository: any SpecialOfferStateRepositoryProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol, clock: SpecialOfferClock = .untrusted)` |
 | Initializer | `init()` |
 | Initializer | `init(acceptsOfferAndPersonalDataProcessing: Bool, acceptsRecurringCharge: Bool, receiptEmail: String? = nil)` |
 | Initializer | `init(activate: any ActivateMonetizationUseCaseProtocol, loadPaywall: any LoadPaywallUseCaseProtocol, selectProduct: any SelectProductUseCaseProtocol, purchaseProduct: any PurchaseSelectedProductUseCaseProtocol, restorePurchases: any RestorePurchasesUseCaseProtocol, analytics: any MonetizationAnalyticsProtocol, paywallPresentationLifecycle: any PaywallPresentationLifecycleProtocol, checkoutProduct: (any CheckoutSelectedProductUseCaseProtocol)? = nil, operationGate: MonetizationOperationGate? = nil, pendingApplePurchase: PendingApplePurchaseCoordinator? = nil)` |
@@ -341,7 +342,7 @@
 | Initializer | `init(catalog: RUCatalogPayload)` |
 | Initializer | `init(catalog: RUCatalogWireAdapters, checkout: RUCheckoutWireAdapters, paymentStatus: RUPaymentStatusWireAdapters, cancellation: RUCancellationWireAdapters, entitlement: RUEntitlementWireAdapters)` |
 | Initializer | `init(catalog: TimeInterval = 15, checkout: TimeInterval = 15, paymentStatus: TimeInterval = 10, entitlementStatus: TimeInterval = 10, cancellation: TimeInterval = 15)` |
-| Initializer | `init(catalogProductID: RUCatalogProductID, kind: RUCatalogProductKind, appStoreProductID: ProductID?, price: Money?, displayPrice: String?, subscriptionPeriod: SubscriptionPeriod, supportedMethods: [CheckoutMethod], title: String? = nil, credits: Int? = nil)` |
+| Initializer | `init(catalogProductID: RUCatalogProductID, kind: RUCatalogProductKind, appStoreProductID: ProductID?, price: Money?, displayPrice: String?, subscriptionPeriod: SubscriptionPeriod, supportedMethods: [CheckoutMethod], title: String? = nil, credits: Int? = nil, isSpecialOffer: Bool = false)` |
 | Initializer | `init(catalogRepository: any RUCatalogRepositoryProtocol, matcher: RUCatalogProductMatcher = RUCatalogProductMatcher())` |
 | Initializer | `init(checkout: any CheckoutSelectedProductUseCaseProtocol, restorePurchases: any RestorePurchasesUseCaseProtocol)` |
 | Initializer | `init(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID, productID: RUCatalogProductID, checkoutMethod: CheckoutMethod, paywallPresentationID: PaywallPresentationID? = nil, paywallVariationID: PaywallVariationID? = nil, requestedPlacementID: PlacementID? = nil, resolvedPlacementID: PlacementID? = nil, startedAt: Date, expiresAt: Date?)` |
@@ -386,21 +387,22 @@
 | Initializer | `init(keys: RemoteConfigKeyRegistry = .broadApps)` |
 | Initializer | `init(kind: PendingOperationBlockerKey.Kind, applicationIdentifier: String)` |
 | Initializer | `init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol)` |
+| Initializer | `init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, stateRepository: any SpecialOfferStateRepositoryProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol, clock: SpecialOfferClock, entitlementStatusProvider: any EntitlementStatusProviderProtocol)` |
 | Initializer | `init(main: AdaptyPlacementID, mappings: [PlacementID : AdaptyPlacementID] = [:])` |
 | Initializer | `init(mappingPolicy: any RUCatalogProductMappingPolicyProtocol = ExactOnlyRUCatalogProductMappingPolicy())` |
 | Initializer | `init(mappings: [ProductID : RUCatalogProductID])` |
 | Initializer | `init(maximumAttempts: Int = 8, delay: Duration = .seconds(2))` |
 | Initializer | `init(method: RUBillingRequestMethod, queryItems: [URLQueryItem] = [], body: Data? = nil)` |
 | Initializer | `init(methods: [CheckoutMethod], storefront: Storefront?)` |
-| Initializer | `init(methods: [CheckoutMethod], storefront: Storefront?, ruBillingAvailability: RUBillingAvailabilityReason)` |
+| Initializer | `init(methods: [CheckoutMethod], storefront: Storefront?, ruBillingAvailability: RUBillingAvailabilityReason, ruProduct: RUCatalogProduct? = nil)` |
 | Initializer | `init(paywall: PaywallPayload)` |
 | Initializer | `init(paywall: PaywallPayload, product: MonetizationProduct)` |
 | Initializer | `init(periodWeights: ProductPricePresenter.PeriodWeights = .standard)` |
 | Initializer | `init(placementID: PlacementID)` |
+| Initializer | `init(placementID: PlacementID, gatePlacementID: PlacementID = .main, windowDuration: TimeInterval = Self.defaultWindowDuration, cooldownDuration: TimeInterval = Self.defaultCooldownDuration, timePolicy: SpecialOfferCampaignTimePolicy = .requireServerTime)` |
+| Initializer | `init(placementID: PlacementID, gatePlacementID: PlacementID = .main, windowDuration: TimeInterval? = nil, cooldownDuration: TimeInterval? = nil)` |
 | Initializer | `init(placementID: PlacementID, variationID: PaywallVariationID?, window: SpecialOfferCampaignWindow, resolvedAt: Date)` |
-| Initializer | `init(placementID: PlacementID, windowDuration: TimeInterval = Self.defaultWindowDuration, cooldownDuration: TimeInterval = Self.defaultCooldownDuration, timePolicy: SpecialOfferCampaignTimePolicy = .requireServerTime)` |
-| Initializer | `init(placementID: PlacementID, windowDuration: TimeInterval? = nil, cooldownDuration: TimeInterval? = nil)` |
-| Initializer | `init(placementIDs: [PlacementID], windowDuration: TimeInterval = Self.defaultWindowDuration, cooldownDuration: TimeInterval = Self.defaultCooldownDuration, timePolicy: SpecialOfferCampaignTimePolicy = .requireServerTime)` |
+| Initializer | `init(placementIDs: [PlacementID], gatePlacementID: PlacementID = .main, windowDuration: TimeInterval = Self.defaultWindowDuration, cooldownDuration: TimeInterval = Self.defaultCooldownDuration, timePolicy: SpecialOfferCampaignTimePolicy = .requireServerTime)` |
 | Initializer | `init(presentationID: PaywallPresentationID, paywallReference: PaywallReference, variationID: PaywallVariationID? = nil, origin: PaywallOrigin, products: [MonetizationProduct], remoteConfiguration: RemotePaywallConfiguration = .empty, remoteConfigurationProvenance: PaywallRemoteConfigurationProvenance = .legacyUnqualified, fetchedAt: Date)` |
 | Initializer | `init(presentationID: ProductPresentationID, reference: ProductReference, productID: ProductID, commercialFingerprint: String? = nil, kind: MonetizationProductKind, title: String? = nil, subtitle: String? = nil, price: Money? = nil, displayPrice: String? = nil, subscriptionPeriod: SubscriptionPeriod = .unknown, catalogSource: CatalogSource)` |
 | Initializer | `init(presentationID: ProductPresentationID, weeklyPrice: Money? = nil, savingsPercent: Int? = nil, isBestValue: Bool = false)` |
@@ -432,11 +434,13 @@
 | Initializer | `init(requestEncoder: any RUEntitlementRequestEncoderProtocol, responseDecoder: any RUEntitlementResponseDecoderProtocol)` |
 | Initializer | `init(requestEncoder: any RUPaymentStatusRequestEncoderProtocol, responseDecoder: any RUPaymentStatusResponseDecoderProtocol)` |
 | Initializer | `init(requestedPlacementID: PlacementID, resolvedPlacementID: PlacementID, catalogSource: CatalogSource, fallbackReason: PaywallFallbackReason? = nil)` |
+| Initializer | `init(resolve: any ResolveSpecialOfferUseCaseProtocol, configuration: SpecialOfferConfiguration, followedPlacementIDs: Set<PlacementID>? = nil)` |
 | Initializer | `init(resolve: any SpecialOfferCampaignResolving, followedPlacementIDs: Set<PlacementID>? = nil)` |
 | Initializer | `init(retainedPresentationLimit: Int = 8)` |
 | Initializer | `init(ruBillingGate: [String], automaticRevenueView: [String] = ["auto_revenue_view"], hardPaywall: [String], closeDelay: [String], uiVariant: [String], specialOfferGate: [String], specialOfferDurationHours: [String], specialOfferCooldownHours: [String], crossedPrice: [String], crossedValue: [String], priceMultiplier: [String], specialOfferBadge: [String], specialOfferPeriodText: [String])` |
 | Initializer | `init(ruDetails: RUCheckoutDetails? = nil)` |
 | Initializer | `init(selection: ProductSelection, checkoutMethod: CheckoutMethod)` |
+| Initializer | `init(serverTime: any ServerTimeProviderProtocol)` |
 | Initializer | `init(services: RUBillingServices)` |
 | Initializer | `init(source: EntitlementSource, freshnessPolicy: EntitlementFreshnessPolicy, assertion: EntitlementSourceAssertion?, isFromCurrentRefresh: Bool)` |
 | Initializer | `init(source: EntitlementSource, state: ResolvedEntitlementState, validatedAt: Date, freshUntil: Date, activeGraceUntil: Date)` |
@@ -444,7 +448,7 @@
 | Initializer | `init(source: EntitlementSource, subject: EntitlementSubject, freshnessPolicy: EntitlementFreshnessPolicy, repository: any EntitlementSourceRepositoryProtocol)` |
 | Initializer | `init(stalePaywallLoad: AppError, purchaseInProgress: AppError, restoreVerificationUnavailable: AppError)` |
 | Initializer | `init(startedAt: Date, expiresAt: Date)` |
-| Initializer | `init(state: SpecialOfferState, paywall: PaywallPayload?, trustedTime: SpecialOfferTrustedTime? = nil)` |
+| Initializer | `init(state: SpecialOfferState, paywall: PaywallPayload?, trustedTime: SpecialOfferTrustedTime? = nil, gatePaywall: PaywallPayload? = nil)` |
 | Initializer | `init(store: any KeyValueStoreProtocol)` |
 | Initializer | `init(store: any KeyValueStoreProtocol, storageKey: String = PersistedSpecialOfferWindowStore.defaultStorageKey)` |
 | Initializer | `init(store: any PendingApplePurchaseStoreProtocol, refreshEntitlement: any EntitlementRepositoryProtocol, transactionRecovery: any PendingAppleTransactionRecoveryProtocol, analytics: any MonetizationAnalyticsProtocol, operationGate: MonetizationOperationGate, maximumClockSkew: TimeInterval = 0)` |
@@ -478,7 +482,10 @@
 | Initializer | `init?(subject: EntitlementSubject, bearerToken: String)` |
 | Initializer | `init?(subject: EntitlementSubject, customerUserID: String, appAccountToken: UUID? = nil)` |
 | Instance Method | `@MainActor func open(_ url: URL) async -> Bool` |
+| Instance Method | `@discardableResult func resetCycle(configuration _: SpecialOfferConfiguration) async -> Bool` |
+| Instance Method | `@discardableResult func resetCycle(configuration: SpecialOfferConfiguration) async -> Bool` |
 | Instance Method | `@discardableResult func resolveNow() async -> SpecialOfferCampaignOutcome?` |
+| Instance Method | `@discardableResult func resolveNow() async -> SpecialOfferResolution?` |
 | Instance Method | `@discardableResult func save(_ state: SpecialOfferState, for configuration: SpecialOfferConfiguration) async -> Bool` |
 | Instance Method | `func abandonAfterUserConfirmation() async -> PendingApplePurchaseOutcome` |
 | Instance Method | `func acquire(_ kind: MonetizationOperationKind) async -> MonetizationOperationLease?` |
@@ -501,6 +508,7 @@
 | Instance Method | `func callAsFunction() async -> CustomerAccessRecoverySnapshot` |
 | Instance Method | `func callAsFunction() async -> EntitlementSnapshot` |
 | Instance Method | `func callAsFunction() async -> MonetizationActivationOutcome` |
+| Instance Method | `func callAsFunction() async -> RUCatalogProduct?` |
 | Instance Method | `func callAsFunction() async -> RUSubscriptionManagementLoadOutcome` |
 | Instance Method | `func callAsFunction() async -> RestoreOutcome` |
 | Instance Method | `func callAsFunction() async -> SpecialOfferCampaignOutcome` |
@@ -521,6 +529,7 @@
 | Instance Method | `func callAsFunction(configuration: SpecialOfferConfiguration?) async -> SpecialOfferResolution` |
 | Instance Method | `func callAsFunction(for product: MonetizationProduct, remoteConfiguration _: RemotePaywallConfiguration) async -> CheckoutMethodsResolution` |
 | Instance Method | `func callAsFunction(for product: MonetizationProduct, remoteConfiguration: RemotePaywallConfiguration) async -> CheckoutMethodsResolution` |
+| Instance Method | `func callAsFunction(for selection: ProductSelection, remoteConfiguration: RemotePaywallConfiguration) async -> CheckoutMethodsResolution` |
 | Instance Method | `func callAsFunction(policy: EntitlementRefreshPolicy) async -> EntitlementSnapshot` |
 | Instance Method | `func callAsFunction(product: MonetizationProduct, kind: RUCatalogProductKind) async -> RUCatalogProduct?` |
 | Instance Method | `func callAsFunction(productPresentationID: ProductPresentationID, in paywall: PaywallPayload) -> ProductSelection?` |
@@ -533,6 +542,7 @@
 | Instance Method | `func clear(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID) async -> Bool` |
 | Instance Method | `func configuration(for paywallReference: PaywallReference) async -> RemoteConfigurationLoadOutcome` |
 | Instance Method | `func connect(_ coordinator: SpecialOfferCampaignCoordinator)` |
+| Instance Method | `func connect(_ coordinator: SpecialOfferCoordinator)` |
 | Instance Method | `func contains(_ logicalPlacement: PlacementID) -> Bool` |
 | Instance Method | `func currentContext() -> RUBillingDeviceContext` |
 | Instance Method | `func currentEntitlements(for productIDs: Set<String>) async -> [StoreKitCurrentEntitlementRecord]` |
@@ -588,6 +598,7 @@
 | Instance Method | `func markTransactionConfirmed(attemptID: MonetizationAttemptID) async -> Bool` |
 | Instance Method | `func match(product: MonetizationProduct, kind: RUCatalogProductKind, in catalog: RUCatalogPayload) -> RUCatalogProduct?` |
 | Instance Method | `func matchPremiumEntitlementProduct(_ product: MonetizationProduct, in catalog: RUCatalogPayload) -> RUCatalogProduct?` |
+| Instance Method | `func matchSpecialOfferProduct(_ product: MonetizationProduct, in catalog: RUCatalogPayload) -> RUCatalogProduct?` |
 | Instance Method | `func notifyFinancialOperationStateChanged()` |
 | Instance Method | `func parse(_ dictionary: [String : Any]) -> RemotePaywallConfiguration` |
 | Instance Method | `func preparedForNewPresentation() -> PaywallPayload` |
@@ -633,6 +644,7 @@
 | Instance Method | `func state(for configuration: SpecialOfferConfiguration) async -> SpecialOfferStateLoadOutcome` |
 | Instance Method | `func string(from money: Money) -> String?` |
 | Instance Method | `func track(_ event: MonetizationAnalyticsEvent) async` |
+| Instance Method | `func uniqueSpecialOfferProduct(in catalog: RUCatalogPayload) -> RUCatalogProduct?` |
 | Instance Method | `func update(_ mode: RUBillingDebugOverrideMode)` |
 | Instance Method | `func verifiedTransactionUpdated(_ transaction: VerifiedApplePurchaseTransaction) async -> PendingApplePurchaseOutcome` |
 | Instance Method | `func verifyEntitlement(for subject: EntitlementSubject) async -> EntitlementSourceResolution` |
@@ -706,7 +718,7 @@
 | Instance Property | `let cooldownDuration: TimeInterval?` |
 | Instance Property | `let coreIdentifier: String` |
 | Instance Property | `let count: Int?` |
-| Instance Property | `let countdown: SpecialOfferCountdownAuthorization?` |
+| Instance Property | `let countdown: SpecialOfferCountdownAuthorization` |
 | Instance Property | `let countryCode: String` |
 | Instance Property | `let coupons: [RUCatalogProduct]` |
 | Instance Property | `let credits: Int?` |
@@ -743,6 +755,9 @@
 | Instance Property | `let freshUntil: Date` |
 | Instance Property | `let freshness: EntitlementFreshness` |
 | Instance Property | `let freshnessPolicy: EntitlementFreshnessPolicy` |
+| Instance Property | `let gatePaywallPresentationID: PaywallPresentationID` |
+| Instance Property | `let gatePlacementID: PlacementID` |
+| Instance Property | `let gateRemoteConfiguration: RemotePaywallConfiguration` |
 | Instance Property | `let hardPaywall: [String]` |
 | Instance Property | `let http: RUBillingHTTPConfiguration` |
 | Instance Property | `let id: CheckoutSessionID` |
@@ -762,6 +777,7 @@
 | Instance Property | `let isLifetime: Bool` |
 | Instance Property | `let isRUBillingEnabled: Bool?` |
 | Instance Property | `let isRefund: Bool` |
+| Instance Property | `let isSpecialOffer: Bool` |
 | Instance Property | `let isUpgraded: Bool` |
 | Instance Property | `let kind: AppError.Kind` |
 | Instance Property | `let kind: ApplePremiumProductCatalog.ProductKind` |
@@ -839,6 +855,7 @@
 | Instance Property | `let reference: ProductReference` |
 | Instance Property | `let regionCode: String?` |
 | Instance Property | `let remoteConfiguration: RemotePaywallConfiguration` |
+| Instance Property | `let remoteConfiguration: SpecialOfferRemoteConfiguration` |
 | Instance Property | `let remoteConfigurationProvenance: PaywallRemoteConfigurationProvenance` |
 | Instance Property | `let repository: any RUCatalogRepositoryProtocol` |
 | Instance Property | `let requestEncoder: any RUCancellationRequestEncoderProtocol` |
@@ -869,6 +886,7 @@
 | Instance Property | `let ruBillingGate: [String]` |
 | Instance Property | `let ruBillingGateDecision: RemoteRUBillingGateDecision` |
 | Instance Property | `let ruDetails: RUCheckoutDetails?` |
+| Instance Property | `let ruProduct: RUCatalogProduct?` |
 | Instance Property | `let ruSubscription: CustomerAccessRecoveryComponent<RUSubscriptionManagementStatus>` |
 | Instance Property | `let savingsPercent: Int?` |
 | Instance Property | `let selectProduct: any SelectProductUseCaseProtocol` |
@@ -921,6 +939,7 @@
 | Instance Property | `let windowDuration: TimeInterval` |
 | Instance Property | `let windowDuration: TimeInterval?` |
 | Instance Property | `nonisolated let decisions: AsyncStream<SpecialOfferCampaignOutcome>` |
+| Instance Property | `nonisolated let decisions: AsyncStream<SpecialOfferResolution>` |
 | Instance Property | `nonisolated let monetizationOperationGate: MonetizationOperationGate` |
 | Instance Property | `nonisolated let pendingOperationBlockerKey: PendingOperationBlockerKey` |
 | Instance Property | `nonisolated var campaignPlacementIDs: Set<PlacementID> { get }` |
@@ -937,7 +956,6 @@
 | Instance Property | `var debugDescription: String { get }` |
 | Instance Property | `var description: String { get }` |
 | Instance Property | `var expirationDate: Date? { get }` |
-| Instance Property | `var expiresAt: Date? { get }` |
 | Instance Property | `var id: ProductPresentationID { get }` |
 | Instance Property | `var id: RUCatalogProductID { get }` |
 | Instance Property | `var isCurrentActiveConfirmed: Bool { get }` |
@@ -1156,6 +1174,7 @@
 | Structure | `struct RemotePaywallConfigurationParser` |
 | Structure | `struct ResolveCheckoutMethodsUseCase` |
 | Structure | `struct ResolveRUCatalogProductUseCase` |
+| Structure | `struct ResolveRUSpecialOfferProductUseCase` |
 | Structure | `struct RestoreAnalyticsContext` |
 | Structure | `struct SelectProductUseCase` |
 | Structure | `struct SpecialOfferCadence` |
@@ -1211,6 +1230,7 @@
 | Type Method | `static func isValid(_ value: String) -> Bool` |
 | Type Method | `static func month(_ count: Int = 1) -> SubscriptionPeriod` |
 | Type Method | `static func remainingTimeInterval(elapsed: TimeInterval) -> TimeInterval` |
+| Type Method | `static func remainingTimeInterval(initialRemainingTime: TimeInterval, elapsed: TimeInterval) -> TimeInterval` |
 | Type Method | `static func trusted(_ date: Date) -> SpecialOfferClockReading` |
 | Type Method | `static func week(_ count: Int = 1) -> SubscriptionPeriod` |
 | Type Method | `static func year(_ count: Int = 1) -> SubscriptionPeriod` |
@@ -1238,6 +1258,8 @@
 | Type Property | `static let specialOffer: PlacementID` |
 | Type Property | `static let standard: CheckoutOptions` |
 | Type Property | `static let standard: ProductPricePresenter.PeriodWeights` |
+| Type Property | `static let standardCooldownDuration: TimeInterval` |
+| Type Property | `static let standardWindowDuration: TimeInterval` |
 | Type Property | `static let tokens: PlacementID` |
 | Type Property | `static let unknown: SubscriptionPeriod` |
 | Type Property | `static let untrusted: SpecialOfferClock` |

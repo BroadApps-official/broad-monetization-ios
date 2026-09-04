@@ -62,6 +62,7 @@ last_valid_file="$platform_root/Sources/BroadMonetization/Data/Paywalls/LastVali
 special_use_case_file="$platform_root/Sources/BroadMonetization/Application/SpecialOffers/ResolveSpecialOfferUseCase.swift"
 special_resolution_file="$platform_root/Sources/BroadMonetization/Domain/SpecialOffers/SpecialOfferResolution.swift"
 special_countdown_file="$platform_root/Sources/BroadMonetization/Domain/SpecialOffers/SpecialOfferCountdownAuthorization.swift"
+special_campaign_file="$platform_root/Sources/BroadMonetization/Application/SpecialOfferCampaigns/ResolveSpecialOfferCampaignUseCase.swift"
 remote_parser_file="$platform_root/Sources/BroadMonetization/Infrastructure/RemoteConfig/RemotePaywallConfigurationParser.swift"
 ru_gate_file="$platform_root/Sources/BroadMonetization/Application/RUBilling/RUBillingGate.swift"
 ru_device_context_file="$platform_root/Sources/BroadMonetization/Domain/Checkout/RUBillingDeviceContext.swift"
@@ -69,6 +70,8 @@ ru_debug_override_file="$platform_root/Sources/BroadMonetization/Application/RUB
 ru_resolution_file="$platform_root/Sources/BroadMonetization/Application/RUBilling/ResolveCheckoutMethodsUseCase.swift"
 ru_checkout_flow_file="$platform_root/Sources/BroadMonetization/Application/RUBilling/RUCheckoutFlowCoordinator.swift"
 ru_flat_catalog_file="$platform_root/Sources/BroadMonetization/Infrastructure/RUBilling/FlatRUCatalogResponseDecoder.swift"
+ru_catalog_product_file="$platform_root/Sources/BroadMonetization/Domain/Checkout/RUCatalogProduct.swift"
+ru_catalog_matcher_file="$platform_root/Sources/BroadMonetization/Application/RUBilling/RUCatalogProductMatcher.swift"
 ru_composition_models_file="$platform_root/Sources/BroadMonetization/Application/DI/RUBillingCompositionModels.swift"
 ru_composition_factory_file="$platform_root/Sources/BroadMonetization/Application/DI/RUBillingCompositionFactory.swift"
 adapty_configuration_file="$platform_root/Sources/BroadMonetization/Infrastructure/Adapty/AdaptyPlatformConfiguration.swift"
@@ -126,20 +129,60 @@ forbid_pattern \
     'isEnabled:(?s:.{0,250})(windowDuration|cooldownDuration)\.isValid' \
     "$remote_parser_file"
 
-forbid_pattern \
-    "Special Offer resolution has no state, clock, window or cooldown gate" \
-    '(stateRepository\.(state|save)|clock\.reading|currentTime\(|resolveState\(|beginWindow\(|resolveExpiredWindow\()' \
-    "$special_use_case_file"
-
 require_pattern \
-    "Special Offer requires an explicit true campaign gate" \
+    "Special Offer reads the explicit gate from the ordinary paywall" \
     "$special_use_case_file" \
-    'specialOffer\?\.isEnabled[[:space:]]*==[[:space:]]*true(?s:.*?)SpecialOfferResolution\(state:[[:space:]]*\.eligible,[[:space:]]*paywall:[[:space:]]*paywall\)'
+    'PaywallLoadRequest\(placementID:[[:space:]]*configuration\.gatePlacementID\)(?s:.*?)specialOffer\?\.isEnabled[[:space:]]*==[[:space:]]*true'
 
 require_pattern \
-    "Special Offer display timer is a 24-hour recurring cycle" \
+    "Special Offer loads the separate product placement only after cadence authorization" \
+    "$special_use_case_file" \
+    'stateRepository\.state\((?s:.*?)case[[:space:]]+let[[:space:]]+\.active\(window\)(?s:.*?)PaywallLoadRequest\(placementID:[[:space:]]*configuration\.placementID\)'
+
+require_pattern \
+    "Special Offer cadence uses persisted state and trusted time" \
+    "$special_use_case_file" \
+    'clock\.reading\(\)(?s:.*?)stateRepository\.state\((?s:.*?)stateRepository\.save\(nextState'
+
+require_pattern \
+    "An active entitlement is rejected before Special Offer paywall loading" \
+    "$special_use_case_file" \
+    'entitlementStatusProvider\.currentStatus\(\)[[:space:]]*!=[[:space:]]*\.active(?s:.*?)PaywallLoadRequest'
+
+require_pattern \
+    "The campaign compatibility API also reads the gate from main" \
+    "$special_campaign_file" \
+    'PaywallLoadRequest\(placementID:[[:space:]]*configuration\.gatePlacementID\)(?s:.*?)specialOffer\?\.isEnabled[[:space:]]*==[[:space:]]*true'
+
+require_pattern \
+    "The campaign compatibility API ignores remote duration overrides" \
+    "$special_campaign_file" \
+    'windowDuration:[[:space:]]*SpecialOfferCampaignConfiguration\.defaultWindowDuration(?s:.*?)cooldownDuration:[[:space:]]*SpecialOfferCampaignConfiguration\.defaultCooldownDuration'
+
+require_pattern \
+    "Special Offer fallback cannot substitute the ordinary paywall" \
+    "$special_use_case_file" \
+    '!origin\.usedFallback(?s:.*?)origin\.requestedPlacementID[[:space:]]*==[[:space:]]*placementID(?s:.*?)origin\.resolvedPlacementID[[:space:]]*==[[:space:]]*placementID'
+
+require_pattern \
+    "Special Offer display timer expires at zero" \
     "$special_countdown_file" \
-    'cycleDuration:[[:space:]]*TimeInterval[[:space:]]*=[[:space:]]*24[[:space:]]*\*[[:space:]]*60[[:space:]]*\*[[:space:]]*60(?s:.*?)wholeSeconds[[:space:]]*%[[:space:]]*cycleFrameCount'
+    'remainingTimeInterval[[:space:]]*<=[[:space:]]*0'
+
+forbid_pattern \
+    "Special Offer countdown never loops after zero" \
+    '(%[[:space:]]*cycleFrameCount|case[[:space:]]+looping|never expires)' \
+    "$special_countdown_file"
+
+require_pattern \
+    "BroadApps default uses only the exact special_offer gate key" \
+    "$platform_root/Sources/BroadMonetization/Infrastructure/RemoteConfig/RemoteConfigKeyRegistry.swift" \
+    'specialOfferGate:[[:space:]]*\["special_offer"\]'
+
+require_pattern \
+    "Special Offer gate accepts only a Foundation boolean" \
+    "$remote_parser_file" \
+    'parseStrictBool\(rawValue\)(?s:.*?)isFoundationBoolean\(value\)'
 
 require_pattern \
     "RU Billing requires explicit ru_pay enabled plus provider authorization" \
@@ -191,6 +234,21 @@ forbid_pattern \
     "Flat backend catalog does not sort, deduplicate or truncate products" \
     '\.(sorted|filter|compactMap|prefix)\(|Dictionary\(' \
     "$ru_flat_catalog_file"
+
+require_pattern \
+    "RU catalog preserves the backend Special Offer marker" \
+    "$ru_catalog_product_file" \
+    'public[[:space:]]+let[[:space:]]+isSpecialOffer:[[:space:]]*Bool'
+
+require_pattern \
+    "Ordinary RU product matching excludes marked Special Offer rows" \
+    "$ru_catalog_matcher_file" \
+    '\$0\.kind[[:space:]]*==[[:space:]]*kind[[:space:]]*&&[[:space:]]*!\$0\.isSpecialOffer'
+
+require_pattern \
+    "RU Special Offer matching requires the explicit backend marker" \
+    "$ru_catalog_matcher_file" \
+    '\$0\.isSpecialOffer(?s:.*?)catalogProductID\.rawValue[[:space:]]*==[[:space:]]*requestedID'
 
 require_pattern \
     "RU Billing exposes typed modes for custom-named Debug configurations" \

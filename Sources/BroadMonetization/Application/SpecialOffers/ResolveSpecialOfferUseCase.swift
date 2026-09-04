@@ -1,7 +1,20 @@
 import BroadCore
 import Foundation
 
+private enum StandardSpecialOfferGateOutcome {
+    case authorized(PaywallPayload)
+    case refused(SpecialOfferResolution)
+}
+
+private enum StandardSpecialOfferCadenceOutcome {
+    case active(SpecialOfferWindow, SpecialOfferTrustedTime)
+    case refused(SpecialOfferResolution)
+}
+
 public actor ResolveSpecialOfferUseCase: ResolveSpecialOfferUseCaseProtocol {
+    public static let defaultWindowDuration = SpecialOfferConfiguration.standardWindowDuration
+    public static let defaultCooldownDuration = SpecialOfferConfiguration.standardCooldownDuration
+
     private struct InFlightResolution {
         let identifier: UUID
         let configuration: SpecialOfferConfiguration
@@ -9,63 +22,73 @@ public actor ResolveSpecialOfferUseCase: ResolveSpecialOfferUseCaseProtocol {
     }
 
     private let loadPaywallUseCase: any LoadPaywallUseCaseProtocol
+    private let stateRepository: (any SpecialOfferStateRepositoryProtocol)?
     private let presentationLifecycle: any PaywallPresentationLifecycleProtocol
+    private let clock: SpecialOfferClock?
+    private let entitlementStatusProvider: (any EntitlementStatusProviderProtocol)?
 
     private var inFlightResolutions: [PlacementID: InFlightResolution] = [:]
 
-    /// Preferred initializer. The platform campaign is authorized by the
-    /// current Adapty payload and does not need persisted timing state.
+    /// Source-compatible initializer for hosts that have not wired the timed
+    /// contract yet. It fails closed when the gate is enabled because a window
+    /// cannot be enforced without durable state and trusted time.
+    @available(
+        *,
+        deprecated,
+        message: "Inject SpecialOfferStateRepositoryProtocol and SpecialOfferClock"
+    )
     public init(
         loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
         presentationLifecycle: any PaywallPresentationLifecycleProtocol
     ) {
         self.loadPaywallUseCase = loadPaywallUseCase
+        stateRepository = nil
         self.presentationLifecycle = presentationLifecycle
+        clock = nil
+        entitlementStatusProvider = nil
     }
 
-    /// Source-compatible initializer for applications created before the
-    /// recurring display countdown replaced real campaign expiration.
+    /// Canonical resolver for Maria's fixed 24-hour window and 24-hour cooldown.
     public init(
         loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
         stateRepository: any SpecialOfferStateRepositoryProtocol,
         presentationLifecycle: any PaywallPresentationLifecycleProtocol,
-        clock: SpecialOfferClock = .untrusted
+        clock: SpecialOfferClock,
+        entitlementStatusProvider: any EntitlementStatusProviderProtocol
     ) {
-        _ = stateRepository
-        _ = clock
-        self.init(
-            loadPaywallUseCase: loadPaywallUseCase,
-            presentationLifecycle: presentationLifecycle
-        )
+        self.loadPaywallUseCase = loadPaywallUseCase
+        self.stateRepository = stateRepository
+        self.presentationLifecycle = presentationLifecycle
+        self.clock = clock
+        self.entitlementStatusProvider = entitlementStatusProvider
     }
 
     public func callAsFunction(
         configuration: SpecialOfferConfiguration?
     ) async -> SpecialOfferResolution {
-        // This guard deliberately precedes every dependency access. A project
-        // that passes nil performs no paywall, cache or network work.
         guard let configuration else {
-            return SpecialOfferResolution(
-                state: .unavailable(.notConfigured),
-                paywall: nil
-            )
+            return Self.unavailable(.notConfigured)
         }
 
         while let inFlight = inFlightResolutions[configuration.placementID] {
-            // Never hand one provider presentation to two callers. Wait for the
-            // current owner, then resolve a fresh presentation for this caller.
             _ = await inFlight.task.value
             removeIfCurrent(inFlight, for: configuration.placementID)
         }
 
         let identifier = UUID()
         let loadPaywallUseCase = loadPaywallUseCase
+        let stateRepository = stateRepository
         let presentationLifecycle = presentationLifecycle
+        let clock = clock
+        let entitlementStatusProvider = entitlementStatusProvider
         let task = Task<SpecialOfferResolution, Never> {
             await Self.resolveConfiguredOffer(
                 configuration,
                 loadPaywallUseCase: loadPaywallUseCase,
-                presentationLifecycle: presentationLifecycle
+                stateRepository: stateRepository,
+                presentationLifecycle: presentationLifecycle,
+                clock: clock,
+                entitlementStatusProvider: entitlementStatusProvider
             )
         }
         let inFlight = InFlightResolution(
@@ -75,6 +98,17 @@ public actor ResolveSpecialOfferUseCase: ResolveSpecialOfferUseCaseProtocol {
         )
         inFlightResolutions[configuration.placementID] = inFlight
         return await finish(inFlight, for: configuration.placementID)
+    }
+
+    /// Clears the running window after a confirmed purchase or restore.
+    @discardableResult
+    public func resetCycle(
+        configuration: SpecialOfferConfiguration
+    ) async -> Bool {
+        guard let stateRepository else {
+            return false
+        }
+        return await stateRepository.save(.eligible, for: configuration)
     }
 }
 
@@ -106,52 +140,209 @@ private extension ResolveSpecialOfferUseCase {
     static func resolveConfiguredOffer(
         _ configuration: SpecialOfferConfiguration,
         loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
-        presentationLifecycle: any PaywallPresentationLifecycleProtocol
+        stateRepository: (any SpecialOfferStateRepositoryProtocol)?,
+        presentationLifecycle: any PaywallPresentationLifecycleProtocol,
+        clock: SpecialOfferClock?,
+        entitlementStatusProvider: (any EntitlementStatusProviderProtocol)?
     ) async -> SpecialOfferResolution {
-        // The repository first obtains the paywall and all of its products,
-        // preserving provider order and exact raw-product references. Only then
-        // does this resolver decide whether the second presentation is allowed.
-        let loadOutcome = await loadPaywallUseCase(
-            PaywallLoadRequest(placementID: configuration.placementID)
+        guard let entitlementStatusProvider else { return unavailable(.persistenceUnavailable) }
+        guard await entitlementStatusProvider.currentStatus() != .active else {
+            return await resetForActiveEntitlement(configuration, stateRepository: stateRepository)
+        }
+        let gateOutcome = await loadAuthorizedGate(
+            configuration,
+            loadPaywallUseCase: loadPaywallUseCase,
+            stateRepository: stateRepository,
+            presentationLifecycle: presentationLifecycle
         )
-        guard case let .loaded(paywall) = loadOutcome else {
+        guard case let .authorized(gatePaywall) = gateOutcome else {
+            guard case let .refused(resolution) = gateOutcome else { preconditionFailure() }
+            return resolution
+        }
+        let cadenceOutcome = await authorizeCadence(
+            configuration,
+            stateRepository: stateRepository,
+            clock: clock
+        )
+        guard case let .active(window, trustedTime) = cadenceOutcome else {
+            await end(gatePaywall, using: presentationLifecycle)
+            guard case let .refused(resolution) = cadenceOutcome else { preconditionFailure() }
+            return resolution
+        }
+        guard let offerPaywall = await loadAuthorizedOffer(
+            configuration,
+            loadPaywallUseCase: loadPaywallUseCase,
+            presentationLifecycle: presentationLifecycle
+        ) else {
+            await end(gatePaywall, using: presentationLifecycle)
             return unavailable(.paywallUnavailable)
         }
-        // The repository may resolve the configured main fallback. Eligibility
-        // still comes only from the Remote Config of the payload actually used.
-        guard isExpectedOrigin(paywall.origin, configuration: configuration) else {
-            await end(paywall, using: presentationLifecycle)
-            return unavailable(.paywallUnavailable)
-        }
-
-        guard paywall.remoteConfigurationProvenance
-            .authorizesSpecialOfferPresentation
-        else {
-            await end(paywall, using: presentationLifecycle)
-            return unavailable(.disabledByRemoteConfiguration)
-        }
-
-        // The current provider payload must explicitly opt in. Missing, malformed
-        // and false values all fail closed and cannot authorize a presentation.
-        guard paywall.remoteConfiguration.specialOffer?.isEnabled == true else {
-            await end(paywall, using: presentationLifecycle)
-            return unavailable(.disabledByRemoteConfiguration)
-        }
-
-        return SpecialOfferResolution(state: .eligible, paywall: paywall)
+        let resolution = SpecialOfferResolution(
+            state: .active(window),
+            paywall: offerPaywall,
+            trustedTime: trustedTime,
+            gatePaywall: gatePaywall
+        )
+        await end(gatePaywall, using: presentationLifecycle)
+        return resolution
     }
 
-    static func isExpectedOrigin(
+    static func resetForActiveEntitlement(
+        _ configuration: SpecialOfferConfiguration,
+        stateRepository: (any SpecialOfferStateRepositoryProtocol)?
+    ) async -> SpecialOfferResolution {
+        guard await resetIfPossible(configuration, stateRepository: stateRepository) else {
+            return unavailable(.persistenceUnavailable)
+        }
+        return unavailable(.alreadyEntitled)
+    }
+
+    static func loadAuthorizedGate(
+        _ configuration: SpecialOfferConfiguration,
+        loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
+        stateRepository: (any SpecialOfferStateRepositoryProtocol)?,
+        presentationLifecycle: any PaywallPresentationLifecycleProtocol
+    ) async -> StandardSpecialOfferGateOutcome {
+        let outcome = await loadPaywallUseCase(
+            PaywallLoadRequest(placementID: configuration.gatePlacementID)
+        )
+        guard case let .loaded(paywall) = outcome else {
+            return .refused(unavailable(.paywallUnavailable))
+        }
+        guard isExactOrigin(paywall.origin, placementID: configuration.gatePlacementID) else {
+            await end(paywall, using: presentationLifecycle)
+            return .refused(unavailable(.paywallUnavailable))
+        }
+        guard paywall.remoteConfigurationProvenance.authorizesSpecialOfferPresentation,
+              paywall.remoteConfiguration.specialOffer?.isEnabled == true
+        else {
+            await end(paywall, using: presentationLifecycle)
+            guard await resetIfPossible(configuration, stateRepository: stateRepository) else {
+                return .refused(unavailable(.persistenceUnavailable))
+            }
+            return .refused(unavailable(.disabledByRemoteConfiguration))
+        }
+        return .authorized(paywall)
+    }
+
+    static func authorizeCadence(
+        _ configuration: SpecialOfferConfiguration,
+        stateRepository: (any SpecialOfferStateRepositoryProtocol)?,
+        clock: SpecialOfferClock?
+    ) async -> StandardSpecialOfferCadenceOutcome {
+        guard let stateRepository else {
+            return .refused(unavailable(.persistenceUnavailable))
+        }
+        guard let clock, case let .synchronized(time) = await clock.reading() else {
+            return .refused(unavailable(.untrustedTime))
+        }
+        guard case let .loaded(state) = await stateRepository.state(for: configuration) else {
+            return .refused(unavailable(.persistenceUnavailable))
+        }
+        let nextState = nextState(from: state, now: time.date)
+        guard await stateRepository.save(nextState, for: configuration) else {
+            return .refused(unavailable(.persistenceUnavailable))
+        }
+        if case let .active(window) = nextState {
+            return .active(window, time)
+        }
+        if case let .cooldown(until) = nextState {
+            return .refused(SpecialOfferResolution(state: .cooldown(until: until), paywall: nil))
+        }
+        return .refused(unavailable(.ineligible))
+    }
+
+    static func loadAuthorizedOffer(
+        _ configuration: SpecialOfferConfiguration,
+        loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
+        presentationLifecycle: any PaywallPresentationLifecycleProtocol
+    ) async -> PaywallPayload? {
+        let outcome = await loadPaywallUseCase(
+            PaywallLoadRequest(placementID: configuration.placementID)
+        )
+        guard case let .loaded(paywall) = outcome else { return nil }
+        guard isExactOrigin(paywall.origin, placementID: configuration.placementID),
+              paywall.remoteConfigurationProvenance.authorizesSpecialOfferPresentation,
+              !paywall.products.isEmpty
+        else {
+            await end(paywall, using: presentationLifecycle)
+            return nil
+        }
+        return paywall
+    }
+
+    /// The cadence is continuous after the first qualifying close: every
+    /// 24-hour active phase is followed immediately by a 24-hour cooldown, even
+    /// while the app is not running.
+    static func nextState(
+        from state: SpecialOfferState,
+        now: Date
+    ) -> SpecialOfferState {
+        switch state {
+        case let .active(window):
+            return phase(
+                startingAt: window.startedAt,
+                now: now
+            )
+        case let .cooldown(until):
+            if now < until {
+                return .cooldown(until: until)
+            }
+            return phase(startingAt: until, now: now)
+        case .eligible, .expired, .unavailable:
+            return .active(newWindow(startingAt: now))
+        }
+    }
+
+    static func phase(
+        startingAt initialWindowStart: Date,
+        now: Date
+    ) -> SpecialOfferState {
+        let windowDuration = defaultWindowDuration
+        let cooldownDuration = defaultCooldownDuration
+        let fullCycleDuration = windowDuration + cooldownDuration
+        let elapsed = max(0, now.timeIntervalSince(initialWindowStart))
+        let completedCycles = floor(elapsed / fullCycleDuration)
+        let cycleStart = initialWindowStart.addingTimeInterval(
+            completedCycles * fullCycleDuration
+        )
+        let activeUntil = cycleStart.addingTimeInterval(windowDuration)
+        if now < activeUntil {
+            return .active(
+                SpecialOfferWindow(startedAt: cycleStart, expiresAt: activeUntil)
+            )
+        }
+        return .cooldown(
+            until: cycleStart.addingTimeInterval(fullCycleDuration)
+        )
+    }
+
+    static func newWindow(
+        startingAt date: Date
+    ) -> SpecialOfferWindow {
+        SpecialOfferWindow(
+            startedAt: date,
+            expiresAt: date.addingTimeInterval(defaultWindowDuration)
+        )
+    }
+
+    static func isExactOrigin(
         _ origin: PaywallOrigin,
-        configuration: SpecialOfferConfiguration
+        placementID: PlacementID
     ) -> Bool {
-        guard origin.requestedPlacementID == configuration.placementID else {
-            return false
+        !origin.usedFallback
+            && origin.requestedPlacementID == placementID
+            && origin.resolvedPlacementID == placementID
+    }
+
+    static func resetIfPossible(
+        _ configuration: SpecialOfferConfiguration,
+        stateRepository: (any SpecialOfferStateRepositoryProtocol)?
+    ) async -> Bool {
+        guard let stateRepository else {
+            return true
         }
-        if origin.usedFallback {
-            return origin.resolvedPlacementID == .main
-        }
-        return origin.resolvedPlacementID == configuration.placementID
+        return await stateRepository.save(.eligible, for: configuration)
     }
 
     static func unavailable(

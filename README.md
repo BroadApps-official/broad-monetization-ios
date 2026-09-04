@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 1.2.0" src="https://img.shields.io/badge/release-1.2.0-10B981">
+  <img alt="Release 1.3.0" src="https://img.shields.io/badge/release-1.3.0-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -64,7 +64,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "1.2.0"
+        from: "1.3.0"
     )
 ]
 ```
@@ -132,20 +132,21 @@ Adapty.getPaywall
   → Adapty.getPaywallProducts
   → mapping всего provider array без filter/sort/dedup
   → storage exact raw-product references
-  → special_offer = true из загруженного payload
-  → второй paywall
+  → special_offer = true из Remote Config основного paywall
+  → products из отдельного Special Offer placement
 ```
 
-`ResolveSpecialOfferUseCase` получает уже целый `PaywallPayload` с products и
-только после этого проверяет `special_offer = true`. Это единственное решение
-о показе: `true` всегда показывает Special Offer, любое другое значение не
-показывает его.
+`ResolveSpecialOfferUseCase` сначала загружает основной paywall и после
+парсинга его products читает strict boolean `special_offer`. При `true`
+резолвер проверяет persisted cadence и только затем загружает отдельный
+placement Special Offer со всеми его products. Fallback на `main` не может
+подменить оффер.
 
-24-часовой countdown — отдельный локальный visual loop
-`24:00:00 → 00:00:00 → 24:00:00`. Цикл запускается при первом показе и
-продолжается между следующими открытиями: через час остаётся примерно 23 часа.
-Ноль сразу запускает новый круг, не скрывает offer и не блокирует purchase.
-Серверное время и дата окончания не используются.
+Цикл фиксирован: 24 часа окна показа, затем 24 часа cooldown.
+Countdown идёт до конца текущего окна и на нуле истекает; UI закрывает
+экран. Cooldown начинается точно от границы окна, даже если приложение
+в этот момент не запущено. Flag off, confirmed purchase и restore
+сбрасывают persisted cycle.
 
 <table>
   <tr>
@@ -217,18 +218,19 @@ policy. По цене или периоду продукт не угадывае
 ## Спешл оффер RU Billing
 
 Для coupon-offer не нужен отдельный target или второй payment manager.
-`RUCatalogProductKind.coupon` и `RUCatalogSections.coupons` выделяют все
-предложения из того же RU catalog, сохраняя backend order и duplicates.
+Backend catalog передаёт strict boolean `isSpecialOffer`. Обычный
+paywall игнорирует помеченную строку, а RU Special Offer выбирает
+её только по marker и exact product ID. При отсутствии marker обычный
+продукт не подставляется. Price, currency и `productId` берутся из
+этой backend-строки.
 
 ```swift
 let coupons = RUCatalogSections(catalog: payload).coupons
 ```
 
-Сначала host полностью подключает обычный RU Billing: catalog, `ru_pay`,
-регион, checkout и подтверждение Premium. Затем добавляет только различия
-Special Offer: единственный gate `special_offer = true`, optional Apple
-placement, exact coupon ID и локальный visual loop `24 → 0 → 24`. Модуль не
-сортирует coupon products по периоду или цене.
+Цикл окна/cooldown, источник флага и закрытие на нуле общие с
+Adapty Special Offer. RU-ветка меняет только источник продукта и
+маршрут checkout. RU Billing A/B-тесты платформой не поддержаны.
 
 СБП/карта дополнительно требуют обычный strict RU gate. Возврат из hosted
 checkout оставляет pending, пока authoritative entitlement/backend не вернул

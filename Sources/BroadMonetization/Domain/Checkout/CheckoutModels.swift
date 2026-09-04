@@ -33,11 +33,14 @@ public struct CheckoutMethodsResolution: Equatable, Sendable {
     public let methods: [CheckoutMethod]
     public let storefront: Storefront?
     public let ruBillingAvailability: RUBillingAvailabilityReason
+    /// Exact backend row used for RU price/currency presentation and checkout.
+    public let ruProduct: RUCatalogProduct?
 
     public init(
         methods: [CheckoutMethod],
         storefront: Storefront?,
-        ruBillingAvailability: RUBillingAvailabilityReason
+        ruBillingAvailability: RUBillingAvailabilityReason,
+        ruProduct: RUCatalogProduct? = nil
     ) {
         precondition(
             Set(methods).count == methods.count,
@@ -47,6 +50,7 @@ public struct CheckoutMethodsResolution: Equatable, Sendable {
         self.methods = methods
         self.storefront = storefront
         self.ruBillingAvailability = ruBillingAvailability
+        self.ruProduct = ruProduct
     }
 
     /// Keeps existing host adapters source-compatible. New adapters should
@@ -61,7 +65,8 @@ public struct CheckoutMethodsResolution: Equatable, Sendable {
             storefront: storefront,
             ruBillingAvailability: methods.contains(.sbp) || methods.contains(.card)
                 ? .available
-                : .hostDisabled
+                : .hostDisabled,
+            ruProduct: nil
         )
     }
 }

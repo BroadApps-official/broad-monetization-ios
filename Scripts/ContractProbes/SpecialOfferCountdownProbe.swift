@@ -4,25 +4,16 @@ import Foundation
 enum SpecialOfferRuntimeProbe {
     static func main() {
         checkRemoteFeatureCapabilities()
-        checkRepeatedPresentationsShareCycle()
         check(elapsed: 0, expected: 86400)
         check(elapsed: 1, expected: 86399)
         check(elapsed: 86399, expected: 1)
         check(elapsed: 86400, expected: 0)
-        check(elapsed: 86401, expected: 86400)
-        check(elapsed: 86402, expected: 86399)
+        check(elapsed: 86401, expected: 0)
+        check(elapsed: 172_800, expected: 0)
         print(
-            "PASS: provider payload authorizes Special Offer without weakening RU Billing; "
-                + "countdown loops 24:00:00 -> 00:00:00 -> 24:00:00"
+            "PASS: the ordinary paywall authorizes Special Offer without weakening RU Billing; "
+                + "the 24-hour countdown expires at zero and does not loop"
         )
-    }
-
-    private static func checkRepeatedPresentationsShareCycle() {
-        let first = SpecialOfferCountdownAuthorization()
-        let reopened = SpecialOfferCountdownAuthorization()
-        guard first == reopened else {
-            fatalError("Reopening Special Offer must continue the same local countdown cycle")
-        }
     }
 
     private static func checkRemoteFeatureCapabilities() {
@@ -32,6 +23,16 @@ enum SpecialOfferRuntimeProbe {
             specialOffer: enabledOffer
         )
         let presentationID = PaywallPresentationID(rawValue: "runtime-probe")
+        let gatePresentationID = PaywallPresentationID(rawValue: "gate-runtime-probe")
+        let startedAt = Date(timeIntervalSinceReferenceDate: 1000)
+        let window = SpecialOfferWindow(
+            startedAt: startedAt,
+            expiresAt: startedAt.addingTimeInterval(86400)
+        )
+        guard case let .synchronized(trustedTime) = SpecialOfferClockReading.trusted(startedAt)
+        else {
+            fatalError("A finite trusted time must synchronize")
+        }
 
         let providerPayloadConfiguration = parsedConfiguration.qualified(
             by: .providerCacheFallbackPossible
@@ -40,8 +41,11 @@ enum SpecialOfferRuntimeProbe {
               !providerPayloadConfiguration.authorizesRUBillingPresentation,
               SpecialOfferPresentationAuthorization(
                   paywallPresentationID: presentationID,
-                  specialOffer: providerPayloadConfiguration.specialOffer,
-                  provenance: .providerCacheFallbackPossible
+                  gatePaywallPresentationID: gatePresentationID,
+                  gateRemoteConfiguration: providerPayloadConfiguration,
+                  provenance: .providerCacheFallbackPossible,
+                  window: window,
+                  trustedTime: trustedTime
               ) != nil
         else {
             fatalError(
@@ -65,8 +69,11 @@ enum SpecialOfferRuntimeProbe {
               !platformCacheConfiguration.authorizesRUBillingPresentation,
               SpecialOfferPresentationAuthorization(
                   paywallPresentationID: presentationID,
-                  specialOffer: platformCacheConfiguration.specialOffer,
-                  provenance: .platformCache
+                  gatePaywallPresentationID: gatePresentationID,
+                  gateRemoteConfiguration: platformCacheConfiguration,
+                  provenance: .platformCache,
+                  window: window,
+                  trustedTime: trustedTime
               ) == nil
         else {
             fatalError("Platform cache must not authorize Special Offer or RU Billing")
@@ -78,8 +85,11 @@ enum SpecialOfferRuntimeProbe {
         guard missingGateConfiguration.specialOffer == nil,
               SpecialOfferPresentationAuthorization(
                   paywallPresentationID: presentationID,
-                  specialOffer: missingGateConfiguration.specialOffer,
-                  provenance: .providerCacheFallbackPossible
+                  gatePaywallPresentationID: gatePresentationID,
+                  gateRemoteConfiguration: missingGateConfiguration,
+                  provenance: .providerCacheFallbackPossible,
+                  window: window,
+                  trustedTime: trustedTime
               ) == nil
         else {
             fatalError("A missing special_offer gate must fail closed")

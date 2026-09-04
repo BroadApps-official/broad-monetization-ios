@@ -79,8 +79,6 @@ private extension RemotePaywallConfigurationParser {
         _ dictionary: [String: Any]
     ) -> SpecialOfferRemoteConfiguration? {
         let specialAliases = keys.specialOfferGate
-            + keys.specialOfferDurationHours
-            + keys.specialOfferCooldownHours
             + keys.crossedPrice
             + keys.crossedValue
             + keys.priceMultiplier
@@ -90,22 +88,12 @@ private extension RemotePaywallConfigurationParser {
             return nil
         }
 
-        let windowDuration = parseOptionalSpecialOfferDuration(
-            in: dictionary,
-            aliases: keys.specialOfferDurationHours
-        )
-        let cooldownDuration = parseOptionalSpecialOfferDuration(
-            in: dictionary,
-            aliases: keys.specialOfferCooldownHours
-        )
-
         return SpecialOfferRemoteConfiguration(
-            // `special_offer` is the only campaign gate. Legacy duration fields
-            // are retained as optional metadata for source compatibility, but
-            // malformed values cannot disable the provider's explicit flag.
+            // Time policy is fixed in application state. Remote Config only
+            // carries the exact boolean gate supplied by the account manager.
             isEnabled: parseSpecialOfferGate(in: dictionary),
-            windowDuration: windowDuration.value,
-            cooldownDuration: cooldownDuration.value,
+            windowDuration: nil,
+            cooldownDuration: nil,
             crossedPrice: value(in: dictionary, aliases: keys.crossedPrice)
                 .flatMap(parseString),
             crossedValue: value(in: dictionary, aliases: keys.crossedValue)
@@ -129,7 +117,7 @@ private extension RemotePaywallConfigurationParser {
         for alias in keys.specialOfferGate where dictionary.keys.contains(alias) {
             didFindKey = true
             guard let rawValue = dictionary[alias],
-                  let parsed = parseBool(rawValue)
+                  let parsed = parseStrictBool(rawValue)
             else {
                 didFindInvalidValue = true
                 continue
@@ -146,6 +134,13 @@ private extension RemotePaywallConfigurationParser {
             && !didFindInvalidValue
             && !parsedValues.isEmpty
             && parsedValues.allSatisfy { $0 }
+    }
+
+    func parseStrictBool(_ value: Any) -> Bool? {
+        guard isFoundationBoolean(value), let number = value as? NSNumber else {
+            return nil
+        }
+        return number.boolValue
     }
 
     func parseOptionalSpecialOfferDuration(
