@@ -13,7 +13,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/BroadApps-official/broad-core-ios.git",
-            from: "1.0.0"
+            from: "1.2.0"
         ),
         .package(
             url: "https://github.com/Swinject/Swinject.git",

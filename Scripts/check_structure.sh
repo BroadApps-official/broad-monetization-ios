@@ -43,7 +43,7 @@ done
 
 for dependency_contract in \
     'BroadApps-official/broad-core-ios\.git' \
-    'from: "1\.0\.0"' \
+    'from: "1\.2\.0"' \
     'Swinject/Swinject\.git' \
     'exact: "2\.10\.0"' \
     'adaptyteam/AdaptySDK-iOS\.git' \

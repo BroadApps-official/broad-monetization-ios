@@ -58,6 +58,64 @@ Countdown не участвует в eligibility. Это локальный ви
 Для него не нужны серверное время, дата окончания или ответ backend. Ноль не
 скрывает экран и не блокирует покупку.
 
+## Special Offer: кампания по наличию
+
+Второй, параллельный путь. Флаговый резолвер выше не меняется — проект выбирает
+один из двух в композиции, и выше этой границы ничего не двигается.
+
+Здесь кампания — это пейвол своего плейсмента. Она есть, когда provider ответил
+на плейсмент оффера **своим** пейволом, payload — свежий ответ provider (не
+восстановленный из кэша платформы), и в нём есть что купить. Ключ `special_offer`
+в этом режиме не нужен: явный `false` остаётся kill switch и выключает кампанию
+из дашборда без релиза, а отсутствие ключа нейтрально. Это существенно: живые
+кампании в кабинете флага рядом с собой не несут.
+
+Кадэнс держит платформа: сутки оффера, потом тихие сутки
+(`SpecialOfferCadence`), и считается он по **серверному времени**
+(`ServerTimeProviderProtocol` из BroadCore). Часы передаются в резолвер
+**параметром без значения по умолчанию** — хост, забывший их отдать, не
+соберётся, а не окажется молча на часах устройства. Пока сервер не ответил,
+`timePolicy` по умолчанию отказывается показывать оффер вообще.
+
+Активная подписка отсекается **до** любых обращений к пейволу, кэшу и сети:
+платящему нечего продавать со скидкой. Это относится и к подписочному экрану,
+который приложение может открыть подписчику само (например из управления
+подпиской): экран откроется, оффера после него не будет.
+
+Покупка и восстановление не прячут оффер, а гасят окно, поэтому следующая
+кампания начинается с полных суток, а не доживает остаток прежней.
+
+Когда спрашивать, тоже решает платформа. `SpecialOfferCampaignCoordinator`
+слушает события, которые пейвол и так шлёт, и после каждого закрытия без покупки
+публикует решение в `decisions`. Свой экран он не преследует, за покупкой и
+восстановлением — гасит окно. Приложение подписывается один раз и только рисует.
+
+```swift
+let configuration = SpecialOfferCampaignConfiguration(placementID: .specialOffer)
+let coordinator = SpecialOfferCampaignCoordinator(
+    resolve: ResolveSpecialOfferCampaignUseCase(
+        configuration: configuration,
+        loadPaywallUseCase: services.loadPaywall,
+        windowRepository: PersistedSpecialOfferWindowStore(store: keyValueStore),
+        presentationLifecycle: services.paywallPresentationLifecycle,
+        entitlementStatusProvider: entitlementEngine,
+        serverTime: serverClock
+    ),
+    configuration: configuration,
+    followedPlacementIDs: [.main]
+)
+await relay.connect(coordinator)          // relay обёрнут вокруг аналитики хоста
+
+for await decision in coordinator.decisions {
+    guard case let .campaign(campaign) = decision else { continue }
+    present(campaign.placementID, remaining: campaign.remainingTimeInterval)
+}
+```
+
+Кампания несёт плейсмент, а не payload: экран грузит плейсмент сам, поэтому
+презентация, которую он рисует, принадлежит ему. Презентацию, на которой
+принималось решение, резолвер закрывает сам.
+
 ## Debug: локальная покупка
 
 `LocalStoreKitPurchaseRepository` и `LocalStoreKitRestoreRepository` (только под
