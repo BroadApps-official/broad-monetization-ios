@@ -1,8 +1,8 @@
 import BroadCore
 import Foundation
 
-/// Compatibility repository for hosts that still migrate former lifecycle
-/// snapshots. The standard resolver does not read or write this state.
+/// Durable lifecycle state for the standard 24-hour Special Offer window and
+/// its following 24-hour cooldown.
 public actor PersistedSpecialOfferStateRepository: SpecialOfferStateRepositoryProtocol {
     private struct Snapshot: Codable, Equatable {
         static let currentSchemaVersion = 1

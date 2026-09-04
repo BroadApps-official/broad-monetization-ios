@@ -2,6 +2,13 @@
 
 Все заметные изменения BroadMonetization фиксируются здесь с объяснением: что изменилось и почему.
 
+## 1.3.1
+
+### Documentation
+
+- Public source documentation for `PersistedSpecialOfferStateRepository`
+  now states its actual role in the canonical 24-hour window/cooldown contract.
+
 ## 1.3.0
 
 ### Changed
@@ -15,9 +22,6 @@
 - RU catalog сохраняет strict `isSpecialOffer`; обычный paywall исключает
   помеченные строки, а Special Offer требует marker и exact ID. RU price,
   currency и `productId` сохраняются до checkout.
-- Campaign-shaped compatibility API больше не обходит контракт:
-  он тоже читает gate из main, требует доверенное время и
-  использует фиксированный цикл 24/24.
 - Campaign-shaped compatibility API больше не обходит контракт:
   он тоже читает gate из main, требует доверенное время и
   использует фиксированный цикл 24/24.
