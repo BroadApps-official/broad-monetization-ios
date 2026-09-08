@@ -2,6 +2,17 @@
 
 Все заметные изменения BroadMonetization фиксируются здесь с объяснением: что изменилось и почему.
 
+## 1.4.1
+
+### Fixed
+
+- Restored exact pre-1.4 initializer overloads as delegating compatibility
+  shims. Existing apps can keep typed references to factory, catalog, remote
+  configuration and key-registry initializers as well as ordinary calls.
+  Default parameters alone do not preserve an initializer's function type.
+- Added compile-only references for every restored signature; RU A/B behavior
+  and the optional 1.4 API are unchanged. SemVer intent: compatibility patch.
+
 ## 1.4.0
 
 ### Added
