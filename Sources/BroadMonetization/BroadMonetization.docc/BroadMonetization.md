@@ -53,6 +53,23 @@ Provider-neutral monetization contracts and production adapters for BroadApps iP
 - ``FlatRUCatalogResponseDecoder``
 - ``RUBillingWireAdapters``
 
+### RU Billing experiments
+
+- ``RUExperimentMetadata``
+- ``RUExperimentEvent``
+- ``RUExperimentAssignedSegment``
+- ``RUExperimentAssignOutcome``
+- ``RUExperimentShownOutcome``
+- ``RUExperimentTrackingOutcome``
+- ``RUExperimentRepositoryProtocol``
+- ``RUExperimentHTTPConfiguration``
+- ``URLSessionRUExperimentRepository``
+- ``RUBillingExperimentTracker``
+- ``RUExperimentCatalogSelector``
+- ``RUExperimentCatalogSelection``
+- ``RUExperimentCatalogSelectionSource``
+- ``RUExperimentCatalogKind``
+
 ### Composition
 
 - ``BroadMonetizationAssembly``

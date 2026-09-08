@@ -32,6 +32,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
     public let closeDelay: TimeInterval?
     public let uiVariantID: PaywallUIVariantID?
     public let specialOffer: SpecialOfferRemoteConfiguration?
+    public let ruExperiment: RUExperimentMetadata?
     private(set) var authorizesRUBillingPresentation: Bool
 
     public init(
@@ -40,7 +41,8 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         accessPolicy: PaywallAccessPolicy? = nil,
         closeDelay: TimeInterval? = nil,
         uiVariantID: PaywallUIVariantID? = nil,
-        specialOffer: SpecialOfferRemoteConfiguration? = nil
+        specialOffer: SpecialOfferRemoteConfiguration? = nil,
+        ruExperiment: RUExperimentMetadata? = nil
     ) {
         if let closeDelay {
             precondition(
@@ -60,6 +62,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         self.closeDelay = closeDelay
         self.uiVariantID = uiVariantID
         self.specialOffer = specialOffer
+        self.ruExperiment = ruExperiment
         authorizesRUBillingPresentation = false
     }
 
@@ -70,7 +73,8 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         closeDelay: TimeInterval?,
         uiVariantID: PaywallUIVariantID?,
         specialOffer: SpecialOfferRemoteConfiguration?,
-        authorizesRUBillingPresentation: Bool
+        authorizesRUBillingPresentation: Bool,
+        ruExperiment: RUExperimentMetadata? = nil
     ) {
         if let closeDelay {
             precondition(
@@ -86,6 +90,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         self.uiVariantID = uiVariantID
         self.specialOffer = specialOffer
         self.authorizesRUBillingPresentation = authorizesRUBillingPresentation
+        self.ruExperiment = ruExperiment
     }
 
     public init(from decoder: any Decoder) throws {
@@ -111,7 +116,10 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
                 SpecialOfferRemoteConfiguration.self,
                 forKey: .specialOffer
             ),
-            authorizesRUBillingPresentation: false
+            authorizesRUBillingPresentation: false,
+            // Experiment metadata belongs to this live response. A persisted
+            // payload cannot revive an old reporting assignment.
+            ruExperiment: nil
         )
     }
 
@@ -142,7 +150,8 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
                 ? specialOffer
                 : nil,
             authorizesRUBillingPresentation: provenance
-                .authorizesRUBillingPresentation
+                .authorizesRUBillingPresentation,
+            ruExperiment: provenance.authorizesRUBillingPresentation ? ruExperiment : nil
         )
     }
 
@@ -154,6 +163,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         case closeDelay
         case uiVariantID
         case specialOffer
+        case ruExperiment
     }
 
     private static func decodeCloseDelay(

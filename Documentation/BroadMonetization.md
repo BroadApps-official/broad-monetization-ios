@@ -140,7 +140,7 @@ Special Offer требует marker и exact case-sensitive ID выбранно�
 Adapty product. При отсутствующем, неоднозначном marker или
 несовпадающем ID checkout закрыт. Цена, валюта и `productId`
 берутся из этой точной backend-строки. RU Billing A/B-тесты
-платформой не поддержаны.
+подключаются отдельно: [настройка в 1.4.0](RUBillingExperiments.md).
 
 [Полный контракт →](RUSpecialOffer.md)
 

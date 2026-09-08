@@ -2,6 +2,24 @@
 
 Все заметные изменения BroadMonetization фиксируются здесь с объяснением: что изменилось и почему.
 
+## 1.4.0
+
+### Added
+
+- Opt-in RU Billing A/B reporting: strict current experiment/segment metadata,
+  shared authenticated assign → paywall-shown transport and one attempt per
+  presentation. Failed assignment never fabricates a shown segment; a stored
+  backend segment is reported without changing the Adapty variant.
+- `RUBillingCompositionFactory.makeExperimentTracker` and optional
+  `AdaptyMonetizationFactory.ruBillingExperiments` integrate the existing show
+  lifecycle without blocking dismissal or changing checkout.
+- `RUCatalogProduct.isDefault` and explicit `RUExperimentCatalogSelector` support
+  exact matches → defaults → complete section while preserving the original
+  backend array, order, duplicate rows and Special Offer boundaries.
+- Executable compatibility/concurrency/HTTP probes, sandbox examples and
+  manual/agent integration guide. SemVer intent: additive minor; existing
+  initializers and JSON remain valid, reporting defaults to disabled.
+
 ## 1.3.1
 
 ### Documentation

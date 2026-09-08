@@ -31,6 +31,32 @@ public struct RUBillingCompositionFactory: Sendable {
         )
     }
 
+    /// Explicitly enables RU experiment reporting with the existing backend,
+    /// subject and authorization epoch. Creating normal services alone does
+    /// not create a tracker or send experiment requests.
+    public func makeExperimentTracker(
+        configuration experimentConfiguration: RUExperimentHTTPConfiguration,
+        onOutcome: @escaping @Sendable (RUExperimentTrackingOutcome) -> Void = { _ in }
+    ) -> RUBillingExperimentTracker {
+        RUBillingExperimentTracker(
+            repository: URLSessionRUExperimentRepository(
+                http: configuration.http,
+                configuration: experimentConfiguration,
+                subject: dependencies.subject,
+                authorizationProvider: dependencies.authorizationProvider,
+                authorizationBinding: dependencies.authorizationBinding
+            ),
+            gate: RUBillingGate(
+                isFeatureEnabled: configuration.isFeatureEnabled,
+                deviceContextProvider: dependencies.deviceContextProvider,
+                debugOverrideStore: dependencies.debugOverrideStore
+            ),
+            storefrontRepository: makeStorefrontRepository(),
+            authorizationBinding: dependencies.authorizationBinding,
+            onOutcome: onOutcome
+        )
+    }
+
     public func makeServices(
         refreshEntitlement: any RefreshEntitlementUseCaseProtocol,
         operationGate: MonetizationOperationGate

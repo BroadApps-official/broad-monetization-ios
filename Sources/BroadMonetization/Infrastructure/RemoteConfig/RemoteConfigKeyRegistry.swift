@@ -63,6 +63,8 @@ public struct RemoteConfigKeyRegistry: Sendable {
     public let priceMultiplier: [String]
     public let specialOfferBadge: [String]
     public let specialOfferPeriodText: [String]
+    public let ruExperimentCode: String
+    public let ruSegmentCode: String
 
     public init(
         ruBillingGate: [String],
@@ -77,7 +79,9 @@ public struct RemoteConfigKeyRegistry: Sendable {
         crossedValue: [String],
         priceMultiplier: [String],
         specialOfferBadge: [String],
-        specialOfferPeriodText: [String]
+        specialOfferPeriodText: [String],
+        ruExperimentCode: String = "experiment_code",
+        ruSegmentCode: String = "segment_code"
     ) {
         let groups = [
             ruBillingGate,
@@ -112,5 +116,11 @@ public struct RemoteConfigKeyRegistry: Sendable {
         self.priceMultiplier = priceMultiplier
         self.specialOfferBadge = specialOfferBadge
         self.specialOfferPeriodText = specialOfferPeriodText
+        precondition(
+            !ruExperimentCode.isEmpty && !ruSegmentCode.isEmpty && ruExperimentCode != ruSegmentCode,
+            "RU experiment keys must be nonempty and distinct"
+        )
+        self.ruExperimentCode = ruExperimentCode
+        self.ruSegmentCode = ruSegmentCode
     }
 }

@@ -9,6 +9,7 @@ struct DecodedRUCatalogProduct: Decodable {
     let supportedMethods: [CheckoutMethod]
     let credits: Int?
     let isSpecialOffer: Bool
+    let isDefault: Bool
 
     private enum CodingKeys: String, CodingKey {
         case catalogProductID
@@ -21,6 +22,7 @@ struct DecodedRUCatalogProduct: Decodable {
         case supportedMethods
         case credits
         case isSpecialOffer
+        case isDefault
     }
 
     init(from decoder: any Decoder) throws {
@@ -50,5 +52,8 @@ struct DecodedRUCatalogProduct: Decodable {
             Bool.self,
             forKey: .isSpecialOffer
         ) ?? false
+        // Old caches omit this additive marker. A malformed new marker must
+        // not invalidate a previously usable catalog or authorize a subset.
+        isDefault = (try? container.decodeIfPresent(Bool.self, forKey: .isDefault)) ?? false
     }
 }

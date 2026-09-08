@@ -20,7 +20,8 @@ public actor LastValidRemoteConfigurationStore {
             closeDelay: parsed.closeDelay ?? previous?.closeDelay,
             uiVariantID: parsed.uiVariantID ?? previous?.uiVariantID,
             specialOffer: parsed.specialOffer,
-            authorizesRUBillingPresentation: false
+            authorizesRUBillingPresentation: false,
+            ruExperiment: parsed.ruExperiment
         )
         configurations[placementID] = resolved
         return resolved

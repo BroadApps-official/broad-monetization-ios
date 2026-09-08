@@ -33,6 +33,7 @@ public struct PaywallAnalyticsContext: Equatable, Sendable {
     public let resolvedPlacementID: PlacementID
     public let fallbackReason: PaywallFallbackReason?
     public let productCount: Int
+    public let remoteConfiguration: RemotePaywallConfiguration
 
     public init(paywall: PaywallPayload) {
         presentationID = paywall.presentationID
@@ -42,6 +43,7 @@ public struct PaywallAnalyticsContext: Equatable, Sendable {
         resolvedPlacementID = paywall.origin.resolvedPlacementID
         fallbackReason = paywall.origin.fallbackReason
         productCount = paywall.products.count
+        remoteConfiguration = paywall.remoteConfiguration
     }
 }
 

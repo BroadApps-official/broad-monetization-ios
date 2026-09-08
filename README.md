@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 1.3.1" src="https://img.shields.io/badge/release-1.3.1-10B981">
+  <img alt="Release 1.4.0" src="https://img.shields.io/badge/release-1.4.0-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -32,6 +32,9 @@ Offer, RU Billing и safe analytics.
 [проверка](#проверка)
 
 ## Что делает модуль
+
+RU Billing A/B подключается отдельно в 1.4.0: [настройка кодом и с агентом](Documentation/RUBillingExperiments.md).
+Обновление зависимости без нового optional tracker сохраняет прежнее поведение.
 
 - загружает paywall и все products в provider order без filter/sort/dedup;
 - сохраняет exact raw-product reference для purchase;
@@ -64,7 +67,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "1.3.1"
+        from: "1.4.0"
     )
 ]
 ```
@@ -230,7 +233,8 @@ let coupons = RUCatalogSections(catalog: payload).coupons
 
 Цикл окна/cooldown, источник флага и закрытие на нуле общие с
 Adapty Special Offer. RU-ветка меняет только источник продукта и
-маршрут checkout. RU Billing A/B-тесты платформой не поддержаны.
+маршрут checkout. RU Billing A/B подключается отдельно через
+[optional tracker и selector](Documentation/RUBillingExperiments.md).
 
 СБП/карта дополнительно требуют обычный strict RU gate. Возврат из hosted
 checkout оставляет pending, пока authoritative entitlement/backend не вернул

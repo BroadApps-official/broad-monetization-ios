@@ -15,6 +15,7 @@ public struct RUCatalogProduct: Identifiable, Codable, Equatable, Sendable {
     public let supportedMethods: [CheckoutMethod]
     public let credits: Int?
     public let isSpecialOffer: Bool
+    public let isDefault: Bool
 
     public init(
         catalogProductID: RUCatalogProductID,
@@ -26,7 +27,8 @@ public struct RUCatalogProduct: Identifiable, Codable, Equatable, Sendable {
         supportedMethods: [CheckoutMethod],
         title: String? = nil,
         credits: Int? = nil,
-        isSpecialOffer: Bool = false
+        isSpecialOffer: Bool = false,
+        isDefault: Bool = false
     ) {
         precondition(
             Set(supportedMethods).count == supportedMethods.count,
@@ -51,6 +53,7 @@ public struct RUCatalogProduct: Identifiable, Codable, Equatable, Sendable {
         self.supportedMethods = supportedMethods
         self.credits = credits
         self.isSpecialOffer = isSpecialOffer
+        self.isDefault = isDefault
     }
 
     public init(from decoder: any Decoder) throws {
@@ -91,7 +94,8 @@ public struct RUCatalogProduct: Identifiable, Codable, Equatable, Sendable {
             supportedMethods: value.supportedMethods,
             title: value.title,
             credits: value.credits,
-            isSpecialOffer: value.isSpecialOffer
+            isSpecialOffer: value.isSpecialOffer,
+            isDefault: value.isDefault
         )
     }
 }

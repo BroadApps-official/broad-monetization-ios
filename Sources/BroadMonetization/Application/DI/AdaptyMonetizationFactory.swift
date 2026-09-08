@@ -7,6 +7,7 @@ public struct AdaptyMonetizationFactory: Sendable {
     private let messages: AdaptyMonetizationMessages
     private let remoteConfigurationParser: RemotePaywallConfigurationParser
     private let remoteConfigurationStore: LastValidRemoteConfigurationStore
+    private let ruBillingExperiments: RUBillingExperimentTracker?
 
     /// Basic anonymous Adapty composition. The host supplies the SDK
     /// configuration, placement mapping and localized messages; no custom
@@ -17,7 +18,8 @@ public struct AdaptyMonetizationFactory: Sendable {
         messages: AdaptyMonetizationMessages,
         remoteConfigurationParser: RemotePaywallConfigurationParser = .init(),
         remoteConfigurationStore: LastValidRemoteConfigurationStore = .init(),
-        context: AdaptyRepositoryContext = .init()
+        context: AdaptyRepositoryContext = .init(),
+        ruBillingExperiments: RUBillingExperimentTracker? = nil
     ) {
         precondition(
             configuration.subject == .anonymous,
@@ -30,7 +32,8 @@ public struct AdaptyMonetizationFactory: Sendable {
             messages: messages,
             remoteConfigurationParser: remoteConfigurationParser,
             remoteConfigurationStore: remoteConfigurationStore,
-            context: context
+            context: context,
+            ruBillingExperiments: ruBillingExperiments
         )
     }
 
@@ -42,7 +45,8 @@ public struct AdaptyMonetizationFactory: Sendable {
         messages: AdaptyMonetizationMessages,
         remoteConfigurationParser: RemotePaywallConfigurationParser = .init(),
         remoteConfigurationStore: LastValidRemoteConfigurationStore = .init(),
-        context: AdaptyRepositoryContext = .init()
+        context: AdaptyRepositoryContext = .init(),
+        ruBillingExperiments: RUBillingExperimentTracker? = nil
     ) {
         self.configuration = configuration
         self.identityProvider = identityProvider
@@ -51,13 +55,16 @@ public struct AdaptyMonetizationFactory: Sendable {
         self.remoteConfigurationParser = remoteConfigurationParser
         self.remoteConfigurationStore = remoteConfigurationStore
         self.context = context
+        self.ruBillingExperiments = ruBillingExperiments
     }
 
     public var paywallPresentationLifecycle: AdaptyPaywallPresentationLifecycle {
         AdaptyPaywallPresentationLifecycle(
             configuration: configuration,
             identityProvider: identityProvider,
-            context: context
+            context: context,
+            placementRegistry: placementRegistry,
+            ruBillingExperiments: ruBillingExperiments
         )
     }
 

@@ -50,4 +50,5 @@ cooldown. Countdown истекает на нуле. Выключение flag, c
 Возврат из browser не является оплатой. Premium открывается только
 после authoritative backend/RU Billing status `active`.
 
-RU Billing A/B-тесты общей платформой пока не поддержаны.
+RU Billing A/B-тесты доступны opt-in с 1.4.0; marker Special Offer остаётся
+обязательным: [подключение и выбор продуктов](RUBillingExperiments.md).

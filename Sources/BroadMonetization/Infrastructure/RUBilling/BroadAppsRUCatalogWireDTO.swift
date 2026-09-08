@@ -44,6 +44,7 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
     let subscriptionPeriod: BroadAppsRUPeriodDTO?
     let paymentMethods: [String]
     let isSpecialOffer: Bool
+    let isDefault: Bool
 
     init(
         productID: String,
@@ -53,7 +54,8 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
         displayPrice: String?,
         subscriptionPeriod: BroadAppsRUPeriodDTO?,
         paymentMethods: [String],
-        isSpecialOffer: Bool
+        isSpecialOffer: Bool,
+        isDefault: Bool = false
     ) {
         self.productID = productID
         self.kind = kind
@@ -63,6 +65,7 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
         self.subscriptionPeriod = subscriptionPeriod
         self.paymentMethods = paymentMethods
         self.isSpecialOffer = isSpecialOffer
+        self.isDefault = isDefault
     }
 
     func with(kind: RUCatalogProductKind) -> BroadAppsRUCatalogProductDTO {
@@ -74,7 +77,8 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
             displayPrice: displayPrice,
             subscriptionPeriod: subscriptionPeriod,
             paymentMethods: paymentMethods,
-            isSpecialOffer: isSpecialOffer
+            isSpecialOffer: isSpecialOffer,
+            isDefault: isDefault
         )
     }
 
@@ -88,6 +92,9 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
         case paymentMethods = "payment_methods"
         case isSpecialOfferCamel = "isSpecialOffer"
         case isSpecialOfferSnake = "is_special_offer"
+        case isDefaultCamel = "isDefault"
+        case isDefaultBare = "default"
+        case isDefaultSnake = "is_default"
     }
 
     init(from decoder: Decoder) throws {
@@ -103,6 +110,10 @@ struct BroadAppsRUCatalogProductDTO: Decodable {
             Bool.self,
             forKey: .isSpecialOfferCamel
         ) ?? container.decodeIfPresent(Bool.self, forKey: .isSpecialOfferSnake) ?? false
+        isDefault = (try? container.decodeIfPresent(Bool.self, forKey: .isDefaultCamel))
+            ?? (try? container.decodeIfPresent(Bool.self, forKey: .isDefaultBare))
+            ?? (try? container.decodeIfPresent(Bool.self, forKey: .isDefaultSnake))
+            ?? false
     }
 }
 

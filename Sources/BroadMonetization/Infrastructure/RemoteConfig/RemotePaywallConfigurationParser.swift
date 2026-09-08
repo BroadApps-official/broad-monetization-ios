@@ -28,12 +28,24 @@ public struct RemotePaywallConfigurationParser: Sendable {
                 .flatMap(validIdentifier)
                 .map(PaywallUIVariantID.init(rawValue:)),
             specialOffer: parseSpecialOffer(dictionary),
-            authorizesRUBillingPresentation: false
+            authorizesRUBillingPresentation: false,
+            ruExperiment: parseRUExperiment(dictionary)
         )
     }
 }
 
 private extension RemotePaywallConfigurationParser {
+    func parseRUExperiment(_ dictionary: [String: Any]) -> RUExperimentMetadata? {
+        // Codes are strict strings from this exact variant. In particular,
+        // NSNumber/Bool and variation IDs are not alternate segment codes.
+        guard let experiment = dictionary[keys.ruExperimentCode] as? String,
+              let segment = dictionary[keys.ruSegmentCode] as? String
+        else {
+            return nil
+        }
+        return RUExperimentMetadata(experimentCode: experiment, segmentCode: segment)
+    }
+
     func parseRUBillingGate(
         in dictionary: [String: Any]
     ) -> RemoteRUBillingGateDecision {

@@ -52,7 +52,8 @@ private extension BroadAppsRUCatalogResponseDecoder {
             displayPrice: product.displayPrice,
             subscriptionPeriod: makePeriod(product.subscriptionPeriod),
             supportedMethods: methods,
-            isSpecialOffer: product.isSpecialOffer
+            isSpecialOffer: product.isSpecialOffer,
+            isDefault: product.isDefault
         )
     }
 

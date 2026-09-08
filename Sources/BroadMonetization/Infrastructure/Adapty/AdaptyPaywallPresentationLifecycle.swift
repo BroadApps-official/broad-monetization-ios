@@ -4,15 +4,21 @@ public struct AdaptyPaywallPresentationLifecycle: PaywallPresentationLifecyclePr
     private let configuration: AdaptyPlatformConfiguration
     private let identityProvider: any AdaptyIdentityProviderProtocol
     private let context: AdaptyRepositoryContext
+    private let placementRegistry: AdaptyPlacementRegistry?
+    private let ruBillingExperiments: RUBillingExperimentTracker?
 
     init(
         configuration: AdaptyPlatformConfiguration,
         identityProvider: any AdaptyIdentityProviderProtocol,
-        context: AdaptyRepositoryContext
+        context: AdaptyRepositoryContext,
+        placementRegistry: AdaptyPlacementRegistry? = nil,
+        ruBillingExperiments: RUBillingExperimentTracker? = nil
     ) {
         self.configuration = configuration
         self.identityProvider = identityProvider
         self.context = context
+        self.placementRegistry = placementRegistry
+        self.ruBillingExperiments = ruBillingExperiments
     }
 
     public func presentationDidAppear(
@@ -25,10 +31,24 @@ public struct AdaptyPaywallPresentationLifecycle: PaywallPresentationLifecyclePr
             return
         }
 
+        // Register the attempt before returning, so a fast close cannot race
+        // its reservation. No network request delays the presentation lifecycle.
+        let report = await ruBillingExperiments?.beginTracking(
+            analyticsContext,
+            placement: placementRegistry?.adaptyPlacement(
+                for: analyticsContext.resolvedPlacementID
+            )?.rawValue ?? analyticsContext.resolvedPlacementID.rawValue
+        )
+
         // Reservation is completed before returning, so a following close can
         // release the registry immediately. SDK logging owns its captured raw
         // value and cannot hold the financial resource registry hostage.
         Task {
+            if let report, await report.value != .useAdapty {
+                // RU failures remain in the RU branch. Falling through would
+                // send a view to a counter that cannot observe this purchase.
+                return
+            }
             _ = await AdaptySDKActivationGate.shared.perform(
                 configuration: configuration,
                 identityProvider: identityProvider,
@@ -47,5 +67,6 @@ public struct AdaptyPaywallPresentationLifecycle: PaywallPresentationLifecyclePr
             presentationID: analyticsContext.presentationID,
             reference: analyticsContext.paywallReference
         )
+        await ruBillingExperiments?.presentationDidEnd(analyticsContext.presentationID)
     }
 }

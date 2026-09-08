@@ -55,7 +55,8 @@ private extension FlatRUCatalogResponseDecoder {
             supportedMethods: methods,
             title: product.title,
             credits: product.credits,
-            isSpecialOffer: product.isSpecialOffer
+            isSpecialOffer: product.isSpecialOffer,
+            isDefault: product.isDefault
         )
     }
 
@@ -144,6 +145,7 @@ private struct FlatRUCatalogProduct: Decodable {
     let displayPrice: String?
     let paymentMethods: [String]?
     let isSpecialOffer: Bool
+    let isDefault: Bool
 
     private enum CodingKeys: String, CodingKey {
         case productIDCamel = "productId"
@@ -162,6 +164,9 @@ private struct FlatRUCatalogProduct: Decodable {
         case paymentMethodsSnake = "payment_methods"
         case isSpecialOfferCamel = "isSpecialOffer"
         case isSpecialOfferSnake = "is_special_offer"
+        case isDefaultCamel = "isDefault"
+        case isDefaultBare = "default"
+        case isDefaultSnake = "is_default"
     }
 
     init(from decoder: any Decoder) throws {
@@ -186,6 +191,10 @@ private struct FlatRUCatalogProduct: Decodable {
             ?? container.decodeIfPresent([String].self, forKey: .paymentMethodsSnake)
         isSpecialOffer = try container.decodeIfPresent(Bool.self, forKey: .isSpecialOfferCamel)
             ?? container.decodeIfPresent(Bool.self, forKey: .isSpecialOfferSnake)
+            ?? false
+        isDefault = (try? container.decodeIfPresent(Bool.self, forKey: .isDefaultCamel))
+            ?? (try? container.decodeIfPresent(Bool.self, forKey: .isDefaultBare))
+            ?? (try? container.decodeIfPresent(Bool.self, forKey: .isDefaultSnake))
             ?? false
     }
 }

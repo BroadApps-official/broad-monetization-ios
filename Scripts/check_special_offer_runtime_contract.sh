@@ -7,6 +7,7 @@ temporary_directory="$(mktemp -d)"
 trap 'rm -rf "$temporary_directory"' EXIT
 
 xcrun swiftc \
+    "$platform_root/Sources/BroadMonetization/Domain/Experiments/RUExperimentMetadata.swift" \
     "$platform_root/Sources/BroadMonetization/Domain/Identifiers/MonetizationIdentifiers.swift" \
     "$platform_root/Sources/BroadMonetization/Domain/Paywalls/PaywallRemoteConfigurationProvenance.swift" \
     "$platform_root/Sources/BroadMonetization/Domain/Paywalls/RemotePaywallConfiguration.swift" \

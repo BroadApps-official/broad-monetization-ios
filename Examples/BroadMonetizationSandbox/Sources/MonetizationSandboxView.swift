@@ -15,6 +15,8 @@ struct MonetizationSandboxView: View {
     private let parsedConfiguration = RemotePaywallConfigurationParser().parse([
         "special_offer": true,
         "ru_pay": true,
+        "experiment_code": "fixture",
+        "segment_code": "a",
         "special_offer_badge": "Fixture"
     ])
 
@@ -73,7 +75,7 @@ struct MonetizationSandboxView: View {
                         "Platform cache",
                         value: yesNo(platformCacheConfiguration.specialOffer?.isEnabled == true)
                     )
-                    LabeledContent("Countdown", value: "24:00:00 → 00:00:00 → loop")
+                    LabeledContent("Countdown", value: "24h window → 24h cooldown")
                 }
 
                 Section("RU Billing authority") {
@@ -93,6 +95,18 @@ struct MonetizationSandboxView: View {
                                 .authorizesRUBillingPresentation
                         )
                     )
+                }
+
+                Section("RU A/B · opt-in") {
+                    LabeledContent("Experiment", value: parsedConfiguration.ruExperiment?.experimentCode ?? "absent")
+                    LabeledContent("Segment", value: parsedConfiguration.ruExperiment?.segmentCode ?? "absent")
+                    LabeledContent("Provider cache metadata", value: yesNo(providerConfiguration.ruExperiment != nil))
+                    LabeledContent(
+                        "Verified fresh metadata",
+                        value: yesNo(qualifiedConfiguration(for: .verifiedFreshRemote).ruExperiment != nil)
+                    )
+                    LabeledContent("Without tracker", value: "existing Adapty lifecycle")
+                    Text("Exact IDs → isDefault → full section. Backend order and duplicates are preserved.")
                 }
 
                 Section("Safety") {
