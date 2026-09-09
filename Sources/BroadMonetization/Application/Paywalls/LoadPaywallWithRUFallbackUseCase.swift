@@ -1,6 +1,7 @@
 import BroadCore
 
-/// Explicitly connects provider outages to the host's RU backend. A received
+/// Connects provider outages or missing RU ID matches to the host's backend.
+/// Without exact matches, all default subscriptions are selected. A received
 /// false/invalid/missing flag is different from receiving no configuration.
 /// Existing LoadPaywallUseCase remains unchanged; install this in its place.
 public struct LoadPaywallWithRUFallbackUseCase: LoadPaywallUseCaseProtocol {
@@ -74,12 +75,9 @@ public struct LoadPaywallWithRUFallbackUseCase: LoadPaywallUseCaseProtocol {
         evidence: RUFallbackAttemptRecorder
     ) async -> PaywallLoadOutcome {
         guard !Task.isCancelled else { return await cancelled(ordinary) }
-        if case let .loaded(paywall) = ordinary,
-           !paywall.products.isEmpty, paywall.origin.catalogSource != .cache {
-            return ordinary
-        }
+        let providerPaywall = availableProviderPaywall(in: ordinary)
         guard request.placementID != .specialOffer, request.placementID != .tokens,
-              let configuration = await evidence.fallbackConfiguration()
+              let configuration = await evidence.fallbackConfiguration(for: providerPaywall)
         else { return ordinary }
         let currentStorefront: Storefront? = switch await storefront.currentStorefront() {
         case let .available(value): value
@@ -90,11 +88,21 @@ public struct LoadPaywallWithRUFallbackUseCase: LoadPaywallUseCaseProtocol {
         else { return ordinary }
         guard case let .loaded(payload) = await catalog.loadFreshCatalog() else { return ordinary }
         guard !Task.isCancelled else { return await cancelled(ordinary) }
-        let products = RUFallbackProductIdentity.products(in: payload)
+        let selection = RUExperimentCatalogSelector().select(
+            productIDs: providerPaywall?.products.map(\.productID) ?? [], in: payload, kind: .subscriptions
+        )
+        // A working provider catalog with any exact matches keeps its complete
+        // array and raw SDK handles. Defaults never replace one unmatched card.
+        if providerPaywall != nil, selection.source == .placementMatches {
+            return ordinary
+        }
+        let products = RUFallbackProductIdentity.products(in: payload, selectedRows: selection.products)
         guard products.contains(where: \.isEligibleForGenericPurchase) else { return ordinary }
         if case let .loaded(discarded) = ordinary {
             await lifecycle.presentationDidEnd(PaywallAnalyticsContext(paywall: discarded))
         }
+        var fallbackConfiguration = RemotePaywallConfiguration.empty
+        fallbackConfiguration.authorizesRUProviderFallback = true
         return .loaded(PaywallPayload(
             presentationID: .generated(),
             paywallReference: PaywallReference(rawValue: "ru-backend-\(PaywallPresentationID.generated().rawValue)"),
@@ -104,11 +112,17 @@ public struct LoadPaywallWithRUFallbackUseCase: LoadPaywallUseCaseProtocol {
                 catalogSource: .ruBackend
             ),
             products: products,
-            remoteConfiguration: configuration,
+            remoteConfiguration: fallbackConfiguration,
             // No assertion that Adapty returned a verified remote response.
             remoteConfigurationProvenance: .legacyUnqualified,
             fetchedAt: payload.fetchedAt
         ))
+    }
+
+    private func availableProviderPaywall(in outcome: PaywallLoadOutcome) -> PaywallPayload? {
+        guard case let .loaded(paywall) = outcome,
+              !paywall.products.isEmpty, paywall.origin.catalogSource != .cache else { return nil }
+        return paywall
     }
 }
 
@@ -150,8 +164,15 @@ private actor RUFallbackAttemptRecorder: PaywallRepositoryProtocol {
         return attempt.outcome
     }
 
-    func fallbackConfiguration() -> RemotePaywallConfiguration? {
-        guard hasUnavailableProviderProducts, !isProhibited else { return nil }
+    func fallbackConfiguration(for providerPaywall: PaywallPayload?) -> RemotePaywallConfiguration? {
+        guard !isProhibited else { return nil }
+        if let providerPaywall {
+            // With working products, the existing fresh-configuration gate is
+            // required before looking for backend matches/defaults.
+            guard providerPaywall.remoteConfiguration.authorizesRUBillingPresentation else { return nil }
+            return providerPaywall.remoteConfiguration
+        }
+        guard hasUnavailableProviderProducts else { return nil }
         // The capability is never serialized. It cannot activate experiments
         // or Special Offer, or pretend the provider sent ru_pay=true.
         var configuration = RemotePaywallConfiguration.empty

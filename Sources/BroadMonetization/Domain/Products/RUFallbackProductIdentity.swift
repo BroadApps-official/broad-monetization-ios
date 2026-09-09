@@ -11,9 +11,13 @@ enum RUFallbackProductIdentity {
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    static func products(in catalog: RUCatalogPayload) -> [MonetizationProduct] {
+    static func products(
+        in catalog: RUCatalogPayload, selectedRows: [RUCatalogProduct]? = nil
+    ) -> [MonetizationProduct] {
         catalog.products.enumerated().compactMap { index, row in
-            guard !row.isSpecialOffer else { return nil }
+            // Keep the index in the original catalog, including skipped rows.
+            // Re-indexing a default subset would bind checkout to another row.
+            guard !row.isSpecialOffer, selectedRows?.contains(row) ?? true else { return nil }
             return MonetizationProduct(
                 presentationID: .generated(),
                 reference: ProductReference(rawValue: "\(prefix)\(index)"),

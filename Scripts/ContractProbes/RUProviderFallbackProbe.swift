@@ -46,6 +46,7 @@ enum RUProviderFallbackProbe {
         await missingPlacementContracts()
         await dedicatedPlacementContracts()
         await emptyProductContracts()
+        await defaultProductContracts()
         print(
             "RU provider fallback passed: regional/response matrix, false after products failure, fresh catalog, row identity, cache, cancellation."
         )
@@ -53,10 +54,9 @@ enum RUProviderFallbackProbe {
 
     static func inspect(_ payload: PaywallPayload) throws {
         check(payload.origin.catalogSource == .ruBackend)
-        check(payload.products.count == 3) // duplicated subscription plus unknown, no offer
+        check(payload.products.count == 2) // both subscription rows; no offer or other sections
         check(payload.products[0].productID == payload.products[1].productID)
         check(payload.products[0].presentationID != payload.products[1].presentationID)
-        check(payload.products[2].isEligibleForGenericPurchase == false)
         check(payload.remoteConfiguration.isRUBillingEnabled == nil)
         check(payload.remoteConfiguration.ruExperiment == nil && payload.remoteConfiguration.specialOffer == nil)
         let gate = RUBillingGate(isFeatureEnabled: true, deviceContextProvider: Device(region: "RU"))
@@ -302,8 +302,10 @@ extension RUProviderFallbackProbe {
 
     actor Catalog: FreshRUCatalogRepositoryProtocol {
         let unavailable: Bool
-        init(unavailable: Bool = false) {
+        let supplied: RUCatalogPayload
+        init(unavailable: Bool = false, supplied: RUCatalogPayload = Catalog.payload) {
             self.unavailable = unavailable
+            self.supplied = supplied
         }
 
         var freshCalls = 0
@@ -312,25 +314,29 @@ extension RUProviderFallbackProbe {
             products: [row(100), row(200), row(300, offer: true), row(400, kind: .unknown)],
             fetchedAt: Date()
         )
-        static func row(_ price: Decimal, offer: Bool = false, kind: RUCatalogProductKind = .subscription) -> RUCatalogProduct {
+        static func row(
+            _ price: Decimal, offer: Bool = false, kind: RUCatalogProductKind = .subscription,
+            isDefault: Bool = false, identifier: String = "same-id", appleID: String? = nil
+        ) -> RUCatalogProduct {
             RUCatalogProduct(
-                catalogProductID: .init(rawValue: "same-id"),
+                catalogProductID: .init(rawValue: identifier),
                 kind: kind,
-                appStoreProductID: nil,
+                appStoreProductID: appleID.map { ProductID(rawValue: $0) },
                 price: Money(amount: price, currencyCode: "RUB"),
                 displayPrice: nil,
                 subscriptionPeriod: .init(unit: .month, count: 1),
                 supportedMethods: [.card],
-                isSpecialOffer: offer
+                isSpecialOffer: offer,
+                isDefault: isDefault
             )
         }
 
         func loadCatalog() async -> RUCatalogLoadOutcome {
-            cachedCalls += 1; return .loaded(Self.payload)
+            cachedCalls += 1; return .loaded(supplied)
         }
 
         func loadFreshCatalog() async -> RUCatalogLoadOutcome {
-            freshCalls += 1; return unavailable ? .unavailable(error) : .loaded(Self.payload)
+            freshCalls += 1; return unavailable ? .unavailable(error) : .loaded(supplied)
         }
     }
 }

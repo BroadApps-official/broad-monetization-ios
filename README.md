@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 1.5.3" src="https://img.shields.io/badge/release-1.5.3-10B981">
+  <img alt="Release 1.5.4" src="https://img.shields.io/badge/release-1.5.4-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -67,7 +67,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "1.5.3"
+        from: "1.5.4"
     )
 ]
 ```
@@ -219,6 +219,11 @@ policy. По цене или периоду продукт не угадывае
 некорректный `ru_pay` закрывает RU methods. **Нет ответа Adapty** — отдельный
 случай: в 1.5.0 можно явно подключить серверный каталог при российском Storefront
 или регионе iPhone. Значение `true` не подставляется, старые API не меняют поведения.
+
+С 1.5.4 подключённый резерв при отсутствии точных совпадений или продуктов Adapty
+показывает все обычные подписки с `isDefault=true`. Если отметок нет, используется
+полный раздел подписок. Выбранные строки сохраняют исходные индексы, порядок,
+дубли, серверные ID и цены; Apple checkout для них недоступен.
 
 ## Спешл оффер RU Billing
 

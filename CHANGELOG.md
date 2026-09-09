@@ -2,6 +2,24 @@
 
 Все заметные изменения BroadMonetization фиксируются здесь с объяснением: что изменилось и почему.
 
+## 1.5.4
+
+### Fixed
+
+- The opt-in RU loader selects all default subscriptions when Adapty is
+  unavailable, returns no products, or has no exact backend ID matches.
+  It reuses the existing exact IDs → isDefault → complete subscription section
+  policy; legacy catalogs without defaults remain usable.
+- Any exact match keeps the complete provider payload and SDK handles. A live
+  nonempty provider catalog requires the existing fresh RU gate before backend
+  selection. Received prohibitions and dedicated placement exclusions remain.
+- Backend cards retain their original catalog indices and full commercial
+  fingerprints after default selection, including duplicate IDs with different
+  prices. Checkout never substitutes an unrelated Apple product or offer.
+- Regression probes cover defaults, partial matches, legacy catalogs, gate
+  provenance and fresh checkout identity. Public signatures are unchanged.
+  SemVer intent: compatibility patch for the opt-in reserve path.
+
 ## 1.5.3
 
 ### Fixed

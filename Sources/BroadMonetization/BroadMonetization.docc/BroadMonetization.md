@@ -97,3 +97,11 @@ substitutes `main` or the ordinary RU subscription catalog for these placements.
 Since 1.5.3, a successful empty provider product array also triggers the opt-in
 RU catalog when either the device region or Storefront is Russian. A received
 false, missing or invalid `ru_pay` remains a prohibition.
+
+Since 1.5.4, the opt-in loader uses ``RUExperimentCatalogSelector`` to display
+all default subscriptions when the provider is unavailable, empty, or has no
+exact backend ID matches. Without defaults, the complete subscription section
+remains the compatibility fallback. Any exact match keeps the provider payload;
+defaults are never attached to a mismatched Apple card. Live nonempty provider
+products require the existing fresh RU gate before backend selection. Selected
+backend rows retain their original indices and terms for fresh checkout validation.

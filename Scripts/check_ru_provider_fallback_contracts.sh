@@ -22,6 +22,7 @@ for source in \
     Application/RUBilling/RUBillingGate.swift \
     Application/RUBilling/RUBillingDebugOverride.swift \
     Application/RUBilling/RUCatalogProductMatcher.swift \
+    Application/RUBilling/RUExperimentCatalogSelector.swift \
     Application/RUBilling/ResolveCheckoutMethodsUseCase.swift \
     Infrastructure/Analytics/NoOpMonetizationAnalytics.swift \
     Infrastructure/Analytics/NonBlockingMonetizationAnalytics.swift \
@@ -36,6 +37,7 @@ for source in \
 done
 while IFS= read -r source; do sources+=("$source"); done < <(rg --files "$source_root/Infrastructure/RemoteConfig" -g '*.swift')
 sources+=("$module_root/Scripts/ContractProbes/RUProviderFallbackProbe.swift")
+sources+=("$module_root/Scripts/ContractProbes/RUDefaultProductsProbe.swift")
 xcrun swiftc -parse-as-library -strict-concurrency=complete -warnings-as-errors \
     -I "$temporary_directory" -L "$temporary_directory" -lBroadCore \
     -Xlinker -rpath -Xlinker "$temporary_directory" \
