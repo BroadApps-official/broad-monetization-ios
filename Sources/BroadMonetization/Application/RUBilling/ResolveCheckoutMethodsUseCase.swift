@@ -102,7 +102,17 @@ private extension ResolveCheckoutMethodsUseCase {
         storefront: Storefront?,
         gateReason: RUBillingAvailabilityReason
     ) async -> CheckoutMethodsResolution {
-        guard case let .loaded(catalog) = await catalogRepository.loadCatalog() else {
+        let catalogOutcome: RUCatalogLoadOutcome = if product.catalogSource == .ruBackend,
+                                                      product.reference.rawValue.hasPrefix(RUFallbackProductIdentity.prefix) {
+            if let fresh = catalogRepository as? any FreshRUCatalogRepositoryProtocol {
+                await fresh.loadFreshCatalog()
+            } else {
+                .unavailable(RUBillingSafeErrors.catalogUnavailable)
+            }
+        } else {
+            await catalogRepository.loadCatalog()
+        }
+        guard !Task.isCancelled, case let .loaded(catalog) = catalogOutcome else {
             return resolution(
                 methods: initialMethods,
                 storefront: storefront,

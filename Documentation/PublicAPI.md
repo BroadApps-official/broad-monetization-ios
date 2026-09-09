@@ -199,6 +199,7 @@
 | Case | `case unavailable(AppError)` |
 | Case | `case unavailable(SpecialOfferCampaignRefusal)` |
 | Case | `case unavailable(SpecialOfferUnavailableReason)` |
+| Case | `case unavailable(receivedConfiguration: RemotePaywallConfiguration?)` |
 | Case | `case unknown` |
 | Case | `case unqualified(AdaptyEntitlementProfileSnapshot)` |
 | Case | `case unqualifiedRemoteConfiguration` |
@@ -255,6 +256,7 @@
 | Class | `final class RUBillingDebugOverrideStore` |
 | Class | `final class SubjectAuthorizationSession` |
 | Enumeration | `enum AdaptyEntitlementProfileResult` |
+| Enumeration | `enum Availability` |
 | Enumeration | `enum BroadAdaptySDKAvailability` |
 | Enumeration | `enum BundleValidation` |
 | Enumeration | `enum CatalogSource` |
@@ -425,6 +427,7 @@
 | Initializer | `init(method: RUBillingRequestMethod, queryItems: [URLQueryItem] = [], body: Data? = nil)` |
 | Initializer | `init(methods: [CheckoutMethod], storefront: Storefront?)` |
 | Initializer | `init(methods: [CheckoutMethod], storefront: Storefront?, ruBillingAvailability: RUBillingAvailabilityReason, ruProduct: RUCatalogProduct? = nil)` |
+| Initializer | `init(outcome: PaywallLoadOutcome, availability: RUFallbackPaywallAttempt.Availability)` |
 | Initializer | `init(paywall: PaywallPayload)` |
 | Initializer | `init(paywall: PaywallPayload, product: MonetizationProduct)` |
 | Initializer | `init(periodWeights: ProductPricePresenter.PeriodWeights = .standard)` |
@@ -444,6 +447,7 @@
 | Initializer | `init(productID: String, appBundleID: String, productKind: StoreKitTransactionProductKind, purchaseDate: Date, expirationDate: Date?, revocationDate: Date?, isUpgraded: Bool, appAccountToken: UUID?)` |
 | Initializer | `init(productID: String, kind: ApplePremiumProductCatalog.ProductKind)` |
 | Initializer | `init(products: [RUCatalogProduct], fetchedAt: Date)` |
+| Initializer | `init(provider: any RUFallbackPaywallRepositoryProtocol, catalog: any FreshRUCatalogRepositoryProtocol, storefront: any StorefrontRepositoryProtocol, gate: RUBillingGate, cache: (any PaywallCacheProtocol)? = nil, analytics: any MonetizationAnalyticsProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol = NoOpPaywallPresentationLifecycle(), staleLoadError: AppError)` |
 | Initializer | `init(purchaseRepository: any PurchaseRepositoryProtocol, evidenceProvider: any TokenTransactionEvidenceProviderProtocol, fulfillmentRepository: any TokenFulfillmentRepositoryProtocol, pendingStore: any PendingTokenPurchaseStoreProtocol, analytics: any MonetizationAnalyticsProtocol = NoOpMonetizationAnalytics(), operationGate: MonetizationOperationGate, inProgressError: AppError? = nil, unavailableError: AppError? = nil, unsupportedProductError: AppError? = nil)` |
 | Initializer | `init(rawValue: String)` |
 | Initializer | `init(reading: @escaping () async -> SpecialOfferClockReading)` |
@@ -615,18 +619,22 @@
 | Instance Method | `func loadCurrentStorefront() async -> StoreKitStorefrontClientResult` |
 | Instance Method | `func loadEntitlement(for subject: EntitlementSubject) async -> PrimaryBackendEntitlementClientResult` |
 | Instance Method | `func loadEntitlement(for subject: EntitlementSubject) async -> RUBillingEntitlementClientResult` |
+| Instance Method | `func loadFreshCatalog() async -> RUCatalogLoadOutcome` |
 | Instance Method | `func loadPaywall(for placementID: PlacementID) async -> PaywallLoadOutcome` |
 | Instance Method | `func loadProfile(for subject: EntitlementSubject) async -> AdaptyEntitlementProfileResult` |
+| Instance Method | `func loadRUFallbackAttempt(for placementID: PlacementID) async -> RUFallbackPaywallAttempt` |
 | Instance Method | `func loadSubscriptionStatus() async -> RUSubscriptionManagementLoadOutcome` |
 | Instance Method | `func makeCustomerAccessRecovery(subject: EntitlementSubject, refreshEntitlement: any RefreshEntitlementUseCaseProtocol, recoverTokenAccount: (any RecoverTokenAccountUseCaseProtocol)? = nil, loadRUSubscription: (any LoadRUSubscriptionStatusUseCaseProtocol)? = nil) -> RecoverCustomerAccessUseCase` |
 | Instance Method | `func makeEntitlementRegistration() -> EntitlementSourceRegistration` |
 | Instance Method | `func makeExperimentTracker(configuration experimentConfiguration: RUExperimentHTTPConfiguration, onOutcome: @escaping (RUExperimentTrackingOutcome) -> Void = { _ in }) -> RUBillingExperimentTracker` |
+| Instance Method | `func makePaywallLoader(provider: any RUFallbackPaywallRepositoryProtocol, cache: (any PaywallCacheProtocol)? = nil, presentationLifecycle: any PaywallPresentationLifecycleProtocol = NoOpPaywallPresentationLifecycle(), staleLoadError: AppError) -> LoadPaywallWithRUFallbackUseCase` |
 | Instance Method | `func makeRegistration(configuration: AppleEntitlementSourceConfiguration, additionalAuthoritativeVerifiers: [any AppleEntitlementVerifierProtocol] = []) -> EntitlementSourceRegistration` |
 | Instance Method | `func makeRegistration(configuration: PrimaryBackendSourceConfiguration) -> EntitlementSourceRegistration` |
 | Instance Method | `func makeRegistration(configuration: RUBillingEntitlementSourceConfiguration) -> EntitlementSourceRegistration` |
 | Instance Method | `func makeRepository() -> any RUSubscriptionRepositoryProtocol` |
 | Instance Method | `func makeServices(entitlementRepository: any EntitlementRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol, paywallCache: (any PaywallCacheProtocol)? = nil, errors: MonetizationFlowErrors, pendingApplePurchaseStore: any PendingApplePurchaseStoreProtocol, pendingAppleTransactionRecovery: any PendingAppleTransactionRecoveryProtocol, operationGate: MonetizationOperationGate) -> BroadMonetizationServices` |
 | Instance Method | `func makeServices(refreshEntitlement: any RefreshEntitlementUseCaseProtocol, operationGate: MonetizationOperationGate) -> RUBillingServices` |
+| Instance Method | `func makeServicesWithRUFallback(entitlementRepository: any EntitlementRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol, paywallCache: (any PaywallCacheProtocol)? = nil, errors: MonetizationFlowErrors, pendingApplePurchaseStore: any PendingApplePurchaseStoreProtocol, pendingAppleTransactionRecovery: any PendingAppleTransactionRecoveryProtocol, operationGate: MonetizationOperationGate, ruBillingFallback: RUBillingCompositionFactory) -> BroadMonetizationServices` |
 | Instance Method | `func mappedCatalogProductID(for _: MonetizationProduct, kind _: RUCatalogProductKind, in _: RUCatalogPayload) -> RUCatalogProductID?` |
 | Instance Method | `func mappedCatalogProductID(for product: MonetizationProduct, kind _: RUCatalogProductKind, in _: RUCatalogPayload) -> RUCatalogProductID?` |
 | Instance Method | `func mappedCatalogProductID(for product: MonetizationProduct, kind: RUCatalogProductKind, in catalog: RUCatalogPayload) -> RUCatalogProductID?` |
@@ -721,6 +729,7 @@
 | Instance Property | `let attemptID: MonetizationAttemptID` |
 | Instance Property | `let authorizationProvider: any SubjectAuthorizationProviderProtocol` |
 | Instance Property | `let automaticRevenueView: [String]` |
+| Instance Property | `let availability: RUFallbackPaywallAttempt.Availability` |
 | Instance Property | `let badge: String?` |
 | Instance Property | `let balance: Decimal` |
 | Instance Property | `let baseURL: URL` |
@@ -846,6 +855,7 @@
 | Instance Property | `let offlineActiveGrace: TimeInterval` |
 | Instance Property | `let operationGate: MonetizationOperationGate` |
 | Instance Property | `let origin: PaywallOrigin` |
+| Instance Property | `let outcome: PaywallLoadOutcome` |
 | Instance Property | `let ownershipPolicy: StoreKitEntitlementOwnershipPolicy` |
 | Instance Property | `let paymentStatus: RUBillingEndpointPath` |
 | Instance Property | `let paymentStatus: RUPaymentStatusWireAdapters` |
@@ -1036,6 +1046,7 @@
 | Protocol | `protocol EntitlementRepositoryProtocol : Sendable` |
 | Protocol | `protocol EntitlementSourceRepositoryProtocol : Sendable` |
 | Protocol | `protocol EntitlementStatusProviderProtocol : Sendable` |
+| Protocol | `protocol FreshRUCatalogRepositoryProtocol : RUCatalogRepositoryProtocol` |
 | Protocol | `protocol LiveStorefrontRepositoryProtocol : Sendable` |
 | Protocol | `protocol LoadPaywallUseCaseProtocol : Sendable` |
 | Protocol | `protocol LoadRUSubscriptionStatusUseCaseProtocol : Sendable` |
@@ -1068,6 +1079,7 @@
 | Protocol | `protocol RUEntitlementRequestEncoderProtocol : Sendable` |
 | Protocol | `protocol RUEntitlementResponseDecoderProtocol : Sendable` |
 | Protocol | `protocol RUExperimentRepositoryProtocol : Sendable` |
+| Protocol | `protocol RUFallbackPaywallRepositoryProtocol : PaywallRepositoryProtocol` |
 | Protocol | `protocol RUPaymentStatusRequestEncoderProtocol : Sendable` |
 | Protocol | `protocol RUPaymentStatusResponseDecoderProtocol : Sendable` |
 | Protocol | `protocol RUSubscriptionRepositoryProtocol : Sendable` |
@@ -1143,6 +1155,7 @@
 | Structure | `struct ExactOnlyRUCatalogProductMappingPolicy` |
 | Structure | `struct FallbackRUSubscriptionRepository` |
 | Structure | `struct FlatRUCatalogResponseDecoder` |
+| Structure | `struct LoadPaywallWithRUFallbackUseCase` |
 | Structure | `struct LoadRUSubscriptionStatusUseCase` |
 | Structure | `struct LocalStoreKitPurchaseRepository` |
 | Structure | `struct LocalStoreKitRestoreRepository` |
@@ -1225,6 +1238,7 @@
 | Structure | `struct RUExperimentEvent` |
 | Structure | `struct RUExperimentHTTPConfiguration` |
 | Structure | `struct RUExperimentMetadata` |
+| Structure | `struct RUFallbackPaywallAttempt` |
 | Structure | `struct RUPaymentPollingPolicy` |
 | Structure | `struct RUPaymentStatusSnapshot` |
 | Structure | `struct RUPaymentStatusWireAdapters` |

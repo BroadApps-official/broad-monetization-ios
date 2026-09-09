@@ -1,3 +1,5 @@
+import BroadCore
+
 public struct RUBillingCompositionFactory: Sendable {
     private let configuration: RUBillingCompositionConfiguration
     private let dependencies: RUBillingCompositionDependencies
@@ -54,6 +56,30 @@ public struct RUBillingCompositionFactory: Sendable {
             storefrontRepository: makeStorefrontRepository(),
             authorizationBinding: dependencies.authorizationBinding,
             onOutcome: onOutcome
+        )
+    }
+
+    /// Uses this composition's backend contract, subject and regional gate.
+    /// Install the returned loader in place of the normal paywall loader.
+    public func makePaywallLoader(
+        provider: any RUFallbackPaywallRepositoryProtocol,
+        cache: (any PaywallCacheProtocol)? = nil,
+        presentationLifecycle: any PaywallPresentationLifecycleProtocol = NoOpPaywallPresentationLifecycle(),
+        staleLoadError: AppError
+    ) -> LoadPaywallWithRUFallbackUseCase {
+        LoadPaywallWithRUFallbackUseCase(
+            provider: provider,
+            catalog: makeCatalogRepository(),
+            storefront: makeStorefrontRepository(),
+            gate: RUBillingGate(
+                isFeatureEnabled: configuration.isFeatureEnabled,
+                deviceContextProvider: dependencies.deviceContextProvider,
+                debugOverrideStore: dependencies.debugOverrideStore
+            ),
+            cache: cache,
+            analytics: dependencies.analytics,
+            presentationLifecycle: presentationLifecycle,
+            staleLoadError: staleLoadError
         )
     }
 

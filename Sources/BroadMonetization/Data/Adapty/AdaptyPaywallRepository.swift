@@ -3,7 +3,7 @@ import BroadCore
 import Foundation
 
 public actor AdaptyPaywallRepository:
-    PaywallRepositoryProtocol,
+    RUFallbackPaywallRepositoryProtocol,
     RemoteConfigRepositoryProtocol {
     private let configuration: AdaptyPlatformConfiguration
     private let identityProvider: any AdaptyIdentityProviderProtocol
@@ -49,8 +49,17 @@ public actor AdaptyPaywallRepository:
     public func loadPaywall(
         for placementID: PlacementID
     ) async -> PaywallLoadOutcome {
+        await loadRUFallbackAttempt(for: placementID).outcome
+    }
+
+    public func loadRUFallbackAttempt(
+        for placementID: PlacementID
+    ) async -> RUFallbackPaywallAttempt {
         guard let adaptyPlacementID = placementRegistry.adaptyPlacement(for: placementID) else {
-            return unavailable(code: "monetization.paywall.placement-not-configured")
+            return RUFallbackPaywallAttempt(
+                outcome: unavailable(code: "monetization.paywall.placement-not-configured"),
+                availability: .notConfigured
+            )
         }
 
         if var inFlightLoad = inFlightLoads[placementID] {
@@ -77,7 +86,10 @@ public actor AdaptyPaywallRepository:
                     )
                 }
             )
-            return outcome ?? unavailable(code: "monetization.paywall.activation-unavailable")
+            return outcome ?? RUFallbackPaywallAttempt(
+                outcome: unavailable(code: "monetization.paywall.activation-unavailable"),
+                availability: .unavailable(receivedConfiguration: nil)
+            )
         }
         let inFlightLoad = InFlightLoad(
             token: loadToken,
@@ -105,7 +117,7 @@ public actor AdaptyPaywallRepository:
 private extension AdaptyPaywallRepository {
     struct InFlightLoad {
         let token: UInt64
-        let task: Task<PaywallLoadOutcome, Never>
+        let task: Task<RUFallbackPaywallAttempt, Never>
         var pendingDeliveries: Int
     }
 
@@ -113,8 +125,9 @@ private extension AdaptyPaywallRepository {
         _ inFlightLoad: InFlightLoad,
         for placementID: PlacementID,
         requiresUniquePresentation: Bool
-    ) async -> PaywallLoadOutcome {
-        let outcome = await inFlightLoad.task.value
+    ) async -> RUFallbackPaywallAttempt {
+        let attempt = await inFlightLoad.task.value
+        let outcome = attempt.outcome
         let deliveredOutcome = await prepareDelivery(
             outcome,
             requiresUniquePresentation: requiresUniquePresentation
@@ -124,7 +137,7 @@ private extension AdaptyPaywallRepository {
             for: placementID,
             outcome: outcome
         )
-        return deliveredOutcome
+        return RUFallbackPaywallAttempt(outcome: deliveredOutcome, availability: attempt.availability)
     }
 
     func prepareDelivery(
@@ -199,7 +212,8 @@ private extension AdaptyPaywallRepository {
     func loadAdaptyPaywall(
         adaptyPlacementID: AdaptyPlacementID,
         logicalPlacementID: PlacementID
-    ) async -> PaywallLoadOutcome {
+    ) async -> RUFallbackPaywallAttempt {
+        var receivedConfiguration: RemotePaywallConfiguration?
         do {
             let paywall = try await Adapty.getPaywall(
                 placementId: adaptyPlacementID.rawValue,
@@ -207,11 +221,7 @@ private extension AdaptyPaywallRepository {
                 loadTimeout: configuration.paywallLoadTimeout
             )
 
-            let adaptyProducts = try await Adapty.getPaywallProducts(paywall: paywall)
-
-            let presentationID = PaywallPresentationID.generated()
-            let paywallReference = PaywallReference.generatedForAdapty()
-            let mappedProducts = Self.mapProducts(adaptyProducts)
+            // Preserve an explicit prohibition even if StoreKit products fail.
             let parsedConfiguration = remoteConfigurationParser.parse(
                 paywall.remoteConfig?.dictionary ?? [:]
             )
@@ -219,20 +229,32 @@ private extension AdaptyPaywallRepository {
                 parsedConfiguration,
                 for: logicalPlacementID
             )
+            receivedConfiguration = remoteConfiguration
+            let adaptyProducts = try await Adapty.getPaywallProducts(paywall: paywall)
+            let presentationID = PaywallPresentationID.generated()
+            let paywallReference = PaywallReference.generatedForAdapty()
+            let mappedProducts = Self.mapProducts(adaptyProducts)
 
-            return await .loaded(
-                registerPayload(
-                    paywall: paywall,
-                    paywallReference: paywallReference,
-                    presentationID: presentationID,
-                    logicalPlacementID: logicalPlacementID,
-                    mappedProducts: mappedProducts,
-                    adaptyProducts: adaptyProducts,
-                    remoteConfiguration: remoteConfiguration
-                )
+            let payload = await registerPayload(
+                paywall: paywall,
+                paywallReference: paywallReference,
+                presentationID: presentationID,
+                logicalPlacementID: logicalPlacementID,
+                mappedProducts: mappedProducts,
+                adaptyProducts: adaptyProducts,
+                remoteConfiguration: remoteConfiguration
+            )
+            return RUFallbackPaywallAttempt(
+                outcome: .loaded(payload),
+                availability: mappedProducts.isEmpty
+                    ? .unavailable(receivedConfiguration: remoteConfiguration)
+                    : .available
             )
         } catch {
-            return unavailable(code: "monetization.paywall.load-unavailable")
+            return RUFallbackPaywallAttempt(
+                outcome: unavailable(code: "monetization.paywall.load-unavailable"),
+                availability: .unavailable(receivedConfiguration: receivedConfiguration)
+            )
         }
     }
 

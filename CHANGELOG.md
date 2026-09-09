@@ -2,6 +2,25 @@
 
 Все заметные изменения BroadMonetization фиксируются здесь с объяснением: что изменилось и почему.
 
+## 1.5.0
+
+### Added
+
+- Opt-in `LoadPaywallWithRUFallbackUseCase`, `RUBillingCompositionFactory.makePaywallLoader`
+  and `AdaptyMonetizationFactory.makeServicesWithRUFallback`: a Russian Storefront
+  or device region may load the configured backend catalog when Adapty/products
+  are unavailable. Existing factory signatures and default loading are unchanged.
+- Attempt-scoped provider evidence preserves received false/invalid/absent flags
+  even when StoreKit products fail. No response is distinct from an absent field.
+- Fresh backend selection preserves row order, duplicates and commercial terms;
+  RU-only products never offer Apple checkout. Before checkout, a fresh catalog
+  must still contain the exact selected occurrence with unchanged terms.
+- Ephemeral fallback authorization cannot survive JSON/cache or activate Special
+  Offer/experiment reporting. Backend payment/entitlement authority is unchanged.
+- Executable regional/response, selection, serialization and cancellation probes,
+  compile-only sandbox wiring, DocC and upgrade documentation.
+  SemVer intent: additive minor release with explicit host opt-in.
+
 ## 1.4.1
 
 ### Fixed

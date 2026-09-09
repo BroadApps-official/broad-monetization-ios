@@ -77,6 +77,50 @@ public struct AdaptyMonetizationFactory: Sendable {
         pendingAppleTransactionRecovery: any PendingAppleTransactionRecoveryProtocol,
         operationGate: MonetizationOperationGate
     ) -> BroadMonetizationServices {
+        makeConfiguredServices(
+            entitlementRepository: entitlementRepository,
+            analytics: analytics,
+            paywallCache: paywallCache,
+            errors: errors,
+            pendingApplePurchaseStore: pendingApplePurchaseStore,
+            pendingAppleTransactionRecovery: pendingAppleTransactionRecovery,
+            operationGate: operationGate,
+            ruBillingFallback: nil
+        )
+    }
+
+    public func makeServicesWithRUFallback(
+        entitlementRepository: any EntitlementRepositoryProtocol,
+        analytics: any MonetizationAnalyticsProtocol,
+        paywallCache: (any PaywallCacheProtocol)? = nil,
+        errors: MonetizationFlowErrors,
+        pendingApplePurchaseStore: any PendingApplePurchaseStoreProtocol,
+        pendingAppleTransactionRecovery: any PendingAppleTransactionRecoveryProtocol,
+        operationGate: MonetizationOperationGate,
+        ruBillingFallback: RUBillingCompositionFactory
+    ) -> BroadMonetizationServices {
+        makeConfiguredServices(
+            entitlementRepository: entitlementRepository,
+            analytics: analytics,
+            paywallCache: paywallCache,
+            errors: errors,
+            pendingApplePurchaseStore: pendingApplePurchaseStore,
+            pendingAppleTransactionRecovery: pendingAppleTransactionRecovery,
+            operationGate: operationGate,
+            ruBillingFallback: ruBillingFallback
+        )
+    }
+
+    private func makeConfiguredServices(
+        entitlementRepository: any EntitlementRepositoryProtocol,
+        analytics: any MonetizationAnalyticsProtocol,
+        paywallCache: (any PaywallCacheProtocol)? = nil,
+        errors: MonetizationFlowErrors,
+        pendingApplePurchaseStore: any PendingApplePurchaseStoreProtocol,
+        pendingAppleTransactionRecovery: any PendingAppleTransactionRecoveryProtocol,
+        operationGate: MonetizationOperationGate,
+        ruBillingFallback: RUBillingCompositionFactory?
+    ) -> BroadMonetizationServices {
         precondition(
             !configuration.observerMode,
             "Standard Adapty services cannot purchase in observer mode; inject a host StoreKit purchase composition instead"
@@ -98,7 +142,8 @@ public struct AdaptyMonetizationFactory: Sendable {
         return assembleServices(
             inputs: inputs,
             paywallRepository: paywallRepository,
-            operationGate: operationGate
+            operationGate: operationGate,
+            ruBillingFallback: ruBillingFallback
         )
     }
 }
@@ -107,7 +152,8 @@ private extension AdaptyMonetizationFactory {
     func assembleServices(
         inputs: AdaptyServiceInputs,
         paywallRepository: AdaptyPaywallRepository,
-        operationGate: MonetizationOperationGate
+        operationGate: MonetizationOperationGate,
+        ruBillingFallback: RUBillingCompositionFactory?
     ) -> BroadMonetizationServices {
         BroadMonetizationServices(
             activate: ActivateMonetizationUseCase(
@@ -118,13 +164,7 @@ private extension AdaptyMonetizationFactory {
                     messages: messages
                 )
             ),
-            loadPaywall: LoadPaywallUseCase(
-                repository: paywallRepository,
-                cache: inputs.paywallCache,
-                analytics: inputs.deliveryAnalytics,
-                presentationLifecycle: inputs.presentationLifecycle,
-                staleLoadError: inputs.errors.stalePaywallLoad
-            ),
+            loadPaywall: makeLoader(inputs: inputs, provider: paywallRepository, fallback: ruBillingFallback),
             selectProduct: SelectProductUseCase(),
             purchaseProduct: PurchaseSelectedProductUseCase(
                 repository: makePurchaseRepository(
@@ -154,6 +194,29 @@ private extension AdaptyMonetizationFactory {
                 operationGate: operationGate
             )
         )
+    }
+
+    func makeLoader(
+        inputs: AdaptyServiceInputs,
+        provider: AdaptyPaywallRepository,
+        fallback: RUBillingCompositionFactory?
+    ) -> any LoadPaywallUseCaseProtocol {
+        if let ruBillingFallback = fallback {
+            ruBillingFallback.makePaywallLoader(
+                provider: provider,
+                cache: inputs.paywallCache,
+                presentationLifecycle: inputs.presentationLifecycle,
+                staleLoadError: inputs.errors.stalePaywallLoad
+            )
+        } else {
+            LoadPaywallUseCase(
+                repository: provider,
+                cache: inputs.paywallCache,
+                analytics: inputs.deliveryAnalytics,
+                presentationLifecycle: inputs.presentationLifecycle,
+                staleLoadError: inputs.errors.stalePaywallLoad
+            )
+        }
     }
 
     func makePaywallRepository() -> AdaptyPaywallRepository {

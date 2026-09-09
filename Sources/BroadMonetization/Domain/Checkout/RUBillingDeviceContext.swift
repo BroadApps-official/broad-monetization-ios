@@ -30,7 +30,7 @@ public struct RUBillingDeviceContext: Equatable, Sendable {
     /// `true` only when the region selected on the iPhone is Russian.
     ///
     /// App Store storefront eligibility is evaluated separately by
-    /// `RUBillingGate`. Adapty's explicit `ru_pay = true` remains mandatory.
+    /// `RUBillingGate`, including the explicitly connected provider-outage path.
     public var isRussian: Bool {
         regionCode == "RU"
             || regionCode == "RUS"

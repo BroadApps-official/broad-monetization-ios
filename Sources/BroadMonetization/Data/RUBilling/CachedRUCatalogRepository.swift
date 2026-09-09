@@ -1,7 +1,7 @@
 import BroadCore
 import Foundation
 
-public actor CachedRUCatalogRepository: RUCatalogRepositoryProtocol {
+public actor CachedRUCatalogRepository: FreshRUCatalogRepositoryProtocol {
     private let remote: any RUCatalogRepositoryProtocol
     private let cache: any CacheRepositoryProtocol
     private let cacheKey: CacheKey<RUCatalogPayload>
@@ -69,6 +69,20 @@ public actor CachedRUCatalogRepository: RUCatalogRepositoryProtocol {
         case let .unavailable(remoteError):
             return await cachedFallback(remoteError: remoteError)
         }
+    }
+
+    public func loadFreshCatalog() async -> RUCatalogLoadOutcome {
+        guard authorizationBinding.isCurrent(), !Task.isCancelled else {
+            return .unavailable(RUBillingSafeErrors.catalogUnavailable)
+        }
+        let outcome = await remote.loadCatalog()
+        guard authorizationBinding.isCurrent(), !Task.isCancelled else {
+            return .unavailable(RUBillingSafeErrors.catalogUnavailable)
+        }
+        if case let .loaded(payload) = outcome {
+            return await persist(payload)
+        }
+        return outcome
     }
 
     private func persist(

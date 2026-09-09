@@ -69,7 +69,17 @@ actor StartSelectedRUCheckoutUseCase:
         isStarting = true
         defer { isStarting = false }
 
-        guard case let .loaded(catalog) = await catalogRepository.loadCatalog() else {
+        let catalogOutcome: RUCatalogLoadOutcome = if selection.product.catalogSource == .ruBackend,
+                                                      selection.product.reference.rawValue.hasPrefix(RUFallbackProductIdentity.prefix) {
+            if let fresh = catalogRepository as? any FreshRUCatalogRepositoryProtocol {
+                await fresh.loadFreshCatalog()
+            } else {
+                .unavailable(RUBillingSafeErrors.catalogUnavailable)
+            }
+        } else {
+            await catalogRepository.loadCatalog()
+        }
+        guard !Task.isCancelled, case let .loaded(catalog) = catalogOutcome else {
             return .unavailable(RUBillingSafeErrors.catalogUnavailable)
         }
         let matchedProduct = selection.requestedPlacementID == .specialOffer

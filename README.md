@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 1.4.1" src="https://img.shields.io/badge/release-1.4.1-10B981">
+  <img alt="Release 1.5.0" src="https://img.shields.io/badge/release-1.5.0-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -67,7 +67,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "1.4.1"
+        from: "1.5.0"
     )
 ]
 ```
@@ -175,7 +175,8 @@ Countdown идёт до конца текущего окна и на нуле и
 RU methods показываются, только если одновременно выполнены все условия:
 
 1. host app зарегистрировал RU Billing adapters;
-2. verified-fresh provider payload содержит `ru_pay = true`;
+2. verified-fresh provider payload содержит `ru_pay = true` **или** явно подключён
+   [резервный сценарий недоступного Adapty](Documentation/RUProviderFallback.md);
 3. App Store storefront — `RU/RUS` **или** регион iPhone — `RU/RUS`;
 4. RU catalog не пуст и точно сопоставлен выбранному product;
 5. backend authorization/kill switch разрешает checkout;
@@ -214,9 +215,10 @@ Decoder принимает `productId` или `product_id`, `title`, `kind`, `pe
 host передаёт собственный `RUCatalogResponseDecoderProtocol`.
 
 Сопоставление выполняется только по exact ID либо явной app-owned mapping
-policy. По цене или периоду продукт не угадывается. Отсутствующий, `false` или
-некорректный `ru_pay` всегда закрывает RU methods — российский регион не
-подставляет `true` автоматически.
+policy. По цене или периоду продукт не угадывается. Полученный `false`, отсутствующий или
+некорректный `ru_pay` закрывает RU methods. **Нет ответа Adapty** — отдельный
+случай: в 1.5.0 можно явно подключить серверный каталог при российском Storefront
+или регионе iPhone. Значение `true` не подставляется, старые API не меняют поведения.
 
 ## Спешл оффер RU Billing
 

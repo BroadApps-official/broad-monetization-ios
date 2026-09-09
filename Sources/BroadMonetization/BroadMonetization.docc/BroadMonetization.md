@@ -77,3 +77,16 @@ Provider-neutral monetization contracts and production adapters for BroadApps iP
 - ``AdaptyPlacementRegistry``
 - ``AdaptyMonetizationFactory``
 - ``AdaptyAnonymousIdentityProvider``
+
+### RU provider outage fallback
+
+Explicitly opt in with ``LoadPaywallWithRUFallbackUseCase`` or the composition
+factory. A Russian Storefront or device region can qualify when the provider
+returns no configuration or cannot load products. A received false, invalid or
+absent flag closes this path. No capability is persisted; checkout and Premium
+still require the backend. Existing APIs keep their previous behavior.
+
+- ``LoadPaywallWithRUFallbackUseCase``
+- ``RUFallbackPaywallRepositoryProtocol``
+- ``RUFallbackPaywallAttempt``
+- ``FreshRUCatalogRepositoryProtocol``

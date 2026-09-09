@@ -70,12 +70,16 @@ public struct RUBillingGate: Sendable {
             // This only authorizes presenting a configured checkout method.
             // The backend and entitlement engine remain the authorities for
             // payment status and premium access.
-            guard remoteConfiguration.authorizesRUBillingPresentation else {
+            guard remoteConfiguration.authorizesRUBillingPresentation
+                || remoteConfiguration.authorizesRUProviderFallback else {
                 return .unqualifiedRemoteConfiguration
             }
         case .absent:
-            // RU billing is never enabled without an explicit `ru_pay = true`.
-            return .remoteFlagAbsent
+            // Only a live, explicitly configured provider outage path can
+            // authorize an absent response. Decoded/cache values cannot.
+            guard remoteConfiguration.authorizesRUProviderFallback else {
+                return .remoteFlagAbsent
+            }
         }
 
         return hasRussianRegionalSignal(storefront: storefront)

@@ -57,6 +57,11 @@ public struct RUCatalogProductMatcher: Sendable {
         kind: RUCatalogProductKind,
         in catalog: RUCatalogPayload
     ) -> RUCatalogProduct? {
+        if product.catalogSource == .ruBackend,
+           product.reference.rawValue.hasPrefix(RUFallbackProductIdentity.prefix) {
+            guard kind == .subscription else { return nil }
+            return RUFallbackProductIdentity.match(product, in: catalog)
+        }
         // Marked Special Offer rows never participate in an ordinary paywall.
         // The dedicated matcher below is the only path that may select them.
         let candidates = catalog.products.filter {

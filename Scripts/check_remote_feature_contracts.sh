@@ -185,9 +185,9 @@ require_pattern \
     'parseStrictBool\(rawValue\)(?s:.*?)isFoundationBoolean\(value\)'
 
 require_pattern \
-    "RU Billing requires explicit ru_pay enabled plus provider authorization" \
+    "RU Billing requires provider authorization or a live opt-in outage capability" \
     "$ru_gate_file" \
-    'case[[:space:]]+\.enabled:(?s:.*?)guard[[:space:]]+remoteConfiguration\.authorizesRUBillingPresentation[[:space:]]+else'
+    'case[[:space:]]+\.enabled:(?s:.*?)guard[[:space:]]+remoteConfiguration\.authorizesRUBillingPresentation[[:space:]]*\|\|[[:space:]]*remoteConfiguration\.authorizesRUProviderFallback[[:space:]]+else'
 
 require_pattern \
     "Explicit false remains a RU Billing kill switch" \
@@ -200,7 +200,7 @@ require_pattern \
     'case[[:space:]]+\.invalid:[[:space:]]*return[[:space:]]+\.remoteFlagInvalid'
 
 require_pattern \
-    "Missing ru_pay remains fail-closed" \
+    "Missing ru_pay without a live outage capability remains fail-closed" \
     "$ru_gate_file" \
     'case[[:space:]]+\.absent:(?s:.*?)return[[:space:]]+\.remoteFlagAbsent'
 

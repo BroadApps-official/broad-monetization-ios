@@ -34,6 +34,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
     public let specialOffer: SpecialOfferRemoteConfiguration?
     public let ruExperiment: RUExperimentMetadata?
     private(set) var authorizesRUBillingPresentation: Bool
+    var authorizesRUProviderFallback = false
 
     public init(
         isRUBillingEnabled: Bool? = nil,
@@ -140,7 +141,7 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
     func qualified(
         by provenance: PaywallRemoteConfigurationProvenance
     ) -> RemotePaywallConfiguration {
-        RemotePaywallConfiguration(
+        var qualified = RemotePaywallConfiguration(
             ruBillingGateDecision: ruBillingGateDecision,
             isAutomaticRevenueViewEnabled: isAutomaticRevenueViewEnabled,
             accessPolicy: accessPolicy,
@@ -153,6 +154,9 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
                 .authorizesRUBillingPresentation,
             ruExperiment: provenance.authorizesRUBillingPresentation ? ruExperiment : nil
         )
+        qualified.authorizesRUProviderFallback = authorizesRUProviderFallback
+            && provenance != .platformCache
+        return qualified
     }
 
     private enum CodingKeys: String, CodingKey {
