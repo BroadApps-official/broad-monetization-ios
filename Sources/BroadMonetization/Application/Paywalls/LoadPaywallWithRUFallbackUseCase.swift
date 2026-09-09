@@ -125,7 +125,11 @@ private actor RUFallbackAttemptRecorder: PaywallRepositoryProtocol {
         let attempt = await provider.loadRUFallbackAttempt(for: placementID)
         switch attempt.availability {
         case .notConfigured:
-            isProhibited = true
+            // Optional placements already fall back to main. Only an absent
+            // main mapping is a composition error, not a provider outage.
+            if placementID == .main {
+                isProhibited = true
+            }
         case .available:
             // Any explicit prohibition in a response wins within this attempt,
             // including an empty requested placement followed by main.

@@ -2,6 +2,17 @@
 
 Все заметные изменения BroadMonetization фиксируются здесь с объяснением: что изменилось и почему.
 
+## 1.5.1
+
+### Fixed
+
+- An unconfigured optional placement still falls back to main first. If the
+  configured main provider is unavailable, the opt-in RU backend loader can
+  continue; only a missing main mapping is a composition error that closes it.
+  Received false/invalid/absent configurations continue to prohibit fallback.
+- Added executable optional-placement/main composition cases. Public APIs are
+  unchanged. SemVer intent: compatibility patch for the 1.5 fallback path.
+
 ## 1.5.0
 
 ### Added

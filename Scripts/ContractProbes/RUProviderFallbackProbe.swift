@@ -43,6 +43,7 @@ enum RUProviderFallbackProbe {
         await failureAndCacheContracts()
         await selectionContracts()
         await placementAndCancellationContracts()
+        await missingPlacementContracts()
         print(
             "RU provider fallback passed: regional/response matrix, false after products failure, fresh catalog, row identity, cache, cancellation."
         )
@@ -136,6 +137,18 @@ enum RUProviderFallbackProbe {
         await check(catalog.freshCalls == 1)
     }
 
+    static func missingPlacementContracts() async {
+        let catalog = Catalog()
+        let optional = PlacementID(rawValue: "unconfigured-optional")
+        let provider = Provider(response: nil, notConfigured: optional)
+        let outcome = await loader(provider: provider, catalog: catalog)(.init(placementID: optional))
+        check(loaded(outcome).origin.catalogSource == .ruBackend)
+        await check(catalog.freshCalls == 1)
+        let missingMain = Provider(response: nil, notConfigured: .main)
+        _ = await loader(provider: missingMain, catalog: catalog)(.init(placementID: optional))
+        await check(catalog.freshCalls == 1)
+    }
+
     static func loader(
         provider: Provider, catalog: Catalog, region: String? = "RU", store: String? = nil, cache: Cache? = nil
     ) -> LoadPaywallWithRUFallbackUseCase {
@@ -161,11 +174,15 @@ extension RUProviderFallbackProbe {
         let response: RemotePaywallConfiguration?
         var firstResponse: RemotePaywallConfiguration?
         var supplied: PaywallPayload?
+        var notConfigured: PlacementID?
         func loadPaywall(for _: PlacementID) async -> PaywallLoadOutcome {
             .unavailable(error)
         }
 
         func loadRUFallbackAttempt(for placement: PlacementID) async -> RUFallbackPaywallAttempt {
+            if placement == notConfigured {
+                return RUFallbackPaywallAttempt(outcome: .unavailable(error), availability: .notConfigured)
+            }
             if let supplied {
                 return RUFallbackPaywallAttempt(outcome: .loaded(supplied), availability: .available)
             }
