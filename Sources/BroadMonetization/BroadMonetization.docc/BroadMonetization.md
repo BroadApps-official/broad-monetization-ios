@@ -93,3 +93,7 @@ still require the backend. Existing APIs keep their previous behavior.
 
 `tokens` and `special_offer` keep their own products and prices. Neither loader
 substitutes `main` or the ordinary RU subscription catalog for these placements.
+
+Since 1.5.3, a successful empty provider product array also triggers the opt-in
+RU catalog when either the device region or Storefront is Russian. A received
+false, missing or invalid `ru_pay` remains a prohibition.

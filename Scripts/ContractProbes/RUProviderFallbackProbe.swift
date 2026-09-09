@@ -45,6 +45,7 @@ enum RUProviderFallbackProbe {
         await placementAndCancellationContracts()
         await missingPlacementContracts()
         await dedicatedPlacementContracts()
+        await emptyProductContracts()
         print(
             "RU provider fallback passed: regional/response matrix, false after products failure, fresh catalog, row identity, cache, cancellation."
         )
@@ -184,6 +185,39 @@ enum RUProviderFallbackProbe {
             gate: RUBillingGate(isFeatureEnabled: true, deviceContextProvider: Device(region: region)),
             cache: cache, analytics: NoOpMonetizationAnalytics(), staleLoadError: error
         )
+    }
+
+    static func emptyProductContracts() async {
+        for region in [nil, "US", "RU", "RUS"] as [String?] {
+            for store in [nil, "US", "RU", "RUS"] as [String?] {
+                for configuration in [
+                    RemotePaywallConfiguration(isRUBillingEnabled: true),
+                    .init(isRUBillingEnabled: false),
+                    .empty,
+                    RemotePaywallConfigurationParser().parse(["ru_pay": "broken"])
+                ] {
+                    let empty = PaywallPayload(
+                        presentationID: .generated(), paywallReference: .init(rawValue: "empty-provider-fixture"),
+                        origin: .init(requestedPlacementID: .main, resolvedPlacementID: .main, catalogSource: .adapty),
+                        products: [], remoteConfiguration: configuration, fetchedAt: Date()
+                    )
+                    for placement in [PlacementID.main, .init(rawValue: "onboarding"), .tokens, .specialOffer] {
+                        let catalog = Catalog()
+                        let result = await loader(
+                            provider: Provider(response: nil, supplied: empty), catalog: catalog,
+                            region: region, store: store
+                        )(.init(placementID: placement))
+                        let shouldLoad = (region == "RU" || region == "RUS" || store == "RU" || store == "RUS")
+                            && configuration.ruBillingGateDecision == .enabled
+                            && placement != .tokens && placement != .specialOffer
+                        await check(catalog.freshCalls == (shouldLoad ? 1 : 0))
+                        let payload = loaded(result)
+                        check((payload.origin.catalogSource == .ruBackend) == shouldLoad)
+                        check(payload.products.isEmpty != shouldLoad)
+                    }
+                }
+            }
+        }
     }
 
     static func loaded(_ outcome: PaywallLoadOutcome) -> PaywallPayload {

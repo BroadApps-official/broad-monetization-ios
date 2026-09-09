@@ -2,6 +2,18 @@
 
 Все заметные изменения BroadMonetization фиксируются здесь с объяснением: что изменилось и почему.
 
+## 1.5.3
+
+### Fixed
+
+- A successful Adapty response with an empty product array now triggers the
+  opt-in fresh RU backend catalog, just like a product loading failure, when
+  either the Storefront or device region is Russian. Received false, missing
+  or invalid ru_pay still prohibits the reserve path.
+- Added empty-response checks across regional combinations, main/ordinary
+  placements and dedicated token/Special Offer exclusions. Existing public
+  APIs and the normal loader are unchanged. SemVer intent: compatibility patch.
+
 ## 1.5.2
 
 ### Fixed

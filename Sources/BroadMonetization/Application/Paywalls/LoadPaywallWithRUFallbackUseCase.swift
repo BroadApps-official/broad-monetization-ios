@@ -114,7 +114,7 @@ public struct LoadPaywallWithRUFallbackUseCase: LoadPaywallUseCaseProtocol {
 
 private actor RUFallbackAttemptRecorder: PaywallRepositoryProtocol {
     let provider: any RUFallbackPaywallRepositoryProtocol
-    private var hasUnavailableProvider = false
+    private var hasUnavailableProviderProducts = false
     private var isProhibited = false
 
     init(provider: any RUFallbackPaywallRepositoryProtocol) {
@@ -133,12 +133,16 @@ private actor RUFallbackAttemptRecorder: PaywallRepositoryProtocol {
         case .available:
             // Any explicit prohibition in a response wins within this attempt,
             // including an empty requested placement followed by main.
-            if case let .loaded(payload) = attempt.outcome,
-               payload.remoteConfiguration.ruBillingGateDecision != .enabled {
-                isProhibited = true
+            if case let .loaded(payload) = attempt.outcome {
+                // A successful SDK request can still contain zero products.
+                // Treat it like unavailable products, preserving its gate.
+                hasUnavailableProviderProducts = hasUnavailableProviderProducts || payload.products.isEmpty
+                if payload.remoteConfiguration.ruBillingGateDecision != .enabled {
+                    isProhibited = true
+                }
             }
         case let .unavailable(configuration):
-            hasUnavailableProvider = true
+            hasUnavailableProviderProducts = true
             if let configuration, configuration.ruBillingGateDecision != .enabled {
                 isProhibited = true
             }
@@ -147,7 +151,7 @@ private actor RUFallbackAttemptRecorder: PaywallRepositoryProtocol {
     }
 
     func fallbackConfiguration() -> RemotePaywallConfiguration? {
-        guard hasUnavailableProvider, !isProhibited else { return nil }
+        guard hasUnavailableProviderProducts, !isProhibited else { return nil }
         // The capability is never serialized. It cannot activate experiments
         // or Special Offer, or pretend the provider sent ru_pay=true.
         var configuration = RemotePaywallConfiguration.empty
