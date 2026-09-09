@@ -36,7 +36,7 @@ public struct RemotePaywallConfigurationParser: Sendable {
 
 private extension RemotePaywallConfigurationParser {
     func parseRUExperiment(_ dictionary: [String: Any]) -> RUExperimentMetadata? {
-        // Codes are strict strings from this exact variant. In particular,
+        // Codes are strict strings from the selected main variant. In particular,
         // NSNumber/Bool and variation IDs are not alternate segment codes.
         guard let experiment = dictionary[keys.ruExperimentCode] as? String,
               let segment = dictionary[keys.ruSegmentCode] as? String

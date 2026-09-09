@@ -48,7 +48,9 @@ public struct SpecialOfferResolution: Equatable, Sendable {
               let trustedTime,
               gatePaywall.remoteConfigurationProvenance
               .authorizesSpecialOfferPresentation,
-              gatePaywall.remoteConfiguration.specialOffer?.isEnabled == true
+              gatePaywall.remoteConfiguration.specialOffer?.isEnabled == true,
+              paywall.remoteConfigurationProvenance.authorizesSpecialOfferPresentation,
+              paywall.remoteConfiguration.specialOffer?.isEnabled == true
         else {
             preconditionFailure(
                 "Special-offer presentation requires an authorized ordinary-paywall gate"
@@ -57,8 +59,8 @@ public struct SpecialOfferResolution: Equatable, Sendable {
         guard let authorization = SpecialOfferPresentationAuthorization(
             paywallPresentationID: paywall.presentationID,
             gatePaywallPresentationID: gatePaywall.presentationID,
-            gateRemoteConfiguration: gatePaywall.remoteConfiguration,
-            provenance: gatePaywall.remoteConfigurationProvenance,
+            gateRemoteConfiguration: paywall.remoteConfiguration,
+            provenance: paywall.remoteConfigurationProvenance,
             window: window,
             trustedTime: trustedTime
         ) else {

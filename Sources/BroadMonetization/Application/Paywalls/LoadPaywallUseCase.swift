@@ -69,9 +69,9 @@ public actor LoadPaywallUseCase: LoadPaywallUseCaseProtocol {
 
         switch fallback {
         case let .usable(paywall), let .empty(paywall, _):
-            // The returned payload is the resolved fallback candidate. Its
-            // Remote Config belongs to `fallbackPlacementID` (normally main),
-            // while `origin` still records the originally requested placement.
+            // The returned products/variation belong to the resolved fallback.
+            // The Adapty repository independently supplies all configuration
+            // keys from main; origin still records the requested placement.
             return await succeed(paywall, context: analyticsContext)
         case let .unavailable(error, _):
             let finalError = primaryFailure.error ?? error

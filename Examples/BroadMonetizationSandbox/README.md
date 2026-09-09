@@ -1,5 +1,13 @@
 # BroadMonetizationSandbox
 
+## Проверка общего Remote Config (2.0.0)
+
+Sandbox использует typed fixtures. Для проверки загрузчика выполните
+`bash Scripts/check_ru_experiment_contracts.sh` из корня: исполняемый контракт
+передаёт противоположные флаги в `main` и другие placements, проверяет пять
+общих ключей, порядок и дубли продуктов, отсутствие ответа и обновление config.
+Custom repositories передают config `main` с каждым payload, включая оффер.
+
 RU A/B fixture section demonstrates optional metadata and its removal for
 unqualified provider cache. No tracker networking is started by this sandbox.
 Executable selection/reporting scenarios run through the module gate;

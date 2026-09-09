@@ -27,7 +27,10 @@
 1. Работающий RU Billing: HTTP configuration, текущие subject, authorization
    provider и session binding должны быть теми же, что у checkout.
 2. Варианты и продукты placement в Adapty; matching `experiment_code` и
-   `segment_code` в Remote Config и backend. Оба кода — строки длиной 1–64,
+   `segment_code` в Remote Config каждого используемого варианта `main` и backend.
+   С 2.0.0 все пять ключей читаются только из `main`, независимо от экрана.
+   Продукты и placement отчёта относятся к фактически показанному paywall.
+   Оба кода — строки длиной 1–64,
    без окружающих пробелов и управляющих символов. Числа/bool не приводятся к строке.
 3. `ru_pay = true` из текущего подтверждённо свежего payload и регион iPhone
    RU/RUS **или** текущий Storefront RU/RUS. Кэш не восстанавливает разрешение

@@ -40,7 +40,10 @@ strict boolean полем `isSpecialOffer` (также поддерживает�
 
 ## Показ и время
 
-Gate берётся из Remote Config основного paywall. При strict boolean
+Gate берётся только из Remote Config выбранного paywall плейсмента `main`.
+С 2.0.0 это же правило действует для `ru_pay`, `auto_revenue_view` и RU A/B-кодов.
+Отдельный offer payload несёт обновлённую конфигурацию `main`; более новый
+запрет отменяет первоначальное разрешение. При strict boolean
 `special_offer = true` действует общий цикл: 24 часа окна, 24 часа
 cooldown. Countdown истекает на нуле. Выключение flag, confirmed purchase
 и restore сбрасывают persisted cycle.

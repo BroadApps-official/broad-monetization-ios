@@ -177,6 +177,16 @@ private extension ResolveSpecialOfferUseCase {
             await end(gatePaywall, using: presentationLifecycle)
             return unavailable(.paywallUnavailable)
         }
+        // Loading the offer refreshes main again. A newer main prohibition must
+        // revoke the earlier gate before the separate offer can be presented.
+        guard offerPaywall.remoteConfiguration.specialOffer?.isEnabled == true else {
+            await end(offerPaywall, using: presentationLifecycle)
+            await end(gatePaywall, using: presentationLifecycle)
+            guard await resetIfPossible(configuration, stateRepository: stateRepository) else {
+                return unavailable(.persistenceUnavailable)
+            }
+            return unavailable(.disabledByRemoteConfiguration)
+        }
         let resolution = SpecialOfferResolution(
             state: .active(window),
             paywall: offerPaywall,

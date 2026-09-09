@@ -3,6 +3,7 @@ import Foundation
 @main
 enum RUExperimentProbe {
     static func main() async throws {
+        await MainPaywallConfigurationProbe.run()
         try await configurationContracts()
         try catalogContracts()
         await reportingContracts()

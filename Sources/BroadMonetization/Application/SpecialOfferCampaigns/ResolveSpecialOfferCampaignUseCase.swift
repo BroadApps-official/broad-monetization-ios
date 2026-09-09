@@ -2,7 +2,7 @@ import BroadCore
 import Foundation
 
 /// Compatibility adapter for the campaign-shaped API. It follows the same
-/// contract as ``ResolveSpecialOfferUseCase``: the ordinary paywall owns the
+/// contract as ``ResolveSpecialOfferUseCase``: main owns the
 /// strict boolean gate and the separate campaign placement owns the products.
 ///
 /// How often an offer may be shown is the platform's rule here, not the host's:
@@ -82,7 +82,8 @@ public actor ResolveSpecialOfferCampaignUseCase: SpecialOfferCampaignResolving {
                 // A quiet period is a decision about the app, not about this one
                 // placement: trying the next name would open a window the
                 // cadence has already refused.
-                guard refusal != .cooldown, refusal != .persistenceUnavailable else {
+                guard refusal != .cooldown, refusal != .persistenceUnavailable,
+                      refusal != .disabledRemotely else {
                     return .unavailable(refusal)
                 }
                 lastRefusal = refusal
@@ -112,9 +113,8 @@ private extension ResolveSpecialOfferCampaignUseCase {
 
         // The provider may answer a placement it does not have with the main
         // paywall. That substitute is the ordinary subscription screen, and
-        // showing it as a discount would be an invented offer. Its remote
-        // configuration belongs to main too, so reading a flag out of it would
-        // mean deciding this campaign by another paywall's settings.
+        // showing it as a discount would be an invented offer. Configuration
+        // always comes from main, but campaign products must remain separate.
         guard !paywall.origin.usedFallback,
               paywall.origin.resolvedPlacementID == placementID
         else {
@@ -126,6 +126,13 @@ private extension ResolveSpecialOfferCampaignUseCase {
         // the only honest answer: the products it sells would be stale too.
         guard paywall.remoteConfigurationProvenance.authorizesSpecialOfferPresentation else {
             return await refuse(.stalePayload, endingPresentationOf: paywall)
+        }
+
+        // The offer load carries a newer main configuration than the initial
+        // gate. Never keep that earlier permission after main has disabled it.
+        guard paywall.remoteConfiguration.specialOffer?.isEnabled == true else {
+            await windowRepository.clear()
+            return await refuse(.disabledRemotely, endingPresentationOf: paywall)
         }
 
         // An empty campaign must not spend the day: the window would open on a

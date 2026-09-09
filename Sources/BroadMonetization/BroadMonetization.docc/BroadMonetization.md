@@ -2,6 +2,17 @@
 
 Provider-neutral monetization contracts and production adapters for BroadApps iPhone applications.
 
+Since 2.0.0, the Adapty adapter reads every Remote Config key from the selected
+paywall of the registered `main` placement. This includes `ru_pay`,
+`auto_revenue_view`, `special_offer`, `experiment_code` and `segment_code`.
+Move these values to every used main variant and locale before migrating from 1.x.
+Products, variation, purchase handles and shown analytics still belong to the
+requested product placement. Other placements never override main configuration.
+Custom repositories must follow the same payload contract and report configuration
+provenance honestly; an SDK cache-capable response is not verified network freshness.
+Special Offer authorization carries the latest main configuration received while
+loading its own products, so an earlier gate cannot override a newer prohibition.
+
 ## Topics
 
 ### Paywalls and products

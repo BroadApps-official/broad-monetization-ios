@@ -10,7 +10,7 @@ public actor AdaptyPaywallRepository:
     private let placementRegistry: AdaptyPlacementRegistry
     private let context: AdaptyRepositoryContext
     private let remoteConfigurationParser: RemotePaywallConfigurationParser
-    private let remoteConfigurationStore: LastValidRemoteConfigurationStore
+    private let mainConfigurationLoader: MainPaywallConfigurationLoader<AdaptyPaywall>
     private let messages: AdaptyMonetizationMessages
     private let clock: CacheClock
     private let retainedConfigurationLimit: Int
@@ -40,7 +40,7 @@ public actor AdaptyPaywallRepository:
         self.placementRegistry = placementRegistry
         self.context = context
         self.remoteConfigurationParser = remoteConfigurationParser
-        self.remoteConfigurationStore = remoteConfigurationStore
+        mainConfigurationLoader = MainPaywallConfigurationLoader(store: remoteConfigurationStore)
         self.messages = messages
         self.clock = clock
         self.retainedConfigurationLimit = retainedConfigurationLimit
@@ -55,7 +55,7 @@ public actor AdaptyPaywallRepository:
     public func loadRUFallbackAttempt(
         for placementID: PlacementID
     ) async -> RUFallbackPaywallAttempt {
-        guard let adaptyPlacementID = placementRegistry.adaptyPlacement(for: placementID) else {
+        guard placementRegistry.contains(placementID) else {
             return RUFallbackPaywallAttempt(
                 outcome: unavailable(code: "monetization.paywall.placement-not-configured"),
                 availability: .notConfigured
@@ -80,10 +80,7 @@ public actor AdaptyPaywallRepository:
                 identityProvider: identityProvider,
                 compositionID: context.sdkCompositionID,
                 operation: { [self] in
-                    await loadAdaptyPaywall(
-                        adaptyPlacementID: adaptyPlacementID,
-                        logicalPlacementID: placementID
-                    )
+                    await loadAdaptyPaywall(logicalPlacementID: placementID)
                 }
             )
             return outcome ?? RUFallbackPaywallAttempt(
@@ -209,27 +206,34 @@ private extension AdaptyPaywallRepository {
         )
     }
 
-    func loadAdaptyPaywall(
-        adaptyPlacementID: AdaptyPlacementID,
-        logicalPlacementID: PlacementID
-    ) async -> RUFallbackPaywallAttempt {
-        var receivedConfiguration: RemotePaywallConfiguration?
-        do {
-            let paywall = try await Adapty.getPaywall(
-                placementId: adaptyPlacementID.rawValue,
-                fetchPolicy: .reloadRevalidatingCacheData,
-                loadTimeout: configuration.paywallLoadTimeout
-            )
+    func fetchAdaptyPaywall(for placementID: PlacementID) async -> AdaptyPaywall? {
+        guard let adaptyPlacementID = placementRegistry.adaptyPlacement(for: placementID) else {
+            return nil
+        }
+        return try? await Adapty.getPaywall(
+            placementId: adaptyPlacementID.rawValue,
+            fetchPolicy: .reloadRevalidatingCacheData,
+            loadTimeout: configuration.paywallLoadTimeout
+        )
+    }
 
-            // Preserve an explicit prohibition even if StoreKit products fail.
-            let parsedConfiguration = remoteConfigurationParser.parse(
-                paywall.remoteConfig?.dictionary ?? [:]
+    func loadAdaptyPaywall(logicalPlacementID: PlacementID) async -> RUFallbackPaywallAttempt {
+        let parser = remoteConfigurationParser
+        let source = await mainConfigurationLoader.load(
+            for: logicalPlacementID,
+            fetch: { [self] in await fetchAdaptyPaywall(for: $0) },
+            parse: { parser.parse($0.remoteConfig?.dictionary ?? [:]) }
+        )
+        // Main owns every key, even when the requested paywall has conflicting
+        // flags. Preserve main's prohibition if target/products loading fails.
+        let receivedConfiguration = source.remoteConfiguration
+        guard let paywall = source.paywall else {
+            return RUFallbackPaywallAttempt(
+                outcome: unavailable(code: "monetization.paywall.load-unavailable"),
+                availability: .unavailable(receivedConfiguration: receivedConfiguration)
             )
-            let remoteConfiguration = await remoteConfigurationStore.resolve(
-                parsedConfiguration,
-                for: logicalPlacementID
-            )
-            receivedConfiguration = remoteConfiguration
+        }
+        do {
             let adaptyProducts = try await Adapty.getPaywallProducts(paywall: paywall)
             let presentationID = PaywallPresentationID.generated()
             let paywallReference = PaywallReference.generatedForAdapty()
@@ -242,12 +246,14 @@ private extension AdaptyPaywallRepository {
                 logicalPlacementID: logicalPlacementID,
                 mappedProducts: mappedProducts,
                 adaptyProducts: adaptyProducts,
-                remoteConfiguration: remoteConfiguration
+                remoteConfiguration: receivedConfiguration ?? .empty,
+                remoteConfigurationProvenance: receivedConfiguration == nil
+                    ? .legacyUnqualified : .providerCacheFallbackPossible
             )
             return RUFallbackPaywallAttempt(
                 outcome: .loaded(payload),
                 availability: mappedProducts.isEmpty
-                    ? .unavailable(receivedConfiguration: remoteConfiguration)
+                    ? .unavailable(receivedConfiguration: receivedConfiguration)
                     : .available
             )
         } catch {
@@ -265,7 +271,8 @@ private extension AdaptyPaywallRepository {
         logicalPlacementID: PlacementID,
         mappedProducts: [MonetizationProduct],
         adaptyProducts: [any AdaptyPaywallProduct],
-        remoteConfiguration: RemotePaywallConfiguration
+        remoteConfiguration: RemotePaywallConfiguration,
+        remoteConfigurationProvenance: PaywallRemoteConfigurationProvenance
     ) async -> PaywallPayload {
         await context.productRegistry.store(
             paywall: paywall,
@@ -289,10 +296,9 @@ private extension AdaptyPaywallRepository {
             ),
             products: mappedProducts,
             remoteConfiguration: remoteConfiguration,
-            // Adapty owns the current payload and may transparently satisfy the
-            // request from its managed cache. This provenance authorizes the
-            // Special Offer flag, but not RU Billing or an entitlement.
-            remoteConfigurationProvenance: .providerCacheFallbackPossible,
+            // This provenance describes the main configuration response,
+            // independently of the target paywall and its StoreKit products.
+            remoteConfigurationProvenance: remoteConfigurationProvenance,
             fetchedAt: clock.now()
         )
     }

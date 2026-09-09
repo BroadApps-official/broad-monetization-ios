@@ -16,9 +16,9 @@ public struct SpecialOfferPresentationAuthorization: Equatable, Sendable {
         window: SpecialOfferWindow,
         trustedTime: SpecialOfferTrustedTime
     ) {
-        // The gate is intentionally supplied by the ordinary paywall. The
-        // presentation ID belongs to the separate offer payload and cannot be
-        // substituted with that ordinary paywall.
+        // The gate is supplied by the latest main configuration, carried with
+        // the separate offer payload. Its presentation ID still identifies the
+        // offer products, while gatePaywallPresentationID records the first gate.
         guard provenance.authorizesSpecialOfferPresentation,
               let specialOffer = gateRemoteConfiguration.specialOffer,
               specialOffer.isEnabled

@@ -95,9 +95,19 @@ require_pattern \
     'authorizesRUBillingPresentation:[[:space:]]*Bool[[:space:]]*\{[[:space:]]*self[[:space:]]*==[[:space:]]*\.verifiedFreshRemote'
 
 require_pattern \
-    "Adapty explicitly marks its payload as provider-managed" \
+    "Only a received main configuration is marked provider-managed" \
     "$adapty_repository_file" \
-    'remoteConfigurationProvenance:[[:space:]]*\.providerCacheFallbackPossible'
+    'remoteConfigurationProvenance:[[:space:]]*receivedConfiguration[[:space:]]*==[[:space:]]*nil[[:space:]]*\?[[:space:]]*\.legacyUnqualified[[:space:]]*:[[:space:]]*\.providerCacheFallbackPossible'
+
+require_pattern \
+    "Adapty obtains all keys through the shared main loader" \
+    "$adapty_repository_file" \
+    'mainConfigurationLoader\.load\((?s:.*?)for:[[:space:]]*logicalPlacementID(?s:.*?)parse:[[:space:]]*\{[[:space:]]*parser\.parse\(\$0\.remoteConfig\?\.dictionary'
+
+require_pattern \
+    "Products use the target paywall returned by the main/configuration split" \
+    "$adapty_repository_file" \
+    'guard[[:space:]]+let[[:space:]]+paywall[[:space:]]*=[[:space:]]*source\.paywall(?s:.*?)Adapty\.getPaywallProducts\(paywall:[[:space:]]*paywall\)'
 
 require_pattern \
     "Remote configuration strips special_offer when provider authority is absent" \
@@ -130,7 +140,7 @@ forbid_pattern \
     "$remote_parser_file"
 
 require_pattern \
-    "Special Offer reads the explicit gate from the ordinary paywall" \
+    "Special Offer reads the initial main gate before loading offer products" \
     "$special_use_case_file" \
     'PaywallLoadRequest\(placementID:[[:space:]]*configuration\.gatePlacementID\)(?s:.*?)specialOffer\?\.isEnabled[[:space:]]*==[[:space:]]*true'
 
@@ -138,6 +148,16 @@ require_pattern \
     "Special Offer loads the separate product placement only after cadence authorization" \
     "$special_use_case_file" \
     'stateRepository\.state\((?s:.*?)case[[:space:]]+let[[:space:]]+\.active\(window\)(?s:.*?)PaywallLoadRequest\(placementID:[[:space:]]*configuration\.placementID\)'
+
+require_pattern \
+    "A newer main prohibition revokes the initial special-offer gate" \
+    "$special_use_case_file" \
+    'guard[[:space:]]+offerPaywall\.remoteConfiguration\.specialOffer\?\.isEnabled[[:space:]]*==[[:space:]]*true(?s:.*?)resetIfPossible(?s:.*?)disabledByRemoteConfiguration'
+
+require_pattern \
+    "Special Offer authorization carries the latest main configuration" \
+    "$special_resolution_file" \
+    'gateRemoteConfiguration:[[:space:]]*paywall\.remoteConfiguration,[[:space:]]*provenance:[[:space:]]*paywall\.remoteConfigurationProvenance'
 
 require_pattern \
     "Special Offer cadence uses persisted state and trusted time" \
