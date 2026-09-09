@@ -90,3 +90,6 @@ still require the backend. Existing APIs keep their previous behavior.
 - ``RUFallbackPaywallRepositoryProtocol``
 - ``RUFallbackPaywallAttempt``
 - ``FreshRUCatalogRepositoryProtocol``
+
+`tokens` and `special_offer` keep their own products and prices. Neither loader
+substitutes `main` or the ordinary RU subscription catalog for these placements.

@@ -2,6 +2,17 @@
 
 Все заметные изменения BroadMonetization фиксируются здесь с объяснением: что изменилось и почему.
 
+## 1.5.2
+
+### Fixed
+
+- Token and Special Offer placements never fall back to main or to the ordinary
+  RU subscription catalog. Their own products, prices and payment flow stay
+  isolated; ordinary subscription placements retain main fallback.
+- Executable checks cover both the original loader and the opt-in RU loader
+  with an available main paywall. Public signatures are unchanged.
+  SemVer intent: corrective patch for dedicated placement isolation.
+
 ## 1.5.1
 
 ### Fixed

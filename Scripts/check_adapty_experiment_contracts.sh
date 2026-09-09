@@ -84,7 +84,7 @@ require_pattern \
     'paywallVariationID[[:space:]]*=[[:space:]]*selection\.paywallVariationID(?s:.*?)requestedPlacementID[[:space:]]*=[[:space:]]*selection\.requestedPlacementID(?s:.*?)resolvedPlacementID[[:space:]]*=[[:space:]]*selection\.resolvedPlacementID'
 
 require_pattern \
-    "Every non-main placement has the common main fallback" \
+    "Ordinary subscription placements use the common main fallback" \
     "$payload_file" \
     'fallbackPlacementID[[:space:]]*=[[:space:]]*\.main'
 

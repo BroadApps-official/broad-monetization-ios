@@ -254,7 +254,7 @@ public struct PaywallLoadRequest: Codable, Equatable, Sendable {
     }
 
     public var shouldAttemptFallback: Bool {
-        placementID != fallbackPlacementID
+        placementID != fallbackPlacementID && placementID != .tokens && placementID != .specialOffer
     }
 }
 

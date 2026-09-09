@@ -44,6 +44,7 @@ enum RUProviderFallbackProbe {
         await selectionContracts()
         await placementAndCancellationContracts()
         await missingPlacementContracts()
+        await dedicatedPlacementContracts()
         print(
             "RU provider fallback passed: regional/response matrix, false after products failure, fresh catalog, row identity, cache, cancellation."
         )
@@ -149,6 +150,32 @@ enum RUProviderFallbackProbe {
         await check(catalog.freshCalls == 1)
     }
 
+    static func dedicatedPlacementContracts() async {
+        for placement in [PlacementID.tokens, .specialOffer] {
+            let provider = DedicatedPlacementProvider()
+            let ordinary = LoadPaywallUseCase(
+                repository: provider, analytics: NoOpMonetizationAnalytics(), staleLoadError: error
+            )
+            let result = await ordinary(.init(placementID: placement))
+            if case .loaded = result {
+                fatalError("Dedicated placement must not borrow main products")
+            }
+            await check(provider.calls == [placement])
+            let catalog = Catalog()
+            let fallback = LoadPaywallWithRUFallbackUseCase(
+                provider: provider, catalog: catalog, storefront: Store(region: "RU"),
+                gate: RUBillingGate(isFeatureEnabled: true, deviceContextProvider: Device(region: "RU")),
+                analytics: NoOpMonetizationAnalytics(), staleLoadError: error
+            )
+            let reserved = await fallback(.init(placementID: placement))
+            if case .loaded = reserved {
+                fatalError("Dedicated placement must not borrow RU subscription products")
+            }
+            await check(provider.calls == [placement, placement])
+            await check(catalog.freshCalls == 0)
+        }
+    }
+
     static func loader(
         provider: Provider, catalog: Catalog, region: String? = "RU", store: String? = nil, cache: Cache? = nil
     ) -> LoadPaywallWithRUFallbackUseCase {
@@ -190,6 +217,27 @@ extension RUProviderFallbackProbe {
                 outcome: .unavailable(error),
                 availability: .unavailable(receivedConfiguration: placement == .main ? response : firstResponse ?? response)
             )
+        }
+    }
+
+    actor DedicatedPlacementProvider: RUFallbackPaywallRepositoryProtocol {
+        var calls: [PlacementID] = []
+        func loadPaywall(for placementID: PlacementID) async -> PaywallLoadOutcome {
+            await loadRUFallbackAttempt(for: placementID).outcome
+        }
+
+        func loadRUFallbackAttempt(for placementID: PlacementID) async -> RUFallbackPaywallAttempt {
+            calls.append(placementID)
+            if placementID == .main {
+                let payload = PaywallPayload(
+                    presentationID: .generated(), paywallReference: .init(rawValue: "main-fixture"),
+                    origin: .init(requestedPlacementID: .main, resolvedPlacementID: .main, catalogSource: .adapty),
+                    products: RUFallbackProductIdentity.products(in: Catalog.payload),
+                    remoteConfiguration: .init(isRUBillingEnabled: true), fetchedAt: Date()
+                )
+                return .init(outcome: .loaded(payload), availability: .available)
+            }
+            return .init(outcome: .unavailable(error), availability: .unavailable(receivedConfiguration: nil))
         }
     }
 

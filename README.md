@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 1.5.1" src="https://img.shields.io/badge/release-1.5.1-10B981">
+  <img alt="Release 1.5.2" src="https://img.shields.io/badge/release-1.5.2-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -67,7 +67,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "1.5.1"
+        from: "1.5.2"
     )
 ]
 ```
@@ -106,7 +106,7 @@ signed-in identity или отдельным authoritative entitlement adapter.
 | Product без trial | Командная naming convention — суффикс `nottrial` слитно, например `weekly_9.99_nottrial`; runtime на имя не полагается |
 | Paywall names | `main`; опциональные `tokens` и `special_offer` только когда flow действительно нужен |
 | Placement IDs | `onboarding`, `pro_icon`, `settings`, `main`, `CTR`, `special_offer`; дополнительные — из app specification |
-| Fallback | Базовые placements связываются с paywall `main`; фактический fallback фиксируется в payload context |
+| Fallback | Обычные подписочные placements используют `main`; `tokens` и `special_offer` исключены. Фактический fallback фиксируется в payload context |
 | Products | `getPaywall → getPaywallProducts → 1:1 mapping → raw registry`; без filter/sort/dedup |
 
 Пример payload для **нового приложения с выключенным Special Offer**:

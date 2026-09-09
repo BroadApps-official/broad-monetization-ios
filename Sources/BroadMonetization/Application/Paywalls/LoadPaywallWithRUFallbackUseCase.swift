@@ -78,7 +78,7 @@ public struct LoadPaywallWithRUFallbackUseCase: LoadPaywallUseCaseProtocol {
            !paywall.products.isEmpty, paywall.origin.catalogSource != .cache {
             return ordinary
         }
-        guard request.placementID != .specialOffer,
+        guard request.placementID != .specialOffer, request.placementID != .tokens,
               let configuration = await evidence.fallbackConfiguration()
         else { return ordinary }
         let currentStorefront: Storefront? = switch await storefront.currentStorefront() {
