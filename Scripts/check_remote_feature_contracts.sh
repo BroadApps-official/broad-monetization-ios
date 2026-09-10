@@ -95,17 +95,17 @@ require_pattern \
     'authorizesRUBillingPresentation:[[:space:]]*Bool[[:space:]]*\{[[:space:]]*self[[:space:]]*==[[:space:]]*\.verifiedFreshRemote'
 
 require_pattern \
-    "Only a received main configuration is marked provider-managed" \
+    "Only a received placement configuration is marked provider-managed" \
     "$adapty_repository_file" \
     'remoteConfigurationProvenance:[[:space:]]*receivedConfiguration[[:space:]]*==[[:space:]]*nil[[:space:]]*\?[[:space:]]*\.legacyUnqualified[[:space:]]*:[[:space:]]*\.providerCacheFallbackPossible'
 
 require_pattern \
-    "Adapty obtains all keys through the shared main loader" \
+    "Adapty obtains all keys through the placement loader with main fallback" \
     "$adapty_repository_file" \
-    'mainConfigurationLoader\.load\((?s:.*?)for:[[:space:]]*logicalPlacementID(?s:.*?)parse:[[:space:]]*\{[[:space:]]*parser\.parse\(\$0\.remoteConfig\?\.dictionary'
+    'placementConfigurationLoader\.load\((?s:.*?)for:[[:space:]]*logicalPlacementID(?s:.*?)parser\.parse\((?s:.*?)paywall\.remoteConfig\?\.dictionary(?s:.*?)fallback:[[:space:]]*main\?\.remoteConfig\?\.dictionary'
 
 require_pattern \
-    "Products use the target paywall returned by the main/configuration split" \
+    "Products use the target paywall returned by the placement configuration loader" \
     "$adapty_repository_file" \
     'guard[[:space:]]+let[[:space:]]+paywall[[:space:]]*=[[:space:]]*source\.paywall(?s:.*?)Adapty\.getPaywallProducts\(paywall:[[:space:]]*paywall\)'
 
@@ -140,7 +140,7 @@ forbid_pattern \
     "$remote_parser_file"
 
 require_pattern \
-    "Special Offer reads the initial main gate before loading offer products" \
+    "Special Offer reads the configured placement gate before loading offer products" \
     "$special_use_case_file" \
     'PaywallLoadRequest\(placementID:[[:space:]]*configuration\.gatePlacementID\)(?s:.*?)specialOffer\?\.isEnabled[[:space:]]*==[[:space:]]*true'
 
@@ -150,12 +150,12 @@ require_pattern \
     'stateRepository\.state\((?s:.*?)case[[:space:]]+let[[:space:]]+\.active\(window\)(?s:.*?)PaywallLoadRequest\(placementID:[[:space:]]*configuration\.placementID\)'
 
 require_pattern \
-    "A newer main prohibition revokes the initial special-offer gate" \
+    "A current offer prohibition revokes the initial special-offer gate" \
     "$special_use_case_file" \
     'guard[[:space:]]+offerPaywall\.remoteConfiguration\.specialOffer\?\.isEnabled[[:space:]]*==[[:space:]]*true(?s:.*?)resetIfPossible(?s:.*?)disabledByRemoteConfiguration'
 
 require_pattern \
-    "Special Offer authorization carries the latest main configuration" \
+    "Special Offer authorization carries the current offer configuration" \
     "$special_resolution_file" \
     'gateRemoteConfiguration:[[:space:]]*paywall\.remoteConfiguration,[[:space:]]*provenance:[[:space:]]*paywall\.remoteConfigurationProvenance'
 
@@ -170,7 +170,7 @@ require_pattern \
     'entitlementStatusProvider\.currentStatus\(\)[[:space:]]*!=[[:space:]]*\.active(?s:.*?)PaywallLoadRequest'
 
 require_pattern \
-    "The campaign compatibility API also reads the gate from main" \
+    "The campaign compatibility API also reads the gate from the configured placement" \
     "$special_campaign_file" \
     'PaywallLoadRequest\(placementID:[[:space:]]*configuration\.gatePlacementID\)(?s:.*?)specialOffer\?\.isEnabled[[:space:]]*==[[:space:]]*true'
 

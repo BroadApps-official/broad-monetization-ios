@@ -27,8 +27,9 @@
 1. Работающий RU Billing: HTTP configuration, текущие subject, authorization
    provider и session binding должны быть теми же, что у checkout.
 2. Варианты и продукты placement в Adapty; matching `experiment_code` и
-   `segment_code` в Remote Config каждого используемого варианта `main` и backend.
-   С 2.0.0 все пять ключей читаются только из `main`, независимо от экрана.
+   `segment_code` в Remote Config каждого используемого paywall и backend.
+   С 2.0.1 приоритет у paywall текущего placement; отсутствующие ключи берутся из `main`.
+   Пара experiment/segment берётся целиком из одного источника.
    Продукты и placement отчёта относятся к фактически показанному paywall.
    Оба кода — строки длиной 1–64,
    без окружающих пробелов и управляющих символов. Числа/bool не приводятся к строке.

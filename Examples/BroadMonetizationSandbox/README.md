@@ -1,12 +1,15 @@
 # BroadMonetizationSandbox
 
-## Проверка общего Remote Config (2.0.0)
+## Проверка Remote Config текущего placement (2.0.1)
 
 Sandbox использует typed fixtures. Для проверки загрузчика выполните
 `bash Scripts/check_ru_experiment_contracts.sh` из корня: исполняемый контракт
-передаёт противоположные флаги в `main` и другие placements, проверяет пять
-общих ключей, порядок и дубли продуктов, отсутствие ответа и обновление config.
-Custom repositories передают config `main` с каждым payload, включая оффер.
+передаёт противоположные флаги в `main` и другие placements, проверяет приоритет
+текущего paywall, fallback отсутствующих ключей, false/null/invalid, aliases,
+целостность A/B-пары, порядок и дубли продуктов, отсутствие ответа и refresh.
+Отдельно проверяются token/tokens: настроенный ID первым, остановка на успехе,
+отсутствие подписочного fallback и сохранение произвольных custom ID.
+Custom repositories передают config текущего placement с fallback на main.
 
 RU A/B fixture section demonstrates optional metadata and its removal for
 unqualified provider cache. No tracker networking is started by this sandbox.

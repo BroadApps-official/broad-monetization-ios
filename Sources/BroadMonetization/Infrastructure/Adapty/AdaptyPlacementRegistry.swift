@@ -34,12 +34,42 @@ public struct AdaptyPlacementRegistry: Sendable {
     public func adaptyPlacement(
         for logicalPlacement: PlacementID
     ) -> AdaptyPlacementID? {
-        mappings[logicalPlacement]
+        if let exact = mappings[logicalPlacement] {
+            return exact
+        }
+        guard logicalPlacement.isTokenPlacement else { return nil }
+        return mappings[.tokens] ?? mappings[.custom("token")]
     }
 
     public func contains(
         _ logicalPlacement: PlacementID
     ) -> Bool {
-        mappings[logicalPlacement] != nil
+        adaptyPlacement(for: logicalPlacement) != nil
+    }
+
+    /// Try the configured ID first. Only known token spelling variants are
+    /// eligible for another SDK request; custom IDs are never guessed.
+    func loadPaywall<Paywall: Sendable>(
+        for logicalPlacement: PlacementID,
+        fetch: @Sendable (AdaptyPlacementID) async -> Paywall?
+    ) async -> Paywall? {
+        guard let configured = adaptyPlacement(for: logicalPlacement) else { return nil }
+        var candidates = [configured]
+        let normalized = configured.rawValue.lowercased()
+        if ["token", "tokens"].contains(normalized) {
+            for value in [normalized, normalized == "token" ? "tokens" : "token"] {
+                let candidate = AdaptyPlacementID(rawValue: value)
+                if !candidates.contains(candidate) {
+                    candidates.append(candidate)
+                }
+            }
+        }
+        for candidate in candidates {
+            guard !Task.isCancelled else { return nil }
+            if let paywall = await fetch(candidate) {
+                return paywall
+            }
+        }
+        return nil
     }
 }

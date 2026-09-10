@@ -24,7 +24,8 @@ for source in \
     Application/RUBilling/RUBillingExperimentTracker.swift \
     Application/RUBilling/RUExperimentCatalogSelector.swift \
     Data/Paywalls/LastValidRemoteConfigurationStore.swift \
-    Data/Paywalls/MainPaywallConfigurationLoader.swift \
+    Data/Paywalls/PlacementPaywallConfigurationLoader.swift \
+    Infrastructure/Adapty/AdaptyPlacementRegistry.swift \
     Infrastructure/RUBilling/SystemRUBillingDeviceContextProvider.swift \
     Infrastructure/RUBilling/RUBillingHTTPConfiguration.swift \
     Infrastructure/RUBilling/RUBillingAuthenticatedHTTPClient.swift \
@@ -40,7 +41,7 @@ for source in \
     sources+=("$source_root/$source")
 done
 while IFS= read -r source; do sources+=("$source"); done < <(rg --files "$module_root/Scripts/ContractProbes" -g 'RUExperiment*swift')
-sources+=("$module_root/Scripts/ContractProbes/MainPaywallConfigurationProbe.swift")
+sources+=("$module_root/Scripts/ContractProbes/PlacementPaywallConfigurationProbe.swift")
 xcrun swiftc -parse-as-library -strict-concurrency=complete -warnings-as-errors \
     -I "$temporary_directory" -L "$temporary_directory" -lBroadCore \
     -Xlinker -rpath -Xlinker "$temporary_directory" \

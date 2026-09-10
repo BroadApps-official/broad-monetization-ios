@@ -76,7 +76,7 @@ public struct LoadPaywallWithRUFallbackUseCase: LoadPaywallUseCaseProtocol {
     ) async -> PaywallLoadOutcome {
         guard !Task.isCancelled else { return await cancelled(ordinary) }
         let providerPaywall = availableProviderPaywall(in: ordinary)
-        guard request.placementID != .specialOffer, request.placementID != .tokens,
+        guard request.placementID != .specialOffer, !request.placementID.isTokenPlacement,
               let configuration = await evidence.fallbackConfiguration(for: providerPaywall)
         else { return ordinary }
         let currentStorefront: Storefront? = switch await storefront.currentStorefront() {

@@ -10,7 +10,7 @@ public actor AdaptyPaywallRepository:
     private let placementRegistry: AdaptyPlacementRegistry
     private let context: AdaptyRepositoryContext
     private let remoteConfigurationParser: RemotePaywallConfigurationParser
-    private let mainConfigurationLoader: MainPaywallConfigurationLoader<AdaptyPaywall>
+    private let placementConfigurationLoader: PlacementPaywallConfigurationLoader<AdaptyPaywall>
     private let messages: AdaptyMonetizationMessages
     private let clock: CacheClock
     private let retainedConfigurationLimit: Int
@@ -40,7 +40,7 @@ public actor AdaptyPaywallRepository:
         self.placementRegistry = placementRegistry
         self.context = context
         self.remoteConfigurationParser = remoteConfigurationParser
-        mainConfigurationLoader = MainPaywallConfigurationLoader(store: remoteConfigurationStore)
+        placementConfigurationLoader = PlacementPaywallConfigurationLoader(store: remoteConfigurationStore)
         self.messages = messages
         self.clock = clock
         self.retainedConfigurationLimit = retainedConfigurationLimit
@@ -207,25 +207,26 @@ private extension AdaptyPaywallRepository {
     }
 
     func fetchAdaptyPaywall(for placementID: PlacementID) async -> AdaptyPaywall? {
-        guard let adaptyPlacementID = placementRegistry.adaptyPlacement(for: placementID) else {
-            return nil
+        let timeout = configuration.paywallLoadTimeout
+        return await placementRegistry.loadPaywall(for: placementID) { candidate in
+            try? await Adapty.getPaywall(
+                placementId: candidate.rawValue,
+                fetchPolicy: .reloadRevalidatingCacheData,
+                loadTimeout: timeout
+            )
         }
-        return try? await Adapty.getPaywall(
-            placementId: adaptyPlacementID.rawValue,
-            fetchPolicy: .reloadRevalidatingCacheData,
-            loadTimeout: configuration.paywallLoadTimeout
-        )
     }
 
     func loadAdaptyPaywall(logicalPlacementID: PlacementID) async -> RUFallbackPaywallAttempt {
         let parser = remoteConfigurationParser
-        let source = await mainConfigurationLoader.load(
+        let source = await placementConfigurationLoader.load(
             for: logicalPlacementID,
             fetch: { [self] in await fetchAdaptyPaywall(for: $0) },
-            parse: { parser.parse($0.remoteConfig?.dictionary ?? [:]) }
+            parse: { paywall, main in
+                parser.parse(paywall.remoteConfig?.dictionary ?? [:], fallback: main?.remoteConfig?.dictionary ?? [:])
+            }
         )
-        // Main owns every key, even when the requested paywall has conflicting
-        // flags. Preserve main's prohibition if target/products loading fails.
+        // Preserve the selected placement's decision if products loading fails.
         let receivedConfiguration = source.remoteConfiguration
         guard let paywall = source.paywall else {
             return RUFallbackPaywallAttempt(
@@ -296,8 +297,8 @@ private extension AdaptyPaywallRepository {
             ),
             products: mappedProducts,
             remoteConfiguration: remoteConfiguration,
-            // This provenance describes the main configuration response,
-            // independently of the target paywall and its StoreKit products.
+            // Both configuration sources are current SDK responses, which can
+            // include provider cache and cannot prove RU freshness.
             remoteConfigurationProvenance: remoteConfigurationProvenance,
             fetchedAt: clock.now()
         )

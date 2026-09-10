@@ -16,7 +16,7 @@ public struct SpecialOfferPresentationAuthorization: Equatable, Sendable {
         window: SpecialOfferWindow,
         trustedTime: SpecialOfferTrustedTime
     ) {
-        // The gate is supplied by the latest main configuration, carried with
+        // The gate is supplied by the offer's own configuration, carried with
         // the separate offer payload. Its presentation ID still identifies the
         // offer products, while gatePaywallPresentationID records the first gate.
         guard provenance.authorizesSpecialOfferPresentation,

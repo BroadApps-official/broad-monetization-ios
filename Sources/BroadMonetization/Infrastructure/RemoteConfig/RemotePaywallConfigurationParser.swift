@@ -8,6 +8,17 @@ public struct RemotePaywallConfigurationParser: Sendable {
         self.keys = keys
     }
 
+    var fallbackKeyGroups: [[String]] {
+        [
+            keys.ruBillingGate, keys.automaticRevenueView, keys.hardPaywall,
+            keys.closeDelay, keys.uiVariant, keys.specialOfferGate,
+            keys.crossedPrice, keys.crossedValue, keys.priceMultiplier,
+            keys.specialOfferBadge, keys.specialOfferPeriodText,
+            // Keep an A/B assignment together; never combine different variants.
+            [keys.ruExperimentCode, keys.ruSegmentCode]
+        ]
+    }
+
     public func parse(
         _ dictionary: [String: Any]
     ) -> RemotePaywallConfiguration {
@@ -36,7 +47,7 @@ public struct RemotePaywallConfigurationParser: Sendable {
 
 private extension RemotePaywallConfigurationParser {
     func parseRUExperiment(_ dictionary: [String: Any]) -> RUExperimentMetadata? {
-        // Codes are strict strings from the selected main variant. In particular,
+        // Codes are strict strings from the selected configuration. In particular,
         // NSNumber/Bool and variation IDs are not alternate segment codes.
         guard let experiment = dictionary[keys.ruExperimentCode] as? String,
               let segment = dictionary[keys.ruSegmentCode] as? String

@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 2.0.0" src="https://img.shields.io/badge/release-2.0.0-10B981">
+  <img alt="Release 2.0.1" src="https://img.shields.io/badge/release-2.0.1-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -67,35 +67,37 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "2.0.0"
+        from: "2.0.1"
     )
 ]
 ```
 
 ## Базовая настройка Adapty
 
-С **2.0.0 единственный источник Remote Config — выбранный Adapty paywall
-плейсмента `main`**. Это относится ко всем ключам: `ru_pay`,
-`auto_revenue_view`, `special_offer`, `experiment_code`, `segment_code`,
-а также display/navigation metadata. Заполните их в каждом A/B-варианте
-`main` на нужной локали. Конфигурации остальных placements не читаются.
+С **2.0.1 ключи Remote Config читаются из выбранного paywall текущего
+плейсмента**. Например, экран из настроек получает ключи paywall в `settings`.
+Только отсутствующие ключи берутся из текущего paywall `main`. Явные `false`,
+`null` и некорректные значения текущего placement не заменяются fallback.
+Это правило распространяется на `ru_pay`, `auto_revenue_view`, `special_offer`
+и display/navigation metadata. Aliases одного ключа разрешаются вместе.
+Пара `experiment_code` / `segment_code` берётся целиком из одного источника:
+неполная пара текущего placement отключает отчёт, а не смешивает A/B-варианты.
 
-Продукты, их порядок и дубли, `variationID`, raw SDK references и аналитика
-показа принадлежат запрошенному placement. При обычном fallback они относятся
-к фактически показанному `main`; `tokens` и `special_offer` не подменяются.
-Загрузка `main` ради настроек сама по себе не регистрирует показ.
+Продукты, порядок и дубли, `variationID`, SDK references и аналитика показа
+принадлежат загруженному placement. При недоступном обычном paywall используется
+`main`; продукты `tokens` и `special_offer` им не подменяются. Запрос `main`
+ради недостающих настроек не регистрирует показ. Если `main` недоступен,
+настройки текущего placement продолжают работать. Полученный запрет сохраняется
+при ошибке загрузки продуктов. Gate и A/B-коды не восстанавливаются из кеша.
 
-Перед загрузкой продуктов адаптер получает `main`. Если запрашивается сам
-`main`, этот paywall используется повторно без второго запроса. Одновременные
-запросы разделяют только текущую загрузку `main`; следующая попытка обновляет
-его. При отсутствии ответа не используются чужие флаги или прежнее разрешение.
-Полученный запрет сохраняется даже при ошибке загрузки продуктов.
+Для token placement адаптер сначала пробует настроенный ID, а при отсутствии
+paywall — альтернативное написание `token` / `tokens`. Настроенный регистр
+пробуется первым, затем известные варианты в нижнем регистре. Произвольные
+custom ID не угадываются. Оба написания исключены из подписочного fallback.
 
-Это изменение поведения 1.x: перенесите общие ключи из остальных placements
-в `main` перед обновлением. Custom repositories должны передавать в каждый
-`PaywallPayload` конфигурацию `main` и её честный provenance. Стандартный
-Adapty SDK по-прежнему не доказывает свежесть RU gate; правила authority
-и отдельного RU-резерва не меняются.
+Custom repositories передают конфигурацию своего placement с fallback
+недостающих полей на `main` и честный provenance. Стандартный Adapty SDK
+по-прежнему не доказывает свежесть RU gate; требования authority сохраняются.
 
 Реальные keys, product IDs и placement IDs принадлежат host app. Модуль хранит
 typed contract и fallback policy, но не вшивает строки конкретного проекта.

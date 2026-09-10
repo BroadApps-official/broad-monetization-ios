@@ -33,6 +33,10 @@ public struct PlacementID: RawRepresentable, Codable, Hashable, Sendable, Valida
     public static func custom(_ rawValue: String) -> PlacementID {
         PlacementID(rawValue: rawValue)
     }
+
+    var isTokenPlacement: Bool {
+        ["token", "tokens"].contains(rawValue.lowercased())
+    }
 }
 
 public struct ProductID: RawRepresentable, Codable, Hashable, Sendable, ValidatedMonetizationIdentifier {
