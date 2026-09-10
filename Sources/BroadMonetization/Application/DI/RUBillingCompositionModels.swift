@@ -70,6 +70,7 @@ public struct RUBillingCompositionDependencies: Sendable {
     public let clock: CacheClock
     public let debugOverrideStore: RUBillingDebugOverrideStore
     public let logger: any BroadLoggerProtocol
+    public let accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)?
 
     public init(
         subject: EntitlementSubject,
@@ -86,7 +87,8 @@ public struct RUBillingCompositionDependencies: Sendable {
         additionalEntitlementClients: [any RUBillingEntitlementClientProtocol] = [],
         clock: CacheClock = .system,
         debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(),
-        logger: any BroadLoggerProtocol = NoOpBroadLogger()
+        logger: any BroadLoggerProtocol = NoOpBroadLogger(),
+        accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)? = nil
     ) {
         precondition(
             MonetizationIdentifierPolicy.isValid(applicationIdentifier),
@@ -109,6 +111,7 @@ public struct RUBillingCompositionDependencies: Sendable {
         self.clock = clock
         self.debugOverrideStore = debugOverrideStore
         self.logger = logger
+        self.accountPolicyRepository = accountPolicyRepository
     }
 }
 
@@ -116,10 +119,13 @@ public struct RUBillingCatalogServices: Sendable {
     public let repository: any RUCatalogRepositoryProtocol
     public let resolveProduct: ResolveRUCatalogProductUseCase
     public let resolveCheckoutMethods: any ResolveCheckoutMethodsUseCaseProtocol
+    public let resolveTokenCheckoutMethods: any ResolveCheckoutMethodsUseCaseProtocol
 }
 
 public struct RUBillingCheckoutServices: Sendable {
     public let startSelectedProduct: any StartSelectedRUCheckoutUseCaseProtocol
+    /// Typed token route. Enabled only with account-policy confirmation.
+    public let startSelectedToken: any StartSelectedRUCheckoutUseCaseProtocol
     public let applicationReturn: RUPaymentReturnCoordinator
     public let cancelSubscription: any CancelRUSubscriptionUseCaseProtocol
     public let loadSubscriptionStatus:

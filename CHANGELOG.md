@@ -1,5 +1,30 @@
 # Changelog
 
+## 3.0.0
+
+### Added
+
+- RU checkout можно подтвердить свежим account policy без payment-status endpoint:
+  подписка по активности и тарифу/периоду, токены по росту сохранённого баланса.
+  Возврат и закрытие payment page используют общий coordinator, 8 попыток по 2 секунды.
+- Отдельные `resolveTokenCheckoutMethods` / `startSelectedToken` сохраняют RU gate,
+  точный backend ID, consent и operation gate; baseline сохраняется до открытия оплаты.
+- Готовый wire adapter для CloudPayments checkout и effective policy; host может
+  использовать свой API-клиент. Ошибки, смена identity и pending остаются fail-closed.
+- Исправлено snake_case декодирование checkoutSessionID/paymentURL/subscriptionID
+  в прежнем wire-контракте. Добавлены compile example и executable contract probe.
+
+### Breaking
+
+- `RUBillingEndpointConfiguration.paymentStatus` стал optional; nil выбирает account policy.
+- В payment refresh/return outcome добавлен `tokensCredited(Int)`; обновите exhaustive switches.
+
+### Почему
+
+Приложения используют состояние аккаунта после web checkout. Обязательный отдельный
+endpoint заставлял дублировать reconciliation в host; теперь этот сценарий есть в модуле.
+Account policy подтверждает доступ/баланс, не оплату конкретного checkout.
+
 ## 2.0.1
 
 ### Fixed

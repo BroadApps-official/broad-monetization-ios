@@ -3,6 +3,8 @@ import BroadCore
 public enum RUPaymentReturnOutcome: Equatable, Sendable {
     case noPendingCheckout
     case active(EntitlementSnapshot)
+    /// Fresh account balance increased. Does not grant subscription access.
+    case tokensCredited(Int)
     case pending
     case inactive
     case unavailable(AppError)
@@ -42,7 +44,7 @@ public actor RUPaymentReturnCoordinator {
         self.analytics = analytics.map(NonBlockingMonetizationAnalytics.wrapping)
     }
 
-    /// The host calls this only after the application becomes active again.
+    /// Call after foreground return or embedded payment-page dismissal.
     /// An opened payment page alone never reaches this method and never grants access.
     public func applicationDidBecomeActive() async -> RUPaymentReturnOutcome {
         let context: PendingRUCheckoutContext
@@ -111,7 +113,19 @@ private extension RUPaymentReturnCoordinator {
             await analytics?.track(.ruCheckoutSafariReturned(context.analyticsContext))
         }
 
-        switch await refreshPayment(checkoutSessionID: context.checkoutSessionID) {
+        switch await refreshPayment(
+            checkoutSessionID: context.checkoutSessionID,
+            productID: context.productID,
+            accountExpectation: context.accountExpectation
+        ) {
+        case let .tokensCredited(balance):
+            guard await pendingStore.clear(
+                checkoutSessionID: context.checkoutSessionID,
+                attemptID: context.attemptID
+            ) else { return .unavailable(RUBillingSafeErrors.paymentStatusUnavailable) }
+            await operationGate.notifyFinancialOperationStateChanged()
+            await analytics?.track(.ruCheckoutConfirmed(context.analyticsContext))
+            return .tokensCredited(balance)
         case let .active(snapshot):
             guard await pendingStore.clear(
                 checkoutSessionID: context.checkoutSessionID,

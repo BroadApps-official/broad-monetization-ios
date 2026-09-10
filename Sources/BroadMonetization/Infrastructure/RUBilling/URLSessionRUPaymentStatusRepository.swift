@@ -32,7 +32,8 @@ struct URLSessionRUPaymentStatusRepository: RUPaymentStatusRepositoryProtocol {
     func paymentStatus(
         for checkoutSessionID: CheckoutSessionID
     ) async -> RUPaymentStatusOutcome {
-        guard !Task.isCancelled,
+        guard let path = configuration.endpoints.paymentStatus,
+              !Task.isCancelled,
               let request = try? requestEncoder.encodePaymentStatusRequest(
                   checkoutSessionID: checkoutSessionID,
                   applicationID: configuration.applicationID,
@@ -43,7 +44,7 @@ struct URLSessionRUPaymentStatusRepository: RUPaymentStatusRepositoryProtocol {
         }
 
         let result = await client.send(
-            path: configuration.endpoints.paymentStatus,
+            path: path,
             method: request.method,
             timeout: configuration.requestTimeouts.paymentStatus,
             queryItems: request.queryItems,

@@ -57,8 +57,31 @@ enum RUExperimentHTTPProbe {
         }
         RUProbeURLProtocol.state.configure(status: 200, body: #"{"logged":false}"#)
         await check(repository.paywallShown(request) == .rejected)
+        let accountRepository = URLSessionRUAccountPolicyRepository(
+            configuration: .init(
+                baseURL: URL(string: "https://fixture.invalid")!, applicationID: "fixture", appBundleIdentifier: "fixture.example",
+                endpoints: .init(
+                    catalog: path,
+                    checkout: path,
+                    entitlementStatus: .init(rawValue: "/v1/policy/effective"),
+                    cancellation: path
+                )
+            ), subject: .anonymous, client: client
+        )
+        RUProbeURLProtocol.state.configure(status: 200, body: #"{"isSubscribed":true,"plan":"monthly","creditsBalance":50}"#)
+        guard case let .loaded(policy) = await accountRepository.loadPolicy(for: .anonymous) else { fatalError("Expected account policy") }
+        check(policy.isSubscribed && policy.creditsBalance == 50)
+        let accountRequest = RUProbeURLProtocol.state.requests.last!
+        check(accountRequest.httpMethod == "GET" && accountRequest.url?.path == "/v1/policy/effective")
+        check(accountRequest.url?.query == nil && accountRequest.httpBody == nil)
+        check(accountRequest.cachePolicy == .reloadIgnoringLocalCacheData)
+        for status in [401, 403, 500] {
+            RUProbeURLProtocol.state.configure(status: status, body: "{}")
+            guard case .unavailable = await accountRepository.loadPolicy(for: .anonymous) else { fatalError("Stale account accepted") }
+        }
         let count = RUProbeURLProtocol.state.requests.count
         authorization.invalidate()
+        guard case .unavailable = await accountRepository.loadPolicy(for: .anonymous) else { fatalError("Revoked account accepted") }
         guard case .unauthorized = await repository.assign(request) else { fatalError("Revoked session accepted") }
         check(RUProbeURLProtocol.state.requests.count == count)
 

@@ -6,6 +6,7 @@ public struct ResolveCheckoutMethodsUseCase: ResolveCheckoutMethodsUseCaseProtoc
     private let productMatcher: RUCatalogProductMatcher
     private let gate: RUBillingGate
     private let logger: any BroadLoggerProtocol
+    private let allowsTokenCheckout: Bool
 
     public init(
         storefrontRepository: any StorefrontRepositoryProtocol,
@@ -15,7 +16,8 @@ public struct ResolveCheckoutMethodsUseCase: ResolveCheckoutMethodsUseCaseProtoc
         deviceContextProvider: any RUBillingDeviceContextProviderProtocol =
             SystemRUBillingDeviceContextProvider(),
         debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(),
-        logger: any BroadLoggerProtocol = NoOpBroadLogger()
+        logger: any BroadLoggerProtocol = NoOpBroadLogger(),
+        allowsTokenCheckout: Bool = false
     ) {
         self.storefrontRepository = storefrontRepository
         self.catalogRepository = catalogRepository
@@ -26,6 +28,7 @@ public struct ResolveCheckoutMethodsUseCase: ResolveCheckoutMethodsUseCaseProtoc
             debugOverrideStore: debugOverrideStore
         )
         self.logger = logger
+        self.allowsTokenCheckout = allowsTokenCheckout
     }
 
     public func callAsFunction(
@@ -57,7 +60,8 @@ private extension ResolveCheckoutMethodsUseCase {
         isSpecialOffer: Bool,
         remoteConfiguration: RemotePaywallConfiguration
     ) async -> CheckoutMethodsResolution {
-        guard product.isEligibleForGenericPurchase else {
+        let isToken = allowsTokenCheckout && product.kind == .consumable && product.price != nil && !isSpecialOffer
+        guard product.isEligibleForGenericPurchase || isToken else {
             return resolution(
                 methods: [],
                 storefront: nil,
@@ -120,9 +124,13 @@ private extension ResolveCheckoutMethodsUseCase {
                 ruProduct: nil
             )
         }
-        let matched = isSpecialOffer
-            ? productMatcher.matchSpecialOfferProduct(product, in: catalog)
-            : productMatcher.matchPremiumEntitlementProduct(product, in: catalog)
+        let matched: RUCatalogProduct? = if allowsTokenCheckout, product.kind == .consumable, !isSpecialOffer {
+            productMatcher.match(product: product, kind: .tokens, in: catalog)
+        } else if isSpecialOffer {
+            productMatcher.matchSpecialOfferProduct(product, in: catalog)
+        } else {
+            productMatcher.matchPremiumEntitlementProduct(product, in: catalog)
+        }
         guard let matched else {
             return resolution(
                 methods: initialMethods,

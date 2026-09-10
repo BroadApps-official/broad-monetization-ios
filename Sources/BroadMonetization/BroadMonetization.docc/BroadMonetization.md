@@ -1,5 +1,11 @@
 # ``BroadMonetization``
 
+RU checkout can use fresh account policy without a payment-status endpoint.
+Omit ``RUBillingEndpointConfiguration/paymentStatus`` to select this mode.
+``RUAccountCheckoutExpectation`` persists the token balance captured before checkout.
+Call ``RUPaymentReturnCoordinator/applicationDidBecomeActive()`` after payment-page dismissal or foreground return.
+``RUPaymentReturnOutcome/tokensCredited(_:)`` updates balance without granting premium.
+
 Provider-neutral monetization contracts and production adapters for BroadApps iPhone applications.
 
 Since 2.0.1, Remote Config comes from the selected paywall of the requested

@@ -12,6 +12,7 @@ public struct PendingRUCheckoutContext: Codable, Equatable, Sendable {
     public let resolvedPlacementID: PlacementID?
     public let startedAt: Date
     public let expiresAt: Date?
+    public let accountExpectation: RUAccountCheckoutExpectation?
 
     public init(
         checkoutSessionID: CheckoutSessionID,
@@ -23,7 +24,8 @@ public struct PendingRUCheckoutContext: Codable, Equatable, Sendable {
         requestedPlacementID: PlacementID? = nil,
         resolvedPlacementID: PlacementID? = nil,
         startedAt: Date,
-        expiresAt: Date?
+        expiresAt: Date?,
+        accountExpectation: RUAccountCheckoutExpectation? = nil
     ) {
         precondition(
             checkoutMethod == .sbp || checkoutMethod == .card,
@@ -57,6 +59,7 @@ public struct PendingRUCheckoutContext: Codable, Equatable, Sendable {
         self.resolvedPlacementID = resolvedPlacementID
         self.startedAt = startedAt
         self.expiresAt = expiresAt
+        self.accountExpectation = accountExpectation
     }
 
     public init(from decoder: any Decoder) throws {
@@ -95,7 +98,8 @@ public struct PendingRUCheckoutContext: Codable, Equatable, Sendable {
             requestedPlacementID: value.requestedPlacementID,
             resolvedPlacementID: value.resolvedPlacementID,
             startedAt: value.startedAt,
-            expiresAt: value.expiresAt
+            expiresAt: value.expiresAt,
+            accountExpectation: value.accountExpectation
         )
     }
 
@@ -129,6 +133,7 @@ public struct PendingRUCheckoutContext: Codable, Equatable, Sendable {
 }
 
 private struct DecodedPendingRUCheckoutContext: Decodable {
+    let accountExpectation: RUAccountCheckoutExpectation?
     let checkoutSessionID: CheckoutSessionID
     let attemptID: MonetizationAttemptID
     let productID: RUCatalogProductID

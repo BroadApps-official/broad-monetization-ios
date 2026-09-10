@@ -20,6 +20,8 @@ actor RUCheckoutFlowCoordinator {
     private let operationGate: MonetizationOperationGate
     private let clock: CacheClock
     private let minimumSessionValidity: TimeInterval
+    private let accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)?
+    private let authorizationBinding: SubjectAuthorizationBinding?
 
     private var isStarting = false
     private var queuedAnalyticsEvents: [MonetizationAnalyticsEvent] = []
@@ -35,7 +37,9 @@ actor RUCheckoutFlowCoordinator {
         analytics: (any MonetizationAnalyticsProtocol)? = nil,
         operationGate: MonetizationOperationGate,
         clock: CacheClock = .system,
-        minimumSessionValidity: TimeInterval = 30
+        minimumSessionValidity: TimeInterval = 30,
+        accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)? = nil,
+        authorizationBinding: SubjectAuthorizationBinding? = nil
     ) {
         precondition(
             minimumSessionValidity.isFinite && minimumSessionValidity >= 0,
@@ -51,13 +55,16 @@ actor RUCheckoutFlowCoordinator {
         self.operationGate = operationGate
         self.clock = clock
         self.minimumSessionValidity = minimumSessionValidity
+        self.accountPolicyRepository = accountPolicyRepository
+        self.authorizationBinding = authorizationBinding
         operationGate.registerPendingOperationBlocker(pendingStore)
     }
 
     func start(
         _ request: RUCheckoutRequest,
         selection: ProductSelection,
-        remoteConfiguration: RemotePaywallConfiguration
+        remoteConfiguration: RemotePaywallConfiguration,
+        accountExpectation: RUAccountCheckoutExpectation? = nil
     ) async -> RUCheckoutFlowOutcome {
         guard !isStarting else {
             return .unavailable(RUBillingSafeErrors.checkoutUnavailable)
@@ -73,7 +80,8 @@ actor RUCheckoutFlowCoordinator {
         let outcome = await performStart(
             request,
             selection: selection,
-            remoteConfiguration: remoteConfiguration
+            remoteConfiguration: remoteConfiguration,
+            accountExpectation: accountExpectation
         )
         await operationGate.release(lease)
         return outcome
@@ -84,7 +92,8 @@ private extension RUCheckoutFlowCoordinator {
     func performStart(
         _ request: RUCheckoutRequest,
         selection: ProductSelection,
-        remoteConfiguration: RemotePaywallConfiguration
+        remoteConfiguration: RemotePaywallConfiguration,
+        accountExpectation: RUAccountCheckoutExpectation?
     ) async -> RUCheckoutFlowOutcome {
         if let eligibilityError = await eligibilityError(
             remoteConfiguration: remoteConfiguration
@@ -92,6 +101,17 @@ private extension RUCheckoutFlowCoordinator {
             return .unavailable(eligibilityError)
         }
 
+        var expectation = accountExpectation
+        if expectation?.kind == .tokens {
+            guard let repository = accountPolicyRepository,
+                  let binding = authorizationBinding, binding.isCurrent(),
+                  case let .loaded(policy) = await repository.loadPolicy(for: binding.subject),
+                  binding.isCurrent(), !Task.isCancelled, policy.subject == binding.subject,
+                  let balance = policy.creditsBalance, balance >= 0 else {
+                return .unavailable(RUBillingSafeErrors.checkoutUnavailable)
+            }
+            expectation = RUAccountCheckoutExpectation(kind: .tokens, creditsBalanceBeforeCheckout: balance)
+        }
         let attemptID = MonetizationAttemptID.generated()
         let analyticsContext = RUCheckoutAnalyticsContext(
             attemptID: attemptID,
@@ -111,7 +131,8 @@ private extension RUCheckoutFlowCoordinator {
                 session: session,
                 request: request,
                 analyticsContext: analyticsContext,
-                authorizationProof: authorizationProof
+                authorizationProof: authorizationProof,
+                accountExpectation: expectation
             )
         case let .unavailable(error):
             return .unavailable(error)
@@ -140,7 +161,8 @@ private extension RUCheckoutFlowCoordinator {
         session: RUCheckoutSession,
         request: RUCheckoutRequest,
         analyticsContext: RUCheckoutAnalyticsContext,
-        authorizationProof: SubjectAuthorizationProof
+        authorizationProof: SubjectAuthorizationProof,
+        accountExpectation: RUAccountCheckoutExpectation?
     ) async -> RUCheckoutFlowOutcome {
         guard await authorizationProvider.stillOwns(
             authorizationProof
@@ -164,7 +186,8 @@ private extension RUCheckoutFlowCoordinator {
             session: session,
             request: request,
             analyticsContext: analyticsContext,
-            startedAt: startedAt
+            startedAt: startedAt,
+            accountExpectation: accountExpectation
         )
         enqueueAnalytics(.ruCheckoutCreated(analyticsContext))
         guard await pendingStore.save(context) else {
@@ -200,7 +223,8 @@ private extension RUCheckoutFlowCoordinator {
         session: RUCheckoutSession,
         request: RUCheckoutRequest,
         analyticsContext: RUCheckoutAnalyticsContext,
-        startedAt: Date
+        startedAt: Date,
+        accountExpectation: RUAccountCheckoutExpectation?
     ) -> PendingRUCheckoutContext {
         PendingRUCheckoutContext(
             checkoutSessionID: session.id,
@@ -212,7 +236,8 @@ private extension RUCheckoutFlowCoordinator {
             requestedPlacementID: analyticsContext.requestedPlacementID,
             resolvedPlacementID: analyticsContext.resolvedPlacementID,
             startedAt: startedAt,
-            expiresAt: session.expiresAt
+            expiresAt: session.expiresAt,
+            accountExpectation: accountExpectation
         )
     }
 

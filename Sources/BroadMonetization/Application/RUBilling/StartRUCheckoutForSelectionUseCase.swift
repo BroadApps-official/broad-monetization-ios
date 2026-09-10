@@ -29,17 +29,23 @@ actor StartSelectedRUCheckoutUseCase:
     private let catalogRepository: any RUCatalogRepositoryProtocol
     private let matcher: RUCatalogProductMatcher
     private let checkoutFlow: RUCheckoutFlowCoordinator
+    private let usesAccountPolicy: Bool
+    private let tokenOnly: Bool
 
     private var isStarting = false
 
     init(
         catalogRepository: any RUCatalogRepositoryProtocol,
         matcher: RUCatalogProductMatcher = RUCatalogProductMatcher(),
-        checkoutFlow: RUCheckoutFlowCoordinator
+        checkoutFlow: RUCheckoutFlowCoordinator,
+        usesAccountPolicy: Bool = false,
+        tokenOnly: Bool = false
     ) {
         self.catalogRepository = catalogRepository
         self.matcher = matcher
         self.checkoutFlow = checkoutFlow
+        self.usesAccountPolicy = usesAccountPolicy
+        self.tokenOnly = tokenOnly
     }
 
     func callAsFunction(
@@ -48,7 +54,11 @@ actor StartSelectedRUCheckoutUseCase:
         remoteConfiguration: RemotePaywallConfiguration,
         options: CheckoutOptions
     ) async -> RUCheckoutFlowOutcome {
-        guard selection.product.isEligibleForGenericPurchase else {
+        let eligible = tokenOnly
+            ? usesAccountPolicy && selection.product.kind == .consumable && selection.product.price != nil
+            && selection.requestedPlacementID != .specialOffer
+            : selection.product.isEligibleForGenericPurchase
+        guard eligible else {
             return .unavailable(RUBillingSafeErrors.checkoutNotEligible)
         }
         guard checkoutMethod == .sbp || checkoutMethod == .card else {
@@ -69,23 +79,7 @@ actor StartSelectedRUCheckoutUseCase:
         isStarting = true
         defer { isStarting = false }
 
-        let catalogOutcome: RUCatalogLoadOutcome = if selection.product.catalogSource == .ruBackend,
-                                                      selection.product.reference.rawValue.hasPrefix(RUFallbackProductIdentity.prefix) {
-            if let fresh = catalogRepository as? any FreshRUCatalogRepositoryProtocol {
-                await fresh.loadFreshCatalog()
-            } else {
-                .unavailable(RUBillingSafeErrors.catalogUnavailable)
-            }
-        } else {
-            await catalogRepository.loadCatalog()
-        }
-        guard !Task.isCancelled, case let .loaded(catalog) = catalogOutcome else {
-            return .unavailable(RUBillingSafeErrors.catalogUnavailable)
-        }
-        let matchedProduct = selection.requestedPlacementID == .specialOffer
-            ? matcher.matchSpecialOfferProduct(selection.product, in: catalog)
-            : matcher.matchPremiumEntitlementProduct(selection.product, in: catalog)
-        guard let matchedProduct,
+        guard let matchedProduct = await matchedProduct(for: selection),
               matchedProduct.supportedMethods.contains(checkoutMethod)
         else {
             return .unavailable(RUBillingSafeErrors.catalogUnavailable)
@@ -99,8 +93,32 @@ actor StartSelectedRUCheckoutUseCase:
                 customerEmail: details.receiptEmail
             ),
             selection: selection,
-            remoteConfiguration: remoteConfiguration
+            remoteConfiguration: remoteConfiguration,
+            accountExpectation: usesAccountPolicy ? RUAccountCheckoutExpectation(
+                kind: tokenOnly ? .tokens : .subscription,
+                subscriptionPeriod: matchedProduct.subscriptionPeriod
+            ) : nil
         )
+    }
+
+    private func matchedProduct(for selection: ProductSelection) async -> RUCatalogProduct? {
+        let outcome: RUCatalogLoadOutcome = if selection.product.catalogSource == .ruBackend,
+                                               selection.product.reference.rawValue.hasPrefix(RUFallbackProductIdentity.prefix) {
+            if let fresh = catalogRepository as? any FreshRUCatalogRepositoryProtocol {
+                await fresh.loadFreshCatalog()
+            } else {
+                .unavailable(RUBillingSafeErrors.catalogUnavailable)
+            }
+        } else {
+            await catalogRepository.loadCatalog()
+        }
+        guard !Task.isCancelled, case let .loaded(catalog) = outcome else { return nil }
+        if tokenOnly {
+            return matcher.match(product: selection.product, kind: .tokens, in: catalog)
+        }
+        return selection.requestedPlacementID == .specialOffer
+            ? matcher.matchSpecialOfferProduct(selection.product, in: catalog)
+            : matcher.matchPremiumEntitlementProduct(selection.product, in: catalog)
     }
 
     private static func isValidEmail(_ value: String) -> Bool {

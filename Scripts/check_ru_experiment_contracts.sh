@@ -31,6 +31,8 @@ for source in \
     Infrastructure/RUBilling/RUBillingAuthenticatedHTTPClient.swift \
     Infrastructure/RUBilling/RUExperimentHTTPConfiguration.swift \
     Infrastructure/RUBilling/URLSessionRUExperimentRepository.swift \
+    Infrastructure/RUBilling/URLSessionRUAccountPolicyRepository.swift \
+    Infrastructure/RUBilling/BroadAppsAccountPolicyWireContract.swift \
     Infrastructure/RUBilling/FlatRUCatalogResponseDecoder.swift \
     Infrastructure/RUBilling/RUBPriceFormatter.swift \
     Infrastructure/RUBilling/RUCatalogWireContract.swift \

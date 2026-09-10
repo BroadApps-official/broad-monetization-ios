@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 2.0.1" src="https://img.shields.io/badge/release-2.0.1-10B981">
+  <img alt="Release 3.0.0" src="https://img.shields.io/badge/release-3.0.0-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -67,12 +67,15 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "2.0.1"
+        from: "3.0.0"
     )
 ]
 ```
 
 ## Базовая настройка Adapty
+
+RU checkout без отдельного payment-status endpoint поддержан с 3.0.0:
+[подключение account policy, подписки и токенов](Documentation/RUAccountPolicy.md).
 
 С **2.0.1 ключи Remote Config читаются из выбранного paywall текущего
 плейсмента**. Например, экран из настроек получает ключи paywall в `settings`.

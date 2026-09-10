@@ -8,7 +8,7 @@ public struct RUBillingCompositionFactory: Sendable {
     public init(
         configuration: RUBillingCompositionConfiguration,
         dependencies: RUBillingCompositionDependencies,
-        wire: RUBillingWireAdapters = .broadApps
+        wire: RUBillingWireAdapters? = nil
     ) {
         precondition(
             configuration.isFeatureEnabled,
@@ -16,7 +16,7 @@ public struct RUBillingCompositionFactory: Sendable {
         )
         self.configuration = configuration
         self.dependencies = dependencies
-        self.wire = wire
+        self.wire = wire ?? (configuration.http.endpoints.paymentStatus == nil ? .broadAppsAccountPolicy : .broadApps)
     }
 
     public func makeEntitlementRegistration() -> EntitlementSourceRegistration {
@@ -138,6 +138,16 @@ private extension RUBillingCompositionFactory {
                 deviceContextProvider: dependencies.deviceContextProvider,
                 debugOverrideStore: dependencies.debugOverrideStore,
                 logger: dependencies.logger
+            ),
+            resolveTokenCheckoutMethods: ResolveCheckoutMethodsUseCase(
+                storefrontRepository: storefront,
+                catalogRepository: catalog,
+                productMatcher: matcher,
+                isFeatureEnabled: configuration.isFeatureEnabled,
+                deviceContextProvider: dependencies.deviceContextProvider,
+                debugOverrideStore: dependencies.debugOverrideStore,
+                logger: dependencies.logger,
+                allowsTokenCheckout: usesAccountPolicy
             )
         )
     }
@@ -161,20 +171,25 @@ private extension RUBillingCompositionFactory {
             pendingStore: pendingStore,
             analytics: dependencies.analytics,
             operationGate: operationGate,
-            clock: dependencies.clock
+            clock: dependencies.clock,
+            accountPolicyRepository: usesAccountPolicy ? makeAccountPolicyRepository() : nil,
+            authorizationBinding: dependencies.authorizationBinding
         )
-        let refresh = RefreshRUPaymentUseCase(
-            paymentStatusRepository: makePaymentStatusRepository(),
-            refreshEntitlement: refreshEntitlement,
-            authorizationBinding: dependencies.authorizationBinding,
-            policy: configuration.polling
-        )
+        let refresh = makePaymentRefresh(refreshEntitlement: refreshEntitlement)
 
         return RUBillingCheckoutServices(
             startSelectedProduct: StartSelectedRUCheckoutUseCase(
                 catalogRepository: catalog,
                 matcher: matcher,
-                checkoutFlow: flow
+                checkoutFlow: flow,
+                usesAccountPolicy: usesAccountPolicy
+            ),
+            startSelectedToken: StartSelectedRUCheckoutUseCase(
+                catalogRepository: catalog,
+                matcher: matcher,
+                checkoutFlow: flow,
+                usesAccountPolicy: usesAccountPolicy,
+                tokenOnly: true
             ),
             applicationReturn: RUPaymentReturnCoordinator(
                 pendingStore: pendingStore,
@@ -201,6 +216,38 @@ private extension RUBillingCompositionFactory {
             cache: dependencies.cache,
             cacheTimeToLive: configuration.cache.storefrontTimeToLive,
             clock: dependencies.clock
+        )
+    }
+
+    var usesAccountPolicy: Bool {
+        configuration.http.endpoints.paymentStatus == nil
+    }
+
+    func makeAccountPolicyRepository() -> any RUAccountPolicyRepositoryProtocol {
+        dependencies.accountPolicyRepository ?? URLSessionRUAccountPolicyRepository(
+            configuration: configuration.http,
+            subject: dependencies.subject,
+            authorizationProvider: dependencies.authorizationProvider,
+            authorizationBinding: dependencies.authorizationBinding
+        )
+    }
+
+    func makePaymentRefresh(
+        refreshEntitlement: any RefreshEntitlementUseCaseProtocol
+    ) -> any RefreshRUPaymentUseCaseProtocol {
+        if usesAccountPolicy {
+            return RefreshRUAccountPaymentUseCase(
+                repository: makeAccountPolicyRepository(),
+                refreshEntitlement: refreshEntitlement,
+                authorizationBinding: dependencies.authorizationBinding,
+                policy: configuration.polling
+            )
+        }
+        return RefreshRUPaymentUseCase(
+            paymentStatusRepository: makePaymentStatusRepository(),
+            refreshEntitlement: refreshEntitlement,
+            authorizationBinding: dependencies.authorizationBinding,
+            policy: configuration.polling
         )
     }
 

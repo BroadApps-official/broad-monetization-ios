@@ -33,7 +33,8 @@ public struct RUBillingEndpointPath: RawRepresentable, Equatable, Sendable {
 public struct RUBillingEndpointConfiguration: Equatable, Sendable {
     public let catalog: RUBillingEndpointPath
     public let checkout: RUBillingEndpointPath
-    public let paymentStatus: RUBillingEndpointPath
+    /// Nil selects account-policy confirmation through entitlementStatus.
+    public let paymentStatus: RUBillingEndpointPath?
     public let entitlementStatus: RUBillingEndpointPath
     public let cancellation: RUBillingEndpointPath
     public let legacyCancellation: RUBillingEndpointPath?
@@ -41,7 +42,7 @@ public struct RUBillingEndpointConfiguration: Equatable, Sendable {
     public init(
         catalog: RUBillingEndpointPath,
         checkout: RUBillingEndpointPath,
-        paymentStatus: RUBillingEndpointPath,
+        paymentStatus: RUBillingEndpointPath? = nil,
         entitlementStatus: RUBillingEndpointPath,
         cancellation: RUBillingEndpointPath,
         legacyCancellation: RUBillingEndpointPath? = nil

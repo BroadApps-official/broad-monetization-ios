@@ -10,6 +10,12 @@ struct BroadAppsRUCheckoutRequestDTO: Encodable {
 }
 
 struct BroadAppsRUCheckoutResponseDTO: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case checkoutSessionID = "checkoutSessionId"
+        case paymentURL = "paymentUrl"
+        case expiresAt
+    }
+
     let checkoutSessionID: String
     let paymentURL: String
     let expiresAt: Date?
@@ -22,6 +28,11 @@ struct BroadAppsRUPaymentStatusRequestDTO: Encodable {
 }
 
 struct BroadAppsRUPaymentStatusResponseDTO: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case checkoutSessionID = "checkoutSessionId"
+        case status
+    }
+
     let checkoutSessionID: String
     let status: RUPaymentStatus
 }
@@ -44,6 +55,12 @@ struct BroadAppsRUCancellationResponseDTO: Decodable {
 }
 
 struct BroadAppsRUEntitlementResponseDTO: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case subscriptionID = "subscriptionId"
+        case subscriptionActive, subscriptionExpiresAt, subscriptionLifetime
+        case subscriptionPlanName, subscriptionAutoRenewalCancelled
+    }
+
     let subscriptionActive: Bool
     let subscriptionExpiresAt: Date?
     let subscriptionLifetime: Bool?

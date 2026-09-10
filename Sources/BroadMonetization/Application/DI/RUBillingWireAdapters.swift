@@ -107,6 +107,21 @@ public struct RUBillingWireAdapters: Sendable {
         )
     )
 
+    public static let broadAppsAccountPolicy = RUBillingWireAdapters(
+        catalog: RUCatalogWireAdapters(
+            requestEncoder: BroadAppsRUBillingWireContract(),
+            responseDecoder: FlatRUCatalogResponseDecoder(supportedMethods: [.sbp, .card])
+        ),
+        checkout: RUCheckoutWireAdapters(
+            requestEncoder: BroadAppsAccountPolicyWireContract(), responseDecoder: BroadAppsAccountPolicyWireContract()
+        ),
+        paymentStatus: broadApps.paymentStatus,
+        cancellation: broadApps.cancellation,
+        entitlement: RUEntitlementWireAdapters(
+            requestEncoder: BroadAppsAccountPolicyWireContract(), responseDecoder: BroadAppsAccountPolicyWireContract()
+        )
+    )
+
     /// Uses the standard checkout/status contracts together with the flat
     /// `{ products: [...] }` catalog used by current BroadApps backends.
     public static func broadAppsFlatCatalog(

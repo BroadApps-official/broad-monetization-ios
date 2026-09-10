@@ -252,6 +252,7 @@ public enum RUPaymentStatusOutcome: Equatable, Sendable {
 
 public enum RUPaymentRefreshOutcome: Equatable, Sendable {
     case active(EntitlementSnapshot)
+    case tokensCredited(Int)
     case pending
     case inactive
     case unavailable(AppError)

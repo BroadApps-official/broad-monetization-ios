@@ -154,7 +154,7 @@ private extension RefreshRUPaymentUseCase {
     }
 }
 
-private extension EntitlementSnapshot {
+extension EntitlementSnapshot {
     var confirmsRUPaymentAccess: Bool {
         sources.contains { source in
             let isRUPaymentAuthority = source.source == .primaryBackend || source.source == .ruBilling

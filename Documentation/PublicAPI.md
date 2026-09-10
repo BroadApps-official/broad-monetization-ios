@@ -91,6 +91,7 @@
 | Case | `case lifetime` |
 | Case | `case live(SpecialOfferCampaignWindow)` |
 | Case | `case loaded(PaywallPayload)` |
+| Case | `case loaded(RUAccountPolicy)` |
 | Case | `case loaded(RUCatalogPayload)` |
 | Case | `case loaded(RUSubscriptionManagementStatus)` |
 | Case | `case loaded(RemotePaywallConfiguration)` |
@@ -192,6 +193,7 @@
 | Case | `case timedOut` |
 | Case | `case tokenPurchase` |
 | Case | `case tokens` |
+| Case | `case tokensCredited(Int)` |
 | Case | `case transactionConfirmed` |
 | Case | `case transactionConfirmedAwaitingEntitlement(EntitlementSnapshot?)` |
 | Case | `case unauthorized` |
@@ -295,6 +297,7 @@
 | Enumeration | `enum PurchaseAttemptOutcome` |
 | Enumeration | `enum PurchaseFailureDisposition` |
 | Enumeration | `enum PurchaseOutcome` |
+| Enumeration | `enum RUAccountPolicyOutcome` |
 | Enumeration | `enum RUBillingAvailabilityReason` |
 | Enumeration | `enum RUBillingDebugOverrideMode` |
 | Enumeration | `enum RUBillingEntitlementClientResult` |
@@ -364,7 +367,7 @@
 | Initializer | `init(balance: Decimal, updatedAt: Date)` |
 | Initializer | `init(baseURL: URL, applicationID: String, appBundleIdentifier: String, endpoints: RUBillingEndpointConfiguration, requestTimeouts: RUBillingRequestTimeouts = RUBillingRequestTimeouts(), maximumResponseSize: Int = 512 * 1024, allowsLegacyCancellationFallback: Bool = false)` |
 | Initializer | `init(bytes: Data)` |
-| Initializer | `init(catalog: RUBillingEndpointPath, checkout: RUBillingEndpointPath, paymentStatus: RUBillingEndpointPath, entitlementStatus: RUBillingEndpointPath, cancellation: RUBillingEndpointPath, legacyCancellation: RUBillingEndpointPath? = nil)` |
+| Initializer | `init(catalog: RUBillingEndpointPath, checkout: RUBillingEndpointPath, paymentStatus: RUBillingEndpointPath? = nil, entitlementStatus: RUBillingEndpointPath, cancellation: RUBillingEndpointPath, legacyCancellation: RUBillingEndpointPath? = nil)` |
 | Initializer | `init(catalog: RUCatalogPayload)` |
 | Initializer | `init(catalog: RUCatalogWireAdapters, checkout: RUCheckoutWireAdapters, paymentStatus: RUPaymentStatusWireAdapters, cancellation: RUCancellationWireAdapters, entitlement: RUEntitlementWireAdapters)` |
 | Initializer | `init(catalog: TimeInterval = 15, checkout: TimeInterval = 15, paymentStatus: TimeInterval = 10, entitlementStatus: TimeInterval = 10, cancellation: TimeInterval = 15)` |
@@ -372,7 +375,7 @@
 | Initializer | `init(catalogProductID: RUCatalogProductID, kind: RUCatalogProductKind, appStoreProductID: ProductID?, price: Money?, displayPrice: String?, subscriptionPeriod: SubscriptionPeriod, supportedMethods: [CheckoutMethod], title: String? = nil, credits: Int? = nil, isSpecialOffer: Bool = false, isDefault: Bool = false)` |
 | Initializer | `init(catalogRepository: any RUCatalogRepositoryProtocol, matcher: RUCatalogProductMatcher = RUCatalogProductMatcher())` |
 | Initializer | `init(checkout: any CheckoutSelectedProductUseCaseProtocol, restorePurchases: any RestorePurchasesUseCaseProtocol)` |
-| Initializer | `init(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID, productID: RUCatalogProductID, checkoutMethod: CheckoutMethod, paywallPresentationID: PaywallPresentationID? = nil, paywallVariationID: PaywallVariationID? = nil, requestedPlacementID: PlacementID? = nil, resolvedPlacementID: PlacementID? = nil, startedAt: Date, expiresAt: Date?)` |
+| Initializer | `init(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID, productID: RUCatalogProductID, checkoutMethod: CheckoutMethod, paywallPresentationID: PaywallPresentationID? = nil, paywallVariationID: PaywallVariationID? = nil, requestedPlacementID: PlacementID? = nil, resolvedPlacementID: PlacementID? = nil, startedAt: Date, expiresAt: Date?, accountExpectation: RUAccountCheckoutExpectation? = nil)` |
 | Initializer | `init(checkoutSessionID: CheckoutSessionID, status: RUPaymentStatus, checkedAt: Date)` |
 | Initializer | `init(client: any PrimaryBackendEntitlementClientProtocol, clock: CacheClock = .system)` |
 | Initializer | `init(client: any RUBillingEntitlementClientProtocol, subject: EntitlementSubject, authorizationBinding: SubjectAuthorizationBinding)` |
@@ -388,8 +391,9 @@
 | Initializer | `init(configuration: AdaptyPlatformConfiguration, placementRegistry: AdaptyPlacementRegistry, messages: AdaptyMonetizationMessages, remoteConfigurationParser: RemotePaywallConfigurationParser = .init(), remoteConfigurationStore: LastValidRemoteConfigurationStore = .init(), context: AdaptyRepositoryContext = .init())` |
 | Initializer | `init(configuration: AdaptyPlatformConfiguration, placementRegistry: AdaptyPlacementRegistry, messages: AdaptyMonetizationMessages, remoteConfigurationParser: RemotePaywallConfigurationParser = .init(), remoteConfigurationStore: LastValidRemoteConfigurationStore = .init(), context: AdaptyRepositoryContext = .init(), ruBillingExperiments: RUBillingExperimentTracker? = nil)` |
 | Initializer | `init(configuration: PrimaryBackendHTTPConfiguration, authorizationProvider: any SubjectAuthorizationProviderProtocol)` |
-| Initializer | `init(configuration: RUBillingCompositionConfiguration, dependencies: RUBillingCompositionDependencies, wire: RUBillingWireAdapters = .broadApps)` |
+| Initializer | `init(configuration: RUBillingCompositionConfiguration, dependencies: RUBillingCompositionDependencies, wire: RUBillingWireAdapters? = nil)` |
 | Initializer | `init(configuration: RUBillingHTTPConfiguration, endpoint: RUBillingEndpointPath? = nil, subject: EntitlementSubject, authorizationProvider: any SubjectAuthorizationProviderProtocol, authorizationBinding: SubjectAuthorizationBinding, requestEncoder: any RUCancellationRequestEncoderProtocol = BroadAppsRUBillingWireContract(), responseDecoder: any RUCancellationResponseDecoderProtocol = BroadAppsRUBillingWireContract())` |
+| Initializer | `init(configuration: RUBillingHTTPConfiguration, subject: EntitlementSubject, authorizationProvider: any SubjectAuthorizationProviderProtocol, authorizationBinding: SubjectAuthorizationBinding)` |
 | Initializer | `init(configuration: RUBillingHTTPConfiguration, subject: EntitlementSubject, authorizationProvider: any SubjectAuthorizationProviderProtocol, authorizationBinding: SubjectAuthorizationBinding, requestEncoder: any RUCancellationRequestEncoderProtocol = BroadAppsRUBillingWireContract(), responseDecoder: any RUCancellationResponseDecoderProtocol = BroadAppsRUBillingWireContract())` |
 | Initializer | `init(configuration: RUBillingHTTPConfiguration, subject: EntitlementSubject, authorizationProvider: any SubjectAuthorizationProviderProtocol, authorizationBinding: SubjectAuthorizationBinding, requestEncoder: any RUCatalogRequestEncoderProtocol = BroadAppsRUBillingWireContract(), decoder: any RUCatalogResponseDecoderProtocol = BroadAppsRUCatalogResponseDecoder(), clock: CacheClock = .system)` |
 | Initializer | `init(configuration: RUBillingHTTPConfiguration, subject: EntitlementSubject, authorizationProvider: any SubjectAuthorizationProviderProtocol, authorizationBinding: SubjectAuthorizationBinding, requestEncoder: any RUEntitlementRequestEncoderProtocol = BroadAppsRUBillingWireContract(), responseDecoder: any RUEntitlementResponseDecoderProtocol = BroadAppsRUBillingWireContract())` |
@@ -417,6 +421,7 @@
 | Initializer | `init(isRUBillingEnabled: Bool? = nil, isAutomaticRevenueViewEnabled: Bool? = nil, accessPolicy: PaywallAccessPolicy? = nil, closeDelay: TimeInterval? = nil, uiVariantID: PaywallUIVariantID? = nil, specialOffer: SpecialOfferRemoteConfiguration? = nil, ruExperiment: RUExperimentMetadata? = nil)` |
 | Initializer | `init(keys: RemoteConfigKeyRegistry = .broadApps)` |
 | Initializer | `init(kind: PendingOperationBlockerKey.Kind, applicationIdentifier: String)` |
+| Initializer | `init(kind: RUCatalogProductKind, subscriptionPeriod: SubscriptionPeriod = .unknown, creditsBalanceBeforeCheckout: Int? = nil)` |
 | Initializer | `init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol)` |
 | Initializer | `init(loadPaywallUseCase: any LoadPaywallUseCaseProtocol, stateRepository: any SpecialOfferStateRepositoryProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol, clock: SpecialOfferClock, entitlementStatusProvider: any EntitlementStatusProviderProtocol)` |
 | Initializer | `init(main: AdaptyPlacementID, mappings: [PlacementID : AdaptyPlacementID] = [:])` |
@@ -489,7 +494,7 @@
 | Initializer | `init(store: any KeyValueStoreProtocol, storageKey: String = PersistedSpecialOfferWindowStore.defaultStorageKey)` |
 | Initializer | `init(store: any PendingApplePurchaseStoreProtocol, refreshEntitlement: any EntitlementRepositoryProtocol, transactionRecovery: any PendingAppleTransactionRecoveryProtocol, analytics: any MonetizationAnalyticsProtocol, operationGate: MonetizationOperationGate, maximumClockSkew: TimeInterval = 0)` |
 | Initializer | `init(storeKitClient: any StoreKitEntitlementsClientProtocol = StoreKitCurrentEntitlementsClient(), clock: CacheClock = .system)` |
-| Initializer | `init(storefrontRepository: any StorefrontRepositoryProtocol, catalogRepository: any RUCatalogRepositoryProtocol, productMatcher: RUCatalogProductMatcher = RUCatalogProductMatcher(), isFeatureEnabled: Bool, deviceContextProvider: any RUBillingDeviceContextProviderProtocol = SystemRUBillingDeviceContextProvider(), debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(), logger: any BroadLoggerProtocol = NoOpBroadLogger())` |
+| Initializer | `init(storefrontRepository: any StorefrontRepositoryProtocol, catalogRepository: any RUCatalogRepositoryProtocol, productMatcher: RUCatalogProductMatcher = RUCatalogProductMatcher(), isFeatureEnabled: Bool, deviceContextProvider: any RUBillingDeviceContextProviderProtocol = SystemRUBillingDeviceContextProvider(), debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(), logger: any BroadLoggerProtocol = NoOpBroadLogger(), allowsTokenCheckout: Bool = false)` |
 | Initializer | `init(storefrontTimeToLive: TimeInterval = 24 * 60 * 60, catalogFreshTimeToLive: TimeInterval = 15 * 60, catalogMaximumStaleAge: TimeInterval = 24 * 60 * 60, pendingCheckoutRetention: TimeInterval = 24 * 60 * 60)` |
 | Initializer | `init(subject: EntitlementSubject)` |
 | Initializer | `init(subject: EntitlementSubject, accessLevelIdentifier: String)` |
@@ -497,13 +502,14 @@
 | Initializer | `init(subject: EntitlementSubject, activate: any ActivateMonetizationUseCaseProtocol, refreshEntitlement: any RefreshEntitlementUseCaseProtocol, recoverTokenAccount: (any RecoverTokenAccountUseCaseProtocol)? = nil, loadRUSubscription: (any LoadRUSubscriptionStatusUseCaseProtocol)? = nil)` |
 | Initializer | `init(subject: EntitlementSubject, appBundleIdentifier: String, productCatalog: ApplePremiumProductCatalog, ownershipPolicy: StoreKitEntitlementOwnershipPolicy)` |
 | Initializer | `init(subject: EntitlementSubject, applicationIdentifier: String, authorizationBinding: SubjectAuthorizationBinding, cache: any CacheRepositoryProtocol, retention: TimeInterval = 24 * 60 * 60, clock: CacheClock = .system)` |
-| Initializer | `init(subject: EntitlementSubject, applicationIdentifier: String, authorizationProvider: any SubjectAuthorizationProviderProtocol, authorizationBinding: SubjectAuthorizationBinding, cache: any CacheRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol = NoOpMonetizationAnalytics(), paymentURLOpener: any PaymentURLOpenerProtocol = UIApplicationPaymentURLOpener(), deviceContextProvider: any RUBillingDeviceContextProviderProtocol = SystemRUBillingDeviceContextProvider(), productMappingPolicy: any RUCatalogProductMappingPolicyProtocol = ExactOnlyRUCatalogProductMappingPolicy(), additionalEntitlementClients: [any RUBillingEntitlementClientProtocol] = [], clock: CacheClock = .system, debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(), logger: any BroadLoggerProtocol = NoOpBroadLogger())` |
+| Initializer | `init(subject: EntitlementSubject, applicationIdentifier: String, authorizationProvider: any SubjectAuthorizationProviderProtocol, authorizationBinding: SubjectAuthorizationBinding, cache: any CacheRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol = NoOpMonetizationAnalytics(), paymentURLOpener: any PaymentURLOpenerProtocol = UIApplicationPaymentURLOpener(), deviceContextProvider: any RUBillingDeviceContextProviderProtocol = SystemRUBillingDeviceContextProvider(), productMappingPolicy: any RUCatalogProductMappingPolicyProtocol = ExactOnlyRUCatalogProductMappingPolicy(), additionalEntitlementClients: [any RUBillingEntitlementClientProtocol] = [], clock: CacheClock = .system, debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(), logger: any BroadLoggerProtocol = NoOpBroadLogger(), accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)? = nil)` |
 | Initializer | `init(subject: EntitlementSubject, applicationIdentifier: String, cache: any CacheRepositoryProtocol, retention: TimeInterval = 7 * 24 * 60 * 60, clock: CacheClock = .system)` |
 | Initializer | `init(subject: EntitlementSubject, applicationIdentifier: String, cache: any CacheRepositoryProtocol, reviewInterval: TimeInterval = 24 * 60 * 60, clock: CacheClock = .system)` |
 | Initializer | `init(subject: EntitlementSubject, freshnessPolicy: EntitlementFreshnessPolicy)` |
 | Initializer | `init(subject: EntitlementSubject, freshnessPolicy: EntitlementFreshnessPolicy, appBundleIdentifier: String, productCatalog: ApplePremiumProductCatalog, ownershipPolicy: StoreKitEntitlementOwnershipPolicy)` |
 | Initializer | `init(subject: EntitlementSubject, isActive: Bool, expiresAt: Date?, isLifetime: Bool = false)` |
 | Initializer | `init(subject: EntitlementSubject, isActive: Bool, expiresAt: Date?, isLifetime: Bool, subscriptionID: RUSubscriptionID? = nil, planName: String? = nil, isAutoRenewalCancelled: Bool = false)` |
+| Initializer | `init(subject: EntitlementSubject, isSubscribed: Bool, plan: String?, creditsBalance: Int?)` |
 | Initializer | `init(subscriptionID: RUSubscriptionID?, planName: String?, isActive: Bool, expiresAt: Date?, isLifetime: Bool, isAutoRenewalCancelled: Bool)` |
 | Initializer | `init(supportedMethods: [CheckoutMethod])` |
 | Initializer | `init(timeToLive: TimeInterval, offlineActiveGrace: TimeInterval)` |
@@ -594,10 +600,13 @@
 | Instance Method | `func decodeCheckoutSession(from data: Data) throws -> RUCheckoutSession` |
 | Instance Method | `func decodeEntitlement(from data: Data, subject: EntitlementSubject) throws -> RUBillingEntitlementRecord` |
 | Instance Method | `func decodePaymentStatus(from data: Data, expectedCheckoutSessionID: CheckoutSessionID, checkedAt: Date) throws -> RUPaymentStatusSnapshot` |
+| Instance Method | `func decodePolicy(from data: Data, subject: EntitlementSubject) throws -> RUAccountPolicy` |
 | Instance Method | `func encode(to encoder: any Encoder) throws` |
 | Instance Method | `func encodeCancellationRequest(subscriptionID: RUSubscriptionID, applicationID: String, appBundleIdentifier: String) throws -> RUBillingWireRequest` |
 | Instance Method | `func encodeCatalogRequest(applicationID: String, appBundleIdentifier: String) throws -> RUBillingWireRequest` |
+| Instance Method | `func encodeCheckoutRequest(_ request: RUCheckoutRequest, applicationID _: String, appBundleIdentifier _: String) async throws -> RUBillingWireRequest` |
 | Instance Method | `func encodeCheckoutRequest(_ request: RUCheckoutRequest, applicationID: String, appBundleIdentifier: String) async throws -> RUBillingWireRequest` |
+| Instance Method | `func encodeEntitlementRequest(applicationID _: String, appBundleIdentifier _: String) throws -> RUBillingWireRequest` |
 | Instance Method | `func encodeEntitlementRequest(applicationID: String, appBundleIdentifier: String) throws -> RUBillingWireRequest` |
 | Instance Method | `func encodePaymentStatusRequest(checkoutSessionID: CheckoutSessionID, applicationID: String, appBundleIdentifier: String) throws -> RUBillingWireRequest` |
 | Instance Method | `func entry(for productID: String) -> ApplePremiumProductCatalog.Entry?` |
@@ -621,6 +630,7 @@
 | Instance Method | `func loadEntitlement(for subject: EntitlementSubject) async -> RUBillingEntitlementClientResult` |
 | Instance Method | `func loadFreshCatalog() async -> RUCatalogLoadOutcome` |
 | Instance Method | `func loadPaywall(for placementID: PlacementID) async -> PaywallLoadOutcome` |
+| Instance Method | `func loadPolicy(for subject: EntitlementSubject) async -> RUAccountPolicyOutcome` |
 | Instance Method | `func loadProfile(for subject: EntitlementSubject) async -> AdaptyEntitlementProfileResult` |
 | Instance Method | `func loadRUFallbackAttempt(for placementID: PlacementID) async -> RUFallbackPaywallAttempt` |
 | Instance Method | `func loadSubscriptionStatus() async -> RUSubscriptionManagementLoadOutcome` |
@@ -707,6 +717,8 @@
 | Instance Property | `let accessLevelIdentifier: String` |
 | Instance Property | `let accessLevels: [String : AdaptyEntitlementAccessLevelSnapshot]` |
 | Instance Property | `let accessPolicy: PaywallAccessPolicy?` |
+| Instance Property | `let accountExpectation: RUAccountCheckoutExpectation?` |
+| Instance Property | `let accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)?` |
 | Instance Property | `let activate: any ActivateMonetizationUseCaseProtocol` |
 | Instance Property | `let activation: MonetizationActivationOutcome` |
 | Instance Property | `let activationUnavailable: String` |
@@ -773,6 +785,8 @@
 | Instance Property | `let coupons: [RUCatalogProduct]` |
 | Instance Property | `let created: Bool` |
 | Instance Property | `let credits: Int?` |
+| Instance Property | `let creditsBalance: Int?` |
+| Instance Property | `let creditsBalanceBeforeCheckout: Int?` |
 | Instance Property | `let crossedPrice: String?` |
 | Instance Property | `let crossedPrice: [String]` |
 | Instance Property | `let crossedValue: Decimal?` |
@@ -832,6 +846,7 @@
 | Instance Property | `let isRUBillingEnabled: Bool?` |
 | Instance Property | `let isRefund: Bool` |
 | Instance Property | `let isSpecialOffer: Bool` |
+| Instance Property | `let isSubscribed: Bool` |
 | Instance Property | `let isUpgraded: Bool` |
 | Instance Property | `let kind: AppError.Kind` |
 | Instance Property | `let kind: ApplePremiumProductCatalog.ProductKind` |
@@ -857,7 +872,7 @@
 | Instance Property | `let origin: PaywallOrigin` |
 | Instance Property | `let outcome: PaywallLoadOutcome` |
 | Instance Property | `let ownershipPolicy: StoreKitEntitlementOwnershipPolicy` |
-| Instance Property | `let paymentStatus: RUBillingEndpointPath` |
+| Instance Property | `let paymentStatus: RUBillingEndpointPath?` |
 | Instance Property | `let paymentStatus: RUPaymentStatusWireAdapters` |
 | Instance Property | `let paymentStatus: TimeInterval` |
 | Instance Property | `let paymentURL: URL` |
@@ -879,6 +894,7 @@
 | Instance Property | `let placement: String` |
 | Instance Property | `let placementID: PlacementID` |
 | Instance Property | `let placementIDs: [PlacementID]` |
+| Instance Property | `let plan: String?` |
 | Instance Property | `let planName: String?` |
 | Instance Property | `let polling: RUPaymentPollingPolicy` |
 | Instance Property | `let presentationAuthorization: SpecialOfferPresentationAuthorization?` |
@@ -929,6 +945,7 @@
 | Instance Property | `let requestedSegmentMatches: Bool` |
 | Instance Property | `let resolveCheckoutMethods: any ResolveCheckoutMethodsUseCaseProtocol` |
 | Instance Property | `let resolveProduct: ResolveRUCatalogProductUseCase` |
+| Instance Property | `let resolveTokenCheckoutMethods: any ResolveCheckoutMethodsUseCaseProtocol` |
 | Instance Property | `let resolvedAt: Date` |
 | Instance Property | `let resolvedPlacementID: PlacementID` |
 | Instance Property | `let resolvedPlacementID: PlacementID?` |
@@ -968,6 +985,7 @@
 | Instance Property | `let specialOfferPeriodText: [String]` |
 | Instance Property | `let stalePaywallLoad: AppError` |
 | Instance Property | `let startSelectedProduct: any StartSelectedRUCheckoutUseCaseProtocol` |
+| Instance Property | `let startSelectedToken: any StartSelectedRUCheckoutUseCaseProtocol` |
 | Instance Property | `let startedAt: Date` |
 | Instance Property | `let startsAt: Date?` |
 | Instance Property | `let state: EntitlementState` |
@@ -1066,6 +1084,7 @@
 | Protocol | `protocol ProfileIdentityProviderProtocol : Sendable` |
 | Protocol | `protocol PurchaseRepositoryProtocol : Sendable` |
 | Protocol | `protocol PurchaseSelectedProductUseCaseProtocol : Sendable` |
+| Protocol | `protocol RUAccountPolicyRepositoryProtocol : Sendable` |
 | Protocol | `protocol RUBillingDeviceContextProviderProtocol : Sendable` |
 | Protocol | `protocol RUBillingEntitlementClientProtocol : Sendable` |
 | Protocol | `protocol RUCancellationRequestEncoderProtocol : Sendable` |
@@ -1125,6 +1144,7 @@
 | Structure | `struct AppleEntitlementSourceConfiguration` |
 | Structure | `struct AppleEntitlementSourceFactory` |
 | Structure | `struct ApplePremiumProductCatalog` |
+| Structure | `struct BroadAppsAccountPolicyWireContract` |
 | Structure | `struct BroadAppsRUBillingWireContract` |
 | Structure | `struct BroadAppsRUCatalogResponseDecoder` |
 | Structure | `struct BroadMonetizationModule` |
@@ -1197,6 +1217,8 @@
 | Structure | `struct PurchaseAnalyticsContext` |
 | Structure | `struct PurchaseConfirmation` |
 | Structure | `struct PurchaseRequest` |
+| Structure | `struct RUAccountCheckoutExpectation` |
+| Structure | `struct RUAccountPolicy` |
 | Structure | `struct RUBPriceFormatter` |
 | Structure | `struct RUBillingCacheConfiguration` |
 | Structure | `struct RUBillingCatalogServices` |
@@ -1287,6 +1309,7 @@
 | Structure | `struct TrackPurchaseStartedUseCase` |
 | Structure | `struct UIApplicationPaymentURLOpener` |
 | Structure | `struct URLSessionPrimaryBackendClient` |
+| Structure | `struct URLSessionRUAccountPolicyRepository` |
 | Structure | `struct URLSessionRUBillingEntitlementClient` |
 | Structure | `struct URLSessionRUCancellationRepository` |
 | Structure | `struct URLSessionRUCatalogRepository` |
@@ -1316,6 +1339,7 @@
 | Type Property | `static let broadApps: RUBillingWireAdapters` |
 | Type Property | `static let broadApps: RUExperimentHTTPConfiguration` |
 | Type Property | `static let broadApps: RemoteConfigKeyRegistry` |
+| Type Property | `static let broadAppsAccountPolicy: RUBillingWireAdapters` |
 | Type Property | `static let ctr: PlacementID` |
 | Type Property | `static let currentVersion: Int` |
 | Type Property | `static let cycleDuration: TimeInterval` |
