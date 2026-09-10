@@ -36,6 +36,9 @@ xcrun swift-symbolgraph-extract \
     kind = symbol.dig("kind", "displayName") || symbol.dig("kind", "identifier")
     declaration = symbol.fetch("declarationFragments", []).map { |fragment| fragment["spelling"] }.join
     declaration = symbol.dig("names", "title") if declaration.empty?
+    # Newer toolchains spell inferred `@Sendable` in declaration fragments, older ones omit it;
+    # drop it so the committed report does not depend on the Xcode version that generated it.
+    declaration = declaration.gsub(/@Sendable\s*/, "")
     [kind, declaration.gsub(/\s+/, " ").strip]
   end.uniq.sort
   File.open(output, "w") do |file|
