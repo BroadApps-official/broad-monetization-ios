@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 3.0.0" src="https://img.shields.io/badge/release-3.0.0-10B981">
+  <img alt="Release 3.0.1" src="https://img.shields.io/badge/release-3.0.1-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -67,7 +67,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "3.0.0"
+        from: "3.0.1"
     )
 ]
 ```
@@ -298,6 +298,13 @@ StoreKit `Restore` не восстанавливает consumable balance. Trans
 ID нужен backend для deduplication начисления, но не передаётся как вход
 обычного recovery. Local cache не является источником купленного доступа или
 баланса.
+
+Pending intent живёт, пока исход открыт: evidence ещё не появилась либо backend
+не ответил (`unavailable`). Окончательный отказ backend (`failed` — повторно
+предъявленная transaction, неизвестный product) завершает попытку и очищает
+store. Это важно, потому что pending store — blocker общего operation gate:
+незакрытый intent блокировал бы и подписки. Host не должен очищать pending по
+кнопке или таймауту.
 
 ## Safe integration boundary
 

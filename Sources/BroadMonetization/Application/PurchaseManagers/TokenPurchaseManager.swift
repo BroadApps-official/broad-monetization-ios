@@ -3,6 +3,11 @@ import BroadCore
 /// Independent consumable flow for apps that sell tokens. It can be composed
 /// next to `SubscriptionPurchaseManager`, but neither manager imports or owns
 /// the other one.
+///
+/// A pending intent survives only while the outcome is still open: a purchase
+/// whose evidence has not appeared yet, or a backend that could not answer.
+/// A definitive refusal ends the attempt and releases the pending store, which
+/// is a blocker of the shared `MonetizationOperationGate`.
 public actor TokenPurchaseManager {
     private let purchaseRepository: any PurchaseRepositoryProtocol
     private let evidenceProvider: any TokenTransactionEvidenceProviderProtocol
@@ -156,6 +161,15 @@ private extension TokenPurchaseManager {
             }
         }
 
+        return await fulfill(evidence, for: intent)
+    }
+
+    /// The intent is released only when the outcome is settled: credited, or
+    /// refused for good. Anything still open keeps it for the next attempt.
+    func fulfill(
+        _ evidence: TokenTransactionEvidence,
+        for intent: PendingTokenPurchaseIntent
+    ) async -> TokenPurchaseOutcome {
         let fulfillment = await fulfillmentRepository.fulfill(
             TokenFulfillmentRequest(
                 attemptID: intent.attemptID,
@@ -173,11 +187,25 @@ private extension TokenPurchaseManager {
         case .pending:
             await analytics.track(.purchasePending(intent.analyticsContext))
             return .pending
-        case let .unavailable(error), let .failed(error):
+        case let .unavailable(error):
+            // The backend could not answer. The purchase may still be creditable,
+            // so the intent stays and the next launch asks again.
             await analytics.track(
                 .purchaseCompletedButUnverified(intent.analyticsContext)
             )
             return .failed(error)
+        case let .failed(error):
+            // The backend refused this evidence for good — a replayed transaction,
+            // an unknown product. Retrying cannot change that answer, so the
+            // attempt ends here. Keeping the intent would leave the pending store
+            // blocking the shared operation gate, and every later purchase, coins
+            // and subscriptions alike, would answer "another payment is already in
+            // progress" until the app is reinstalled.
+            return await clearAndReturn(
+                .failed(error),
+                context: intent.analyticsContext,
+                event: .purchaseCompletedButUnverified(intent.analyticsContext)
+            )
         }
     }
 
