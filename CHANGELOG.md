@@ -1,24 +1,33 @@
 # Changelog
 
-## 3.0.1
+## 4.0.0
+
+### Added
+
+- `TokenFulfillmentOutcome.rejected(AppError)` явно обозначает окончательный
+  отказ backend. Только этот отказ завершает pending-попытку; старый `.failed`
+  сохраняет evidence для reconciliation независимо от `AppError.isRetryable`.
+
+### Breaking
+
+- Добавлен case `.rejected` в публичный enum `TokenFulfillmentOutcome`:
+  обновите exhaustive switches. Существующие вызовы `.failed(error)` сохраняют
+  прежнее поведение; adapters могут перейти на `.rejected` только там, где
+  backend гарантирует окончательность отказа. Поэтому выбран major bump.
 
 ### Fixed
 
-- Окончательный отказ backend в fulfillment пакета токенов завершает попытку и
-  очищает `PendingTokenPurchaseStore`. Раньше очищались только `credited` и
-  `alreadyCredited`, а `failed` оставлял intent: store зарегистрирован blocker'ом
-  общего `MonetizationOperationGate`, поэтому после одного такого отказа **все**
-  последующие покупки, включая подписки, отвечали «another payment is already in
-  progress» до переустановки приложения. `unavailable` по-прежнему сохраняет
-  intent — это ответ транспорта, а не решение backend.
+- Подтверждённый окончательный отказ `.rejected` освобождает общий operation gate
+  после успешной очистки store. `.failed`, `.unavailable` и `.pending` сохраняют
+  попытку, поэтому повтор подтверждает предыдущее начисление без новой покупки.
+- Исполняемая проверка покрывает восстановление по тому же evidence, отказ,
+  повторный результат `alreadyCredited` и неуспешную очистку pending store.
 
 ### Почему
 
-Provider path уже различает окончательный и временный исход: `failed` очищает
-pending только при `definitivelyNotPurchased`. Fulfillment path этого различия не
-делал, хотя `TokenFulfillmentOutcome` разводит `failed` и `unavailable` ровно для
-этого. Обойти в host нельзя: чистить pending по кнопке или таймауту запрещено, а
-никакого `abandon` в публичном API нет.
+Provider path различает окончательный и временный исход, а старый fulfillment
+`.failed` такого доказательства не давал. Новый явный исход позволяет завершить
+подтверждённый отказ, сохраняя recovery существующих adapters и template.
 
 ## 3.0.0
 
