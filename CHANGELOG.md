@@ -1,5 +1,34 @@
 # Changelog
 
+## 4.0.0
+
+### Added
+
+- `TokenFulfillmentOutcome.rejected(AppError)` явно обозначает окончательный
+  отказ backend. Только этот отказ завершает pending-попытку; старый `.failed`
+  сохраняет evidence для reconciliation независимо от `AppError.isRetryable`.
+
+### Breaking
+
+- Добавлен case `.rejected` в публичный enum `TokenFulfillmentOutcome`:
+  обновите exhaustive switches. Существующие вызовы `.failed(error)` сохраняют
+  прежнее поведение; adapters могут перейти на `.rejected` только там, где
+  backend гарантирует окончательность отказа. Поэтому выбран major bump.
+
+### Fixed
+
+- Подтверждённый окончательный отказ `.rejected` освобождает общий operation gate
+  после успешной очистки store. `.failed`, `.unavailable` и `.pending` сохраняют
+  попытку, поэтому повтор подтверждает предыдущее начисление без новой покупки.
+- Исполняемая проверка покрывает восстановление по тому же evidence, отказ,
+  повторный результат `alreadyCredited` и неуспешную очистку pending store.
+
+### Почему
+
+Provider path различает окончательный и временный исход, а старый fulfillment
+`.failed` такого доказательства не давал. Новый явный исход позволяет завершить
+подтверждённый отказ, сохраняя recovery существующих adapters и template.
+
 ## 3.0.0
 
 ### Added

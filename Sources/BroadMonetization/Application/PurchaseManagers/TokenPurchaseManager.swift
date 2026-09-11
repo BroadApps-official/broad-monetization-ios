@@ -3,6 +3,12 @@ import BroadCore
 /// Independent consumable flow for apps that sell tokens. It can be composed
 /// next to `SubscriptionPurchaseManager`, but neither manager imports or owns
 /// the other one.
+///
+/// A pending intent survives only while the outcome is still open: a purchase
+/// whose evidence has not appeared yet, or a backend that could not answer.
+/// Only an explicit `TokenFulfillmentOutcome.rejected` ends a refused attempt
+/// and releases the pending store, a blocker of the shared operation gate.
+/// Legacy `.failed` responses keep their evidence for reconciliation.
 public actor TokenPurchaseManager {
     private let purchaseRepository: any PurchaseRepositoryProtocol
     private let evidenceProvider: any TokenTransactionEvidenceProviderProtocol
@@ -156,6 +162,15 @@ private extension TokenPurchaseManager {
             }
         }
 
+        return await fulfill(evidence, for: intent)
+    }
+
+    /// The intent is released only when the outcome is settled: credited, or
+    /// refused for good. Anything still open keeps it for the next attempt.
+    func fulfill(
+        _ evidence: TokenTransactionEvidence,
+        for intent: PendingTokenPurchaseIntent
+    ) async -> TokenPurchaseOutcome {
         let fulfillment = await fulfillmentRepository.fulfill(
             TokenFulfillmentRequest(
                 attemptID: intent.attemptID,
@@ -174,10 +189,20 @@ private extension TokenPurchaseManager {
             await analytics.track(.purchasePending(intent.analyticsContext))
             return .pending
         case let .unavailable(error), let .failed(error):
+            // Neither outcome proves a terminal refusal. Preserve evidence
+            // even when the AppError UI retry hint is false.
             await analytics.track(
                 .purchaseCompletedButUnverified(intent.analyticsContext)
             )
             return .failed(error)
+        case let .rejected(error):
+            // The adapter explicitly establishes financial finality. Clear
+            // only this attempt and release the shared gate after durable success.
+            return await clearAndReturn(
+                .failed(error),
+                context: intent.analyticsContext,
+                event: .purchaseCompletedButUnverified(intent.analyticsContext)
+            )
         }
     }
 

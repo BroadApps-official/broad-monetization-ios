@@ -149,6 +149,7 @@
 | Case | `case purchased` |
 | Case | `case refreshed` |
 | Case | `case rejected` |
+| Case | `case rejected(AppError)` |
 | Case | `case remoteFlagAbsent` |
 | Case | `case remoteFlagDisabled` |
 | Case | `case remoteFlagInvalid` |

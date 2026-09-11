@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 3.0.0" src="https://img.shields.io/badge/release-3.0.0-10B981">
+  <img alt="Release 4.0.0" src="https://img.shields.io/badge/release-4.0.0-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -67,7 +67,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "3.0.0"
+        from: "4.0.0"
     )
 ]
 ```
@@ -299,6 +299,18 @@ ID нужен backend для deduplication начисления, но не пе�
 обычного recovery. Local cache не является источником купленного доступа или
 баланса.
 
+Pending intent сохраняется при `.pending`, `.unavailable` и `.failed` независимо
+от `AppError.isRetryable`. Повтор использует то же evidence и attempt ID без
+нового provider purchase. Только `.rejected(error)` явно подтверждает окончательный
+отказ backend и очищает store, освобождая общий operation gate. Ошибка очистки
+оставляет блокировку. Host не должен очищать pending по кнопке или таймауту.
+
+Не переводите временную ошибку, ожидание webhook, сбой авторизации или исправимое
+сопоставление продукта в `.rejected`. Если transaction уже начислена текущему
+аккаунту, верните `.alreadyCredited(balance)`. Для миграции на 4.0.0 обновите
+exhaustive switches по `TokenFulfillmentOutcome`; существующие adapters с
+`.failed(error)` сохраняют прежнее восстановление.
+
 ## Safe integration boundary
 
 Host передаёт configuration и backend implementations через public
@@ -317,6 +329,7 @@ let assemblies = [
 bash Scripts/check_remote_feature_contracts.sh
 bash Scripts/check_adapty_experiment_contracts.sh
 bash Scripts/check_special_offer_runtime_contract.sh
+bash Scripts/check_token_purchase_contracts.sh
 ```
 
 Проверки компилируют production types и фиксируют order/provenance,

@@ -57,6 +57,8 @@ honestly; an SDK response that can use cache does not prove RU freshness.
 - ``AdaptySDKProfileIdentityProvider``
 - ``SubscriptionPurchaseManager``
 - ``TokenPurchaseManager``
+- ``TokenFulfillmentOutcome``
+- ``TokenFulfillmentRepositoryProtocol``
 - ``AppleTransactionUpdatesBridge``
 - ``RUBillingGate``
 - ``RUBillingDeviceContext``

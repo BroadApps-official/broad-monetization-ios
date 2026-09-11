@@ -74,13 +74,24 @@ public enum TokenFulfillmentOutcome: Equatable, Sendable {
     case alreadyCredited(TokenBalanceSnapshot)
     case pending
     case unavailable(AppError)
+    /// A failure without proof of a terminal refusal. The saved evidence is
+    /// retained, including when the error's UI retry hint is false.
     case failed(AppError)
+    /// The authoritative backend has definitively refused this attempt and
+    /// confirms that its evidence will not be credited on a later retry.
+    /// Never use this for transport/authentication errors, a pending webhook,
+    /// or a product mapping that may become available. A transaction already
+    /// credited to the current account must return `alreadyCredited` instead.
+    case rejected(AppError)
 }
 
 public protocol TokenFulfillmentRepositoryProtocol: Sendable {
     /// Sends verified evidence to the app backend. Implementations atomically
     /// credit each transaction ID once and return the resulting account
     /// balance. Normal account recovery is a separate full-snapshot request.
+    /// Return `.rejected` only for an authoritative terminal refusal. Existing
+    /// `.failed` responses preserve pending evidence and remain recoverable;
+    /// `AppError.isRetryable` alone does not establish financial finality.
     func fulfill(
         _ request: TokenFulfillmentRequest
     ) async -> TokenFulfillmentOutcome
