@@ -94,7 +94,7 @@ unexpected_imports="$(/usr/bin/ruby -rjson -e '
   failures = []
   ARGV.each do |root|
     Dir.glob(File.join(root, "**/*.swift")).sort.each do |path|
-      File.foreach(path).with_index(1) do |line, line_number|
+      File.foreach(path, encoding: "UTF-8").with_index(1) do |line, line_number|
         next unless (match = line.match(/^\s*import\s+(Broad[A-Za-z0-9_]+)/))
         failures << "#{path}:#{line_number}: #{match[1]}" unless allowed.include?(match[1])
       end
