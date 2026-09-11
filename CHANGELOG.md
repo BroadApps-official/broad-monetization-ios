@@ -10,6 +10,8 @@
 
 ### Breaking
 
+- Минимальная версия BroadCore поднята до `2.0.0`, чтобы модуль подключался
+  вместе с новым типизированным host logging в проверенном наборе платформы.
 - Добавлен case `.rejected` в публичный enum `TokenFulfillmentOutcome`:
   обновите exhaustive switches. Существующие вызовы `.failed(error)` сохраняют
   прежнее поведение; adapters могут перейти на `.rejected` только там, где

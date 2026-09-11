@@ -55,7 +55,7 @@ RU Billing A/B подключается отдельно в 1.4.0: [настро
 
 | Product | Platform | BroadApps dependency | External dependencies |
 |---|---|---|---|
-| `BroadMonetization` | iOS 17+, iPhone | `BroadCore` from `1.2.0` | Adapty `3.17.3`, Swinject `2.10.0` |
+| `BroadMonetization` | iOS 17+, iPhone | `BroadCore` from `2.0.0` | Adapty `3.17.3`, Swinject `2.10.0` |
 
 Host app подключает этот repository только по надобности. Обязательного
 umbrella package нет. Если app напрямую импортирует `BroadCore`, его product
