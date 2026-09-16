@@ -102,14 +102,26 @@
         ) async -> PurchaseAttemptOutcome {
             switch verification {
             case let .verified(transaction):
+                let capturedEvidence = StoreKitTransactionEvidenceCapture.capture(
+                    transaction,
+                    signedTransaction: verification.jwsRepresentation
+                )
                 await transaction.finish()
-                return .completed(
+                let confirmation = if request.selection.product.kind == .consumable {
+                    PurchaseConfirmation(
+                        productID: request.selection.product.productID,
+                        checkoutMethod: request.checkoutMethod,
+                        confirmedAt: Date(),
+                        capturedStoreTransactionEvidence: capturedEvidence
+                    )
+                } else {
                     PurchaseConfirmation(
                         productID: request.selection.product.productID,
                         checkoutMethod: request.checkoutMethod,
                         confirmedAt: Date()
                     )
-                )
+                }
+                return .completed(confirmation)
             case .unverified:
                 // Something was bought, but its signature does not check out. The
                 // intent stays open for reconciliation.

@@ -1,5 +1,6 @@
 import Adapty
 import BroadCore
+import StoreKit
 
 public actor AdaptyPurchaseRepository: PurchaseRepositoryProtocol {
     private let configuration: AdaptyPlatformConfiguration
@@ -87,13 +88,7 @@ private extension AdaptyPurchaseRepository {
             case .pending:
                 return .pending
             case .success:
-                return .completed(
-                    PurchaseConfirmation(
-                        productID: request.selection.product.productID,
-                        checkoutMethod: .apple,
-                        confirmedAt: clock.now()
-                    )
-                )
+                return completedOutcome(result, request: request)
             }
         } catch {
             return .failed(
@@ -101,6 +96,42 @@ private extension AdaptyPurchaseRepository {
                 disposition: .outcomeUnknown
             )
         }
+    }
+
+    func completedOutcome(
+        _ result: AdaptyPurchaseResult,
+        request: PurchaseRequest
+    ) -> PurchaseAttemptOutcome {
+        let confirmationDate = clock.now()
+        guard request.selection.product.kind == .consumable else {
+            return .completed(
+                PurchaseConfirmation(
+                    productID: request.selection.product.productID,
+                    checkoutMethod: .apple,
+                    confirmedAt: confirmationDate
+                )
+            )
+        }
+
+        // Adapty returns StoreKit's verified transaction and JWS even though
+        // its default auto-finish mode has already removed the consumable from
+        // Transaction.all on iOS 17. Hand it directly to TokenPurchaseManager.
+        guard let capturedEvidence = StoreKitTransactionEvidenceCapture.capture(
+            result.sk2SignedTransaction
+        ) else {
+            return .failed(
+                purchaseUnavailableError(),
+                disposition: .outcomeUnknown
+            )
+        }
+        return .completed(
+            PurchaseConfirmation(
+                productID: request.selection.product.productID,
+                checkoutMethod: .apple,
+                confirmedAt: confirmationDate,
+                capturedStoreTransactionEvidence: capturedEvidence
+            )
+        )
     }
 
     func resolveProduct(

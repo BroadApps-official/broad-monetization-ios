@@ -110,6 +110,84 @@ public protocol TokenTransactionEvidenceProviderProtocol: Sendable {
     ) async -> TokenEvidenceResolution
 }
 
+protocol DirectTokenEvidenceProvider: Sendable {
+    func evidence(
+        from captured: CapturedStoreTransactionEvidence,
+        productID: ProductID,
+        purchasedAfter: Date
+    ) async -> TokenEvidenceResolution
+}
+
+protocol StoreEvidenceConsumer: AnyObject, Sendable {
+    func receiveCapturedStoreTransactionEvidence(
+        _ evidence: CapturedStoreTransactionEvidence
+    ) async -> Bool
+}
+
+final class StoreEvidenceConsumerRegistry: @unchecked Sendable {
+    static let shared = StoreEvidenceConsumerRegistry()
+
+    private let lock = NSLock()
+    private var consumers: [
+        PendingOperationBlockerKey: WeakStoreEvidenceConsumer
+    ] = [:]
+    private var bufferedEvidence: [String: CapturedStoreTransactionEvidence] = [:]
+    private var bufferedTransactionIDs: [String] = []
+
+    func register(
+        _ consumer: any StoreEvidenceConsumer,
+        for key: PendingOperationBlockerKey
+    ) {
+        lock.lock()
+        consumers[key] = WeakStoreEvidenceConsumer(consumer)
+        let buffered = bufferedTransactionIDs.compactMap { bufferedEvidence[$0] }
+        lock.unlock()
+
+        Task { [weak consumer] in
+            guard let consumer else {
+                return
+            }
+            for evidence in buffered where await consumer
+                .receiveCapturedStoreTransactionEvidence(evidence) {
+                self.discard(transactionID: evidence.transactionID)
+            }
+        }
+    }
+
+    func publish(
+        _ evidence: CapturedStoreTransactionEvidence
+    ) -> [any StoreEvidenceConsumer] {
+        lock.lock()
+        if bufferedEvidence[evidence.transactionID] == nil {
+            bufferedTransactionIDs.append(evidence.transactionID)
+        }
+        bufferedEvidence[evidence.transactionID] = evidence
+        while bufferedTransactionIDs.count > 32 {
+            let removedID = bufferedTransactionIDs.removeFirst()
+            bufferedEvidence.removeValue(forKey: removedID)
+        }
+        consumers = consumers.filter { $0.value.consumer != nil }
+        let current = consumers.values.compactMap(\.consumer)
+        lock.unlock()
+        return current
+    }
+
+    func discard(transactionID: String) {
+        lock.lock()
+        bufferedEvidence.removeValue(forKey: transactionID)
+        bufferedTransactionIDs.removeAll { $0 == transactionID }
+        lock.unlock()
+    }
+}
+
+private final class WeakStoreEvidenceConsumer: @unchecked Sendable {
+    weak var consumer: (any StoreEvidenceConsumer)?
+
+    init(_ consumer: any StoreEvidenceConsumer) {
+        self.consumer = consumer
+    }
+}
+
 public struct PendingTokenPurchaseIntent: Codable, Equatable, Sendable {
     public let analyticsContext: PurchaseAnalyticsContext
     public let startedAt: Date

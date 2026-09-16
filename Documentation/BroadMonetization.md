@@ -169,9 +169,14 @@ bounded fallback, но не подменяет server verification. Recovery и 
 fulfillment остаются idempotent app/backend boundaries.
 
 `AppleTransactionUpdatesBridge` — единственный `Transaction.updates` листенер:
-ставится один раз до старта Adapty и форвардит verified purchase-транзакции своего
-bundle в `PendingApplePurchaseCoordinator`, не вызывая `finish()`. Так покупка,
-завершившаяся вне приложения, не теряется. Раньше этот listener писал каждый host.
+ставится один раз до старта Adapty и не вызывает `finish()`. Premium-факты он
+форвардит в `PendingApplePurchaseCoordinator`, а verified JWS consumable-покупок —
+в текущий `TokenPurchaseManager`. Короткий process-local буфер сохраняет событие,
+если manager создаётся после bridge. Обычный успешный token checkout получает тот
+же JWS прямо из результата Adapty до того, как auto-finish скроет transaction из
+истории iOS 17. `Transaction.unfinished` и `Transaction.all` используются только
+как recovery fallback. Так не теряются и покупки, завершившиеся вне приложения.
+Раньше этот listener писал каждый host.
 
 Для диагностики (например, письмо в поддержку) `EntitlementStatus.supportSubscriptionValue`
 даёт канонический строковый статус (`subscribed`/`not_subscribed`/`unknown`), а

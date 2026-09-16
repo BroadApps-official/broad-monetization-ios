@@ -19,6 +19,7 @@ public actor TokenPurchaseManager {
     private let inProgressError: AppError
     private let unavailableError: AppError
     private let unsupportedProductError: AppError
+    private var activeProviderAttemptID: MonetizationAttemptID?
 
     public init(
         purchaseRepository: any PurchaseRepositoryProtocol,
@@ -42,6 +43,10 @@ public actor TokenPurchaseManager {
         self.unsupportedProductError = unsupportedProductError
             ?? Self.defaultUnsupportedProductError
         operationGate.registerPendingOperationBlocker(pendingStore)
+        StoreEvidenceConsumerRegistry.shared.register(
+            self,
+            for: pendingStore.pendingOperationBlockerKey
+        )
     }
 
     public func purchase(
@@ -69,13 +74,31 @@ public actor TokenPurchaseManager {
         }
 
         await analytics.track(.purchaseStarted(context))
+        activeProviderAttemptID = context.attemptID
         let providerOutcome = await purchaseRepository.purchase(
             PurchaseRequest(selection: selection, checkoutMethod: method)
         )
-        let outcome = await resolveProviderOutcome(
+        let providerMayHaveRacedWithUpdate = switch providerOutcome {
+        case .pending, .failed(_, .outcomeUnknown):
+            true
+        case .cancelled, .completed, .failed(_, .definitivelyNotPurchased):
+            false
+        }
+        var outcome = await resolveProviderOutcome(
             providerOutcome,
             context: context
         )
+        if providerMayHaveRacedWithUpdate,
+           outcome == .pending,
+           case let .pending(intent) = await pendingStore.state(),
+           intent.evidence != nil {
+            // The updates bridge may have persisted evidence while the provider
+            // was still returning `.pending` or an unknown outcome.
+            outcome = await resolve(intent)
+        }
+        if activeProviderAttemptID == context.attemptID {
+            activeProviderAttemptID = nil
+        }
         await operationGate.release(lease)
         return outcome
     }
@@ -94,6 +117,52 @@ public actor TokenPurchaseManager {
             }
             return await resolve(intent)
         }
+    }
+}
+
+extension TokenPurchaseManager: StoreEvidenceConsumer {
+    func receiveCapturedStoreTransactionEvidence(
+        _ capturedEvidence: CapturedStoreTransactionEvidence
+    ) async -> Bool {
+        guard case let .pending(intent) = await pendingStore.state(),
+              intent.belongsToCurrentSubject,
+              intent.productID.rawValue == capturedEvidence.productID
+        else {
+            return false
+        }
+
+        let evidence: TokenTransactionEvidence
+        if let savedEvidence = intent.evidence {
+            guard savedEvidence.transactionID == capturedEvidence.transactionID else {
+                return false
+            }
+            evidence = savedEvidence
+        } else {
+            guard let capturedEvidenceProvider = evidenceProvider
+                as? any DirectTokenEvidenceProvider,
+                case let .verified(resolvedEvidence) = await capturedEvidenceProvider.evidence(
+                    from: capturedEvidence,
+                    productID: intent.productID,
+                    purchasedAfter: intent.startedAt
+                ),
+                await pendingStore.save(
+                    evidence: resolvedEvidence,
+                    attemptID: intent.attemptID
+                )
+            else {
+                return false
+            }
+            evidence = resolvedEvidence
+        }
+
+        // The interactive purchase call consumes the same saved evidence when
+        // Adapty returns. Out-of-band approvals have no such caller, so finish
+        // their idempotent backend fulfillment directly from the update bridge.
+        guard activeProviderAttemptID != intent.attemptID else {
+            return true
+        }
+        _ = await fulfill(evidence, for: intent)
+        return true
     }
 }
 
@@ -127,25 +196,42 @@ private extension TokenPurchaseManager {
                     failure: MonetizationAnalyticsFailure(error: error)
                 )
             )
-        case .completed:
+        case let .completed(confirmation):
             switch await pendingStore.state() {
             case let .pending(intent):
-                return await resolve(intent)
+                return await resolve(
+                    intent,
+                    capturedEvidence: confirmation.takeCapturedStoreTransactionEvidence()
+                )
             case .none, .unavailable:
                 return .failed(unavailableError)
             }
         }
     }
 
-    func resolve(_ intent: PendingTokenPurchaseIntent) async -> TokenPurchaseOutcome {
+    func resolve(
+        _ intent: PendingTokenPurchaseIntent,
+        capturedEvidence: CapturedStoreTransactionEvidence? = nil
+    ) async -> TokenPurchaseOutcome {
         let evidence: TokenTransactionEvidence
         if let savedEvidence = intent.evidence {
             evidence = savedEvidence
         } else {
-            switch await evidenceProvider.evidence(
-                productID: intent.productID,
-                purchasedAfter: intent.startedAt
-            ) {
+            let resolution: TokenEvidenceResolution = if let capturedEvidence,
+                                                         let capturedEvidenceProvider = evidenceProvider
+                                                         as? any DirectTokenEvidenceProvider {
+                await capturedEvidenceProvider.evidence(
+                    from: capturedEvidence,
+                    productID: intent.productID,
+                    purchasedAfter: intent.startedAt
+                )
+            } else {
+                await evidenceProvider.evidence(
+                    productID: intent.productID,
+                    purchasedAfter: intent.startedAt
+                )
+            }
+            switch resolution {
             case let .verified(resolvedEvidence):
                 guard await pendingStore.save(
                     evidence: resolvedEvidence,

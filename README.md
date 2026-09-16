@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 4.0.0" src="https://img.shields.io/badge/release-4.0.0-10B981">
+  <img alt="Release 4.0.1" src="https://img.shields.io/badge/release-4.0.1-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -67,7 +67,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "4.0.0"
+        from: "4.0.1"
     )
 ]
 ```
@@ -299,6 +299,16 @@ ID нужен backend для deduplication начисления, но не пе�
 обычного recovery. Local cache не является источником купленного доступа или
 баланса.
 
+Начиная с 4.0.1 verified JWS consumable-покупки передаётся в token flow прямо
+из результата Adapty/StoreKit и сохраняется до backend fulfillment. Поэтому
+корректность не зависит от `Transaction.all`: на iOS 17 завершённый Adapty
+consumable там отсутствует. `AppleTransactionUpdatesBridge`, установленный до
+старта Adapty, тем же способом принимает Ask-to-Buy и другие out-of-band
+завершения; короткий process-local буфер не теряет событие, если
+`TokenPurchaseManager` создаётся чуть позже. `Transaction.unfinished`, затем
+`Transaction.all` остаются только recovery fallback. Включать iOS 18
+`SKIncludeConsumableInAppPurchaseHistory` для корректности этого flow не нужно.
+
 Pending intent сохраняется при `.pending`, `.unavailable` и `.failed` независимо
 от `AppError.isRetryable`. Повтор использует то же evidence и attempt ID без
 нового provider purchase. Только `.rejected(error)` явно подтверждает окончательный
@@ -310,6 +320,12 @@ Pending intent сохраняется при `.pending`, `.unavailable` и `.fai
 аккаунту, верните `.alreadyCredited(balance)`. Для миграции на 4.0.0 обновите
 exhaustive switches по `TokenFulfillmentOutcome`; существующие adapters с
 `.failed(error)` сохраняют прежнее восстановление.
+
+Уже зависшие попытки, созданные версией 4.0.0 на iOS 17 после auto-finish,
+могут не иметь локально доступного JWS. Их нельзя безопасно очищать по таймауту:
+сверьте transaction на backend через App Store Server API/notifications или
+данные провайдера, выполните идемпотентное начисление и только затем очистите
+конкретный pending attempt.
 
 ## Safe integration boundary
 

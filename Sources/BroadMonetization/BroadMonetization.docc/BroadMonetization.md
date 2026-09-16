@@ -18,6 +18,13 @@ no paywall is returned. Neither spelling falls back to subscription products.
 Custom repositories preserve the same configuration contract and report provenance
 honestly; an SDK response that can use cache does not prove RU freshness.
 
+Since 4.0.1, consumable fulfillment captures the verified StoreKit JWS directly
+from the Adapty/StoreKit purchase result before provider auto-finish can remove it
+from iOS 17 transaction history. ``AppleTransactionUpdatesBridge`` delivers and
+briefly buffers the same evidence for Ask-to-Buy and other out-of-band completions,
+including updates received before ``TokenPurchaseManager`` is composed. StoreKit
+unfinished/history scans remain recovery fallbacks, not the normal proof path.
+
 ## Topics
 
 ### Paywalls and products

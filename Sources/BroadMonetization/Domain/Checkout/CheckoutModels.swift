@@ -158,6 +158,7 @@ public struct PurchaseConfirmation: Codable, Equatable, Sendable {
     public let productID: ProductID
     public let checkoutMethod: CheckoutMethod
     public let confirmedAt: Date
+    private let transactionEvidencePayload: PurchaseConfirmationEvidencePayload
 
     public init(
         productID: ProductID,
@@ -167,7 +168,80 @@ public struct PurchaseConfirmation: Codable, Equatable, Sendable {
         self.productID = productID
         self.checkoutMethod = checkoutMethod
         self.confirmedAt = confirmedAt
+        transactionEvidencePayload = PurchaseConfirmationEvidencePayload(nil)
     }
+
+    init(
+        productID: ProductID,
+        checkoutMethod: CheckoutMethod,
+        confirmedAt: Date,
+        capturedStoreTransactionEvidence: CapturedStoreTransactionEvidence
+    ) {
+        self.productID = productID
+        self.checkoutMethod = checkoutMethod
+        self.confirmedAt = confirmedAt
+        transactionEvidencePayload = PurchaseConfirmationEvidencePayload(
+            capturedStoreTransactionEvidence
+        )
+    }
+
+    func takeCapturedStoreTransactionEvidence() -> CapturedStoreTransactionEvidence? {
+        transactionEvidencePayload.evidence
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        productID = try container.decode(ProductID.self, forKey: .productID)
+        checkoutMethod = try container.decode(
+            CheckoutMethod.self,
+            forKey: .checkoutMethod
+        )
+        confirmedAt = try container.decode(Date.self, forKey: .confirmedAt)
+        transactionEvidencePayload = PurchaseConfirmationEvidencePayload(nil)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(productID, forKey: .productID)
+        try container.encode(checkoutMethod, forKey: .checkoutMethod)
+        try container.encode(confirmedAt, forKey: .confirmedAt)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case productID
+        case checkoutMethod
+        case confirmedAt
+    }
+}
+
+/// Keeps the synthesized public equality contract independent of an internal
+/// process-local payload.
+private struct PurchaseConfirmationEvidencePayload: Equatable, Sendable {
+    let evidence: CapturedStoreTransactionEvidence?
+
+    init(_ evidence: CapturedStoreTransactionEvidence?) {
+        self.evidence = evidence
+    }
+
+    static func == (_: Self, _: Self) -> Bool {
+        true
+    }
+}
+
+/// Process-local handoff of a StoreKit-verified JWS. It is deliberately omitted
+/// from the public confirmation's Codable and Equatable contracts. The token
+/// manager durably saves the evidence before backend fulfillment.
+struct CapturedStoreTransactionEvidence: Equatable, Sendable {
+    let transactionID: String
+    let productID: String
+    let signedTransaction: String
+    let purchasedAt: Date
+    let appBundleIdentifier: String
+    let appAccountToken: UUID?
+    let isConsumable: Bool
+    let isPurchase: Bool
+    let revocationDate: Date?
+    let isUpgraded: Bool
 }
 
 /// Raw result produced by the StoreKit/Adapty purchase adapter. A completed SDK

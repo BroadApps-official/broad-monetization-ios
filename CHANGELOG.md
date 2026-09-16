@@ -1,5 +1,31 @@
 # Changelog
 
+## 4.0.1
+
+### Fixed
+
+- Consumable purchase больше не ищет единственное доказательство только в
+  `Transaction.all`: verified transaction и JWS из успешного результата
+  Adapty/StoreKit передаются прямо в `TokenPurchaseManager` и сохраняются до
+  идемпотентного backend fulfillment.
+- `AppleTransactionUpdatesBridge` принимает и кратковременно буферизует verified
+  consumable JWS для Ask-to-Buy, cold launch и других out-of-band завершений,
+  включая событие до создания token manager. Bridge по-прежнему не вызывает
+  `finish()`.
+- Исторический recovery сначала проверяет `Transaction.unfinished`, затем
+  `Transaction.all`. Это fallback, а не условие обычного начисления на iOS 17.
+- Contract probe проверяет прямой JWS, live/buffered transaction update,
+  сохранение evidence, exactly-once retry и освобождение общего operation gate.
+
+### Почему
+
+Adapty по умолчанию завершает StoreKit transaction, а iOS 17 не возвращает
+завершённые consumable в `Transaction.all`. Поэтому оплаченная покупка могла
+остаться без evidence, а durable pending навсегда блокировал purchase и restore.
+Теперь evidence захватывается до потери transaction из истории. Уже зависшие
+попытки 4.0.0 требуют серверной сверки; таймаут не является доказательством того,
+что списания не было.
+
 ## 4.0.0
 
 ### Added

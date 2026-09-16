@@ -5,7 +5,8 @@ import StoreKit
 /// completed purchase. It does not finish transactions; the purchase adapter
 /// remains their sole owner.
 public struct StoreKitTokenTransactionEvidenceProvider:
-    TokenTransactionEvidenceProviderProtocol {
+    TokenTransactionEvidenceProviderProtocol,
+    DirectTokenEvidenceProvider {
     private let appBundleIdentifier: String
     private let ownershipPolicy: StoreKitEntitlementOwnershipPolicy
     private let maximumClockSkew: TimeInterval
@@ -37,40 +38,65 @@ public struct StoreKitTokenTransactionEvidenceProvider:
     ) async -> TokenEvidenceResolution {
         var foundRelevantUnverified = false
 
+        for await result in Transaction.unfinished {
+            guard !Task.isCancelled else {
+                return .unavailable
+            }
+            switch evaluate(
+                result,
+                productID: productID,
+                purchasedAfter: purchasedAfter
+            ) {
+            case let .verified(evidence):
+                return .verified(evidence)
+            case .relevantUnverified:
+                foundRelevantUnverified = true
+            case .irrelevant:
+                break
+            }
+        }
+
         for await result in Transaction.all {
             guard !Task.isCancelled else {
                 return .unavailable
             }
-
-            switch result {
-            case let .unverified(transaction, _):
-                if isRelevant(
-                    transaction,
-                    productID: productID,
-                    purchasedAfter: purchasedAfter
-                ) {
-                    foundRelevantUnverified = true
-                }
-            case let .verified(transaction):
-                guard isRelevant(
-                    transaction,
-                    productID: productID,
-                    purchasedAfter: purchasedAfter
-                ) else {
-                    continue
-                }
-                return .verified(
-                    TokenTransactionEvidence(
-                        transactionID: String(transaction.id),
-                        productID: productID,
-                        signedTransaction: result.jwsRepresentation,
-                        purchasedAt: transaction.purchaseDate
-                    )
-                )
+            switch evaluate(
+                result,
+                productID: productID,
+                purchasedAfter: purchasedAfter
+            ) {
+            case let .verified(evidence):
+                return .verified(evidence)
+            case .relevantUnverified:
+                foundRelevantUnverified = true
+            case .irrelevant:
+                break
             }
         }
 
         return foundRelevantUnverified ? .unavailable : .notFound
+    }
+
+    func evidence(
+        from captured: CapturedStoreTransactionEvidence,
+        productID: ProductID,
+        purchasedAfter: Date
+    ) async -> TokenEvidenceResolution {
+        guard isRelevant(
+            captured,
+            productID: productID,
+            purchasedAfter: purchasedAfter
+        ) else {
+            return .unavailable
+        }
+        return .verified(
+            TokenTransactionEvidence(
+                transactionID: captured.transactionID,
+                productID: productID,
+                signedTransaction: captured.signedTransaction,
+                purchasedAt: captured.purchasedAt
+            )
+        )
     }
 
     private func isRelevant(
@@ -89,12 +115,69 @@ public struct StoreKitTokenTransactionEvidenceProvider:
             >= -maximumClockSkew
     }
 
+    private func isRelevant(
+        _ captured: CapturedStoreTransactionEvidence,
+        productID: ProductID,
+        purchasedAfter: Date
+    ) -> Bool {
+        captured.productID == productID.rawValue
+            && captured.appBundleIdentifier == appBundleIdentifier
+            && captured.isConsumable
+            && captured.isPurchase
+            && captured.revocationDate == nil
+            && !captured.isUpgraded
+            && ownershipMatches(captured.appAccountToken)
+            && captured.purchasedAt.timeIntervalSince(purchasedAfter)
+            >= -maximumClockSkew
+    }
+
     private func ownershipMatches(_ transaction: Transaction) -> Bool {
+        ownershipMatches(transaction.appAccountToken)
+    }
+
+    private func ownershipMatches(_ appAccountToken: UUID?) -> Bool {
         switch ownershipPolicy {
         case .appStoreAccount:
             true
         case let .appAccountToken(expectedToken):
-            transaction.appAccountToken == expectedToken
+            appAccountToken == expectedToken
         }
+    }
+
+    private func evaluate(
+        _ result: VerificationResult<Transaction>,
+        productID: ProductID,
+        purchasedAfter: Date
+    ) -> Evaluation {
+        switch result {
+        case let .unverified(transaction, _):
+            return isRelevant(
+                transaction,
+                productID: productID,
+                purchasedAfter: purchasedAfter
+            ) ? .relevantUnverified : .irrelevant
+        case let .verified(transaction):
+            guard isRelevant(
+                transaction,
+                productID: productID,
+                purchasedAfter: purchasedAfter
+            ) else {
+                return .irrelevant
+            }
+            return .verified(
+                TokenTransactionEvidence(
+                    transactionID: String(transaction.id),
+                    productID: productID,
+                    signedTransaction: result.jwsRepresentation,
+                    purchasedAt: transaction.purchaseDate
+                )
+            )
+        }
+    }
+
+    private enum Evaluation {
+        case verified(TokenTransactionEvidence)
+        case relevantUnverified
+        case irrelevant
     }
 }
