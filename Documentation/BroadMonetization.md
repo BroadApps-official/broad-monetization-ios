@@ -34,7 +34,9 @@ filter/sort/dedup.
 let presenter = ProductPricePresenter()
 let rows = presenter.presentations(for: payload.products)
 
-// Одна строка на перерисовке — без сопоставления результата по presentationID:
+// Одна строка — без сопоставления результата по presentationID. Экономия и
+// бейдж считаются относительно всего набора, поэтому метод считает набор
+// целиком: для списка строк берите presentations(for:) одним вызовом.
 let row = presenter.presentation(for: product, among: payload.products)
 ```
 
@@ -59,7 +61,9 @@ formatter.currencyCode = weeklyPrice.currencyCode
 ```
 
 `nil` означает, что provider локаль не сообщил — тогда берите локаль устройства.
-Продукты, закэшированные до появления поля, декодируются как прежде.
+Продукты RU-каталога сообщают `ru_RU`: их цены пишутся в этой локали независимо
+от того, прислал ли текст backend или отформатировал модуль. Продукты,
+закэшированные до появления поля, декодируются как прежде.
 
 ## Special Offer
 

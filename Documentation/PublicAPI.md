@@ -456,7 +456,7 @@
 | Initializer | `init(provider: any RUFallbackPaywallRepositoryProtocol, catalog: any FreshRUCatalogRepositoryProtocol, storefront: any StorefrontRepositoryProtocol, gate: RUBillingGate, cache: (any PaywallCacheProtocol)? = nil, analytics: any MonetizationAnalyticsProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol = NoOpPaywallPresentationLifecycle(), staleLoadError: AppError)` |
 | Initializer | `init(purchaseRepository: any PurchaseRepositoryProtocol, evidenceProvider: any TokenTransactionEvidenceProviderProtocol, fulfillmentRepository: any TokenFulfillmentRepositoryProtocol, pendingStore: any PendingTokenPurchaseStoreProtocol, analytics: any MonetizationAnalyticsProtocol = NoOpMonetizationAnalytics(), operationGate: MonetizationOperationGate, inProgressError: AppError? = nil, unavailableError: AppError? = nil, unsupportedProductError: AppError? = nil)` |
 | Initializer | `init(rawValue: String)` |
-| Initializer | `init(reading: @escaping () async -> SpecialOfferClockReading)` |
+| Initializer | `init(reading: @escaping @Sendable () async -> SpecialOfferClockReading)` |
 | Initializer | `init(regionCode: String?)` |
 | Initializer | `init(regionCode: String?, primaryLanguageIdentifier: String?)` |
 | Initializer | `init(registrations: [EntitlementSourceRegistration], subject: EntitlementSubject, cache: any EntitlementCacheProtocol, timeoutPolicy: TimeoutPolicy, clock: CacheClock = .system, aggregator: EntitlementAggregator = EntitlementAggregator(), analytics: any MonetizationAnalyticsProtocol = NoOpMonetizationAnalytics())` |
@@ -466,7 +466,7 @@
 | Initializer | `init(repository: any MonetizationRepositoryProtocol)` |
 | Initializer | `init(repository: any PaywallRepositoryProtocol, cache: (any PaywallCacheProtocol)? = nil, analytics: any MonetizationAnalyticsProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol = NoOpPaywallPresentationLifecycle(), staleLoadError: AppError)` |
 | Initializer | `init(repository: any PurchaseRepositoryProtocol, entitlementRepository: any EntitlementRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol, pendingStore: any PendingApplePurchaseStoreProtocol, operationGate: MonetizationOperationGate, inProgressError: AppError, pendingStateUnavailableError: AppError? = nil, unsupportedProductError: AppError? = nil)` |
-| Initializer | `init(repository: any RUExperimentRepositoryProtocol, gate: RUBillingGate, storefrontRepository: any StorefrontRepositoryProtocol, authorizationBinding: SubjectAuthorizationBinding, onOutcome: @escaping (RUExperimentTrackingOutcome) -> Void = { _ in })` |
+| Initializer | `init(repository: any RUExperimentRepositoryProtocol, gate: RUBillingGate, storefrontRepository: any StorefrontRepositoryProtocol, authorizationBinding: SubjectAuthorizationBinding, onOutcome: @escaping @Sendable (RUExperimentTrackingOutcome) -> Void = { _ in })` |
 | Initializer | `init(repository: any RUSubscriptionRepositoryProtocol, refreshEntitlement: any RefreshEntitlementUseCaseProtocol, authorizationBinding: SubjectAuthorizationBinding)` |
 | Initializer | `init(repository: any RestoreRepositoryProtocol, entitlementRepository: any EntitlementRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol, operationGate: MonetizationOperationGate, verificationUnavailableError: AppError)` |
 | Initializer | `init(requestEncoder: any RUCancellationRequestEncoderProtocol, responseDecoder: any RUCancellationResponseDecoderProtocol)` |
@@ -637,7 +637,7 @@
 | Instance Method | `func loadSubscriptionStatus() async -> RUSubscriptionManagementLoadOutcome` |
 | Instance Method | `func makeCustomerAccessRecovery(subject: EntitlementSubject, refreshEntitlement: any RefreshEntitlementUseCaseProtocol, recoverTokenAccount: (any RecoverTokenAccountUseCaseProtocol)? = nil, loadRUSubscription: (any LoadRUSubscriptionStatusUseCaseProtocol)? = nil) -> RecoverCustomerAccessUseCase` |
 | Instance Method | `func makeEntitlementRegistration() -> EntitlementSourceRegistration` |
-| Instance Method | `func makeExperimentTracker(configuration experimentConfiguration: RUExperimentHTTPConfiguration, onOutcome: @escaping (RUExperimentTrackingOutcome) -> Void = { _ in }) -> RUBillingExperimentTracker` |
+| Instance Method | `func makeExperimentTracker(configuration experimentConfiguration: RUExperimentHTTPConfiguration, onOutcome: @escaping @Sendable (RUExperimentTrackingOutcome) -> Void = { _ in }) -> RUBillingExperimentTracker` |
 | Instance Method | `func makePaywallLoader(provider: any RUFallbackPaywallRepositoryProtocol, cache: (any PaywallCacheProtocol)? = nil, presentationLifecycle: any PaywallPresentationLifecycleProtocol = NoOpPaywallPresentationLifecycle(), staleLoadError: AppError) -> LoadPaywallWithRUFallbackUseCase` |
 | Instance Method | `func makeRegistration(configuration: AppleEntitlementSourceConfiguration, additionalAuthoritativeVerifiers: [any AppleEntitlementVerifierProtocol] = []) -> EntitlementSourceRegistration` |
 | Instance Method | `func makeRegistration(configuration: PrimaryBackendSourceConfiguration) -> EntitlementSourceRegistration` |
@@ -1361,6 +1361,7 @@
 | Type Property | `static let maximumDuration: TimeInterval` |
 | Type Property | `static let maximumUTF8Length: Int` |
 | Type Property | `static let onboarding: PlacementID` |
+| Type Property | `static let priceLocaleIdentifier: String` |
 | Type Property | `static let proIcon: PlacementID` |
 | Type Property | `static let settings: PlacementID` |
 | Type Property | `static let specialOffer: PlacementID` |

@@ -1,6 +1,15 @@
 import Foundation
 
 public struct RUCatalogProduct: Identifiable, Codable, Equatable, Sendable {
+    /// The locale RU catalog prices are written in.
+    ///
+    /// Whether the backend sent ``displayPrice`` as text or the module formatted
+    /// it, the figure is Russian. A number a host derives from it — a weekly
+    /// equivalent, a crossed-out price — has to be written the same way, or the
+    /// row carries two prices spelled differently. It reaches the host as
+    /// ``MonetizationProduct/priceLocaleIdentifier``.
+    public static let priceLocaleIdentifier = "ru_RU"
+
     public var id: RUCatalogProductID {
         catalogProductID
     }

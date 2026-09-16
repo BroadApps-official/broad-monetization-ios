@@ -11,7 +11,7 @@ public struct RUBPriceFormatter: Sendable {
         }
 
         let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: "ru_RU")
+        formatter.locale = Locale(identifier: RUCatalogProduct.priceLocaleIdentifier)
         formatter.numberStyle = .currency
         formatter.currencyCode = money.currencyCode
         return formatter.string(from: NSDecimalNumber(decimal: money.amount))

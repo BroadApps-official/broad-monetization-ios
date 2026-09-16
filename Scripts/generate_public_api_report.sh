@@ -10,18 +10,23 @@ if [[ "$simulator_arch" == "x86_64" && "$translation_state" == "1" ]]; then
     simulator_arch="arm64"
 fi
 
-# Newer toolchains put the built module in the Swift Build products directory;
-# older ones use the per-triple path. Take the first that holds it, newest
-# layout first, so a module left behind by a previous Xcode is not picked up.
+# Newer toolchains put the built module in the Swift Build products directory,
+# older ones in the per-triple path, and a machine that has seen both keeps a
+# stale copy in the one it no longer writes. Report on the module the package
+# build step just produced: the most recently written one.
 module_directory=""
+newest_module_seconds=""
 for candidate_directory in \
     "$module_root/.build/out/Products/Debug-iphonesimulator" \
     "$module_root/.build/${simulator_arch}-apple-ios-simulator/debug/Modules" \
     "$module_root/.build/${simulator_arch}-apple-ios-simulator/debug"
 do
-    if [[ -e "$candidate_directory/$module_name.swiftmodule" ]]; then
+    candidate_module="$candidate_directory/$module_name.swiftmodule"
+    [[ -e "$candidate_module" ]] || continue
+    candidate_seconds="$(/usr/bin/stat -f %m "$candidate_module")"
+    if [[ -z "$newest_module_seconds" || "$candidate_seconds" -gt "$newest_module_seconds" ]]; then
+        newest_module_seconds="$candidate_seconds"
         module_directory="$candidate_directory"
-        break
     fi
 done
 if [[ -z "$module_directory" ]]; then
@@ -53,9 +58,6 @@ xcrun swift-symbolgraph-extract \
     kind = symbol.dig("kind", "displayName") || symbol.dig("kind", "identifier")
     declaration = symbol.fetch("declarationFragments", []).map { |fragment| fragment["spelling"] }.join
     declaration = symbol.dig("names", "title") if declaration.empty?
-    # Newer toolchains spell inferred `@Sendable` in declaration fragments, older ones omit it;
-    # drop it so the committed report does not depend on the Xcode version that generated it.
-    declaration = declaration.gsub(/@Sendable\s*/, "")
     [kind, declaration.gsub(/\s+/, " ").strip]
   end.uniq.sort
   File.open(output, "w") do |file|

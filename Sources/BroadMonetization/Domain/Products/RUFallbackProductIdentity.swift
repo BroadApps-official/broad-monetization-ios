@@ -27,6 +27,10 @@ enum RUFallbackProductIdentity {
                 title: row.title,
                 price: row.price,
                 displayPrice: row.displayPrice,
+                // The RU catalog writes its prices in one locale, whether the
+                // backend sent the text or the module formatted it, so a figure
+                // derived from this row is written the same way.
+                priceLocaleIdentifier: RUCatalogProduct.priceLocaleIdentifier,
                 subscriptionPeriod: row.subscriptionPeriod,
                 catalogSource: .ruBackend
             )
