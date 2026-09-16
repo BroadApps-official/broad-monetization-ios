@@ -123,6 +123,14 @@ validation. Доступ здесь **не** выдаётся: транзакц�
 
 ## RU Billing
 
+В account-policy режиме незавершённый checkout остаётся общим финансовым
+блокером. Для явной отмены host подключает
+`RUCheckoutTerminationClientProtocol`: модуль очищает точный pending
+attempt только после серверного `failed`, `cancelled` или `expired`. Закрытие
+payment page и локальное время не считаются доказательством.
+
+[Полный контракт account-policy и termination](RUAccountPolicy.md).
+
 RU path разрешён только при host opt-in, explicit valid `ru_pay = true`,
 verified-fresh remote payload, App Store storefront `RU/RUS` **или** регионе
 iPhone `RU/RUS`, exact catalog match и доступных backend methods. Язык

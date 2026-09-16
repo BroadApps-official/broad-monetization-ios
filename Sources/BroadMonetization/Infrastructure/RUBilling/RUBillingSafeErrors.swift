@@ -78,6 +78,13 @@ enum RUBillingSafeErrors {
         isRetryable: true
     )
 
+    static let pendingCheckoutTerminationUnavailable = AppError(
+        kind: .unavailable,
+        userMessage: "The pending payment could not be cancelled. Please try again.",
+        diagnosticCode: "ru-billing.pending-checkout-termination-unavailable",
+        isRetryable: true
+    )
+
     static let cancellationUnavailable = AppError(
         kind: .unavailable,
         userMessage: "Subscription management is temporarily unavailable.",

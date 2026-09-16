@@ -1,5 +1,35 @@
 # Changelog
 
+## 4.1.0
+
+### Added
+
+- Account-policy RU Billing принимает optional
+  `RUCheckoutTerminationClientProtocol`. После явного отказа
+  пользователя host может запросить серверную отмену через
+  `services.checkout.pendingCheckoutTermination`.
+- Backend-authoritative `failed`, `cancelled` или `expired` очищает ровно тот же
+  durable pending attempt и уведомляет общий operation gate. Конкурентные
+  termination-вызовы одной попытки объединяются.
+- Contract probe проверяет terminal success, coalescing, точную корреляцию,
+  `pending`/`unavailable`, отсутствие adapter и ошибку durable-очистки.
+
+### Fixed
+
+- Брошенный СБП/card checkout больше не обязан навсегда блокировать purchase и
+  restore в account-policy режиме: платформа предоставляет безопасный путь
+  серверного завершения попытки.
+- Закрытие payment page, локальный timeout и `expiresAt` по-прежнему не очищают
+  pending, потому что не исключают позднее списание.
+
+### Почему
+
+`GET /v1/policy/effective` подтверждает только новое состояние аккаунта и не
+может доказать отказ конкретного checkout. Для снятия финансовой блокировки
+нужна отдельная серверная гарантия терминального состояния. SemVer intent:
+additive minor release; существующие integrations продолжают fail-closed, пока
+не передадут новый optional client.
+
 ## 4.0.1
 
 ### Fixed

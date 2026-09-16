@@ -197,6 +197,9 @@ private extension RUBillingCompositionFactory {
                 operationGate: operationGate,
                 analytics: dependencies.analytics
             ),
+            pendingCheckoutTermination: makePendingCheckoutTermination(
+                pendingStore: pendingStore, operationGate: operationGate
+            ),
             cancelSubscription: CancelRUSubscriptionUseCase(
                 repository: makeCancellationRepository(),
                 refreshEntitlement: refreshEntitlement,
@@ -216,6 +219,17 @@ private extension RUBillingCompositionFactory {
             cache: dependencies.cache,
             cacheTimeToLive: configuration.cache.storefrontTimeToLive,
             clock: dependencies.clock
+        )
+    }
+
+    func makePendingCheckoutTermination(
+        pendingStore: PendingRUCheckoutStore,
+        operationGate: MonetizationOperationGate
+    ) -> RUPendingCheckoutTerminationCoordinator {
+        RUPendingCheckoutTerminationCoordinator(
+            pendingStore: pendingStore,
+            client: dependencies.checkoutTerminationClient,
+            operationGate: operationGate
         )
     }
 

@@ -40,4 +40,26 @@ enum RUAccountPolicyWiringExample {
     static func paymentPageDismissed(services: RUBillingServices) async -> RUPaymentReturnOutcome {
         await services.checkout.applicationReturn.applicationDidBecomeActive()
     }
+
+    /// Present explicit confirmation before calling this route. The injected
+    /// repository must make the checkout terminal on the backend.
+    static func abandonPayment(
+        services: RUBillingServices
+    ) async -> RUPendingCheckoutTerminationOutcome {
+        await services.checkout.pendingCheckoutTermination
+            .terminatePendingCheckout()
+    }
+}
+
+/// A compile-only bridge around an existing subject-bound API client.
+struct AppCheckoutTerminationClient: RUCheckoutTerminationClientProtocol {
+    let terminate: @Sendable (
+        RUPendingCheckoutTerminationRequest
+    ) async -> RUPendingCheckoutTerminationResult
+
+    func terminatePendingCheckout(
+        _ request: RUPendingCheckoutTerminationRequest
+    ) async -> RUPendingCheckoutTerminationResult {
+        await terminate(request)
+    }
 }

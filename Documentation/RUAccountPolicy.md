@@ -64,10 +64,36 @@ Cancellation остаётся отдельным контрактом: пере�
 сообщение и предложить повторную проверку. Retry вызывает только reconciliation,
 не создаёт новый checkout. Pending блокирует новую финансовую операцию до
 подтверждения; истечение времени или закрытие страницы не доказывает отмену
-платежа. Для гарантированного завершения отменённых checkout нужен достоверный
-terminal status backend. Смена режима не делает старый pending совместимым:
-сначала завершите его прежним способом; context без account expectation
-никогда не превращается в успех.
+платежа.
+
+Начиная с 4.1.0 host может передать в `RUBillingCompositionDependencies`
+`checkoutTerminationClient`. Его свежий авторизованный backend-вызов
+должен атомарно отменить checkout либо доказать терминальный `failed`,
+`cancelled` или `expired`. После явного подтверждения пользователя вызывайте:
+
+```swift
+let outcome = await services.checkout.pendingCheckoutTermination
+    .terminatePendingCheckout()
+```
+
+Только `.terminated(status)` удаляет ровно сохранённые `checkoutSessionID` и
+`attemptID` и освобождает общий operation gate. `.pending`, `.unavailable`,
+отсутствующий client, чужой subject и ошибка durable-очистки сохраняют
+блокировку. Не вызывайте termination автоматически при `sceneDidBecomeActive`
+или закрытии web view: пользователь мог продолжить оплату в банковском
+приложении. Сначала спросите, действительно ли он хочет отменить попытку.
+
+Backend adapter не должен выводить terminal status из device time или локального
+`expiresAt`. В BroadApps account-policy checkout ID может быть локальной
+корреляцией, поэтому client разрешено использовать свой subject-bound API
+«отменить текущий checkout», но `.terminated` допустим только после серверной
+гарантии, что позднее списание невозможно. Повтор с теми же
+`checkoutSessionID` и `attemptID` должен быть идемпотентным. Если такого
+backend-контракта нет, безопасно снять блокировку только после его
+добавления либо через прежний режим с authoritative `paymentStatus`.
+
+Смена режима не делает старый pending совместимым: сначала завершите его прежним
+способом; context без account expectation никогда не превращается в успех.
 
 ## Переход с 2.x
 

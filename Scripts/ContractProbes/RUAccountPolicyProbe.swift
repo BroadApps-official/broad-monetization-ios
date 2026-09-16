@@ -13,7 +13,8 @@ enum RUAccountPolicyProbe {
         try persistenceContracts()
         await pollingContracts()
         await returnContracts()
-        print("RU account-policy contracts passed: wire, persistence, plan, balance, retry, subject, epoch and return coalescing.")
+        await terminationContracts()
+        print("RU account-policy contracts passed: wire, persistence, plan, balance, retry, subject, epoch, return and termination.")
     }
 
     static func wireContracts() throws {
@@ -122,6 +123,90 @@ enum RUAccountPolicyProbe {
         await check(pending.hasPendingMonetizationOperation())
     }
 
+    static func terminationContracts() async {
+        await terminalTerminationContract()
+        await retainedTerminationContracts()
+    }
+
+    static func terminalTerminationContract() async {
+        let terminalContext = context(expectation: tokens)
+        let terminalStore = PendingStore(terminalContext)
+        let terminalGate = MonetizationOperationGate()
+        terminalGate.registerPendingOperationBlocker(terminalStore)
+        let terminalRepository = TerminationRepository(
+            .terminated(.cancelled),
+            slow: true
+        )
+        let terminalCoordinator = RUPendingCheckoutTerminationCoordinator(
+            pendingStore: terminalStore,
+            client: terminalRepository,
+            operationGate: terminalGate
+        )
+        async let first = terminalCoordinator.terminatePendingCheckout()
+        async let second = terminalCoordinator.terminatePendingCheckout()
+        let terminalOutcomes = await [first, second]
+        check(terminalOutcomes == [.terminated(.cancelled), .terminated(.cancelled)])
+        await check(terminalRepository.calls == 1)
+        await check(terminalRepository.request == terminationRequest(terminalContext))
+        await check(!terminalGate.isFinancialOperationBlocked())
+        await check(terminalCoordinator.terminatePendingCheckout() == .noPendingCheckout)
+    }
+
+    static func retainedTerminationContracts() async {
+        let pendingStore = PendingStore(context(expectation: tokens))
+        let pendingGate = MonetizationOperationGate()
+        pendingGate.registerPendingOperationBlocker(pendingStore)
+        let pendingCoordinator = RUPendingCheckoutTerminationCoordinator(
+            pendingStore: pendingStore,
+            client: TerminationRepository(.pending),
+            operationGate: pendingGate
+        )
+        await check(pendingCoordinator.terminatePendingCheckout() == .pending)
+        await check(pendingGate.isFinancialOperationBlocked())
+
+        let unavailableStore = PendingStore(context(expectation: tokens))
+        let unavailableGate = MonetizationOperationGate()
+        unavailableGate.registerPendingOperationBlocker(unavailableStore)
+        let unavailableCoordinator = RUPendingCheckoutTerminationCoordinator(
+            pendingStore: unavailableStore,
+            client: TerminationRepository(.unavailable(failure)),
+            operationGate: unavailableGate
+        )
+        await check(unavailableCoordinator.terminatePendingCheckout() == .unavailable(failure))
+        await check(unavailableGate.isFinancialOperationBlocked())
+
+        let unconfiguredStore = PendingStore(context(expectation: tokens))
+        let unconfiguredGate = MonetizationOperationGate()
+        unconfiguredGate.registerPendingOperationBlocker(unconfiguredStore)
+        let unconfiguredCoordinator = RUPendingCheckoutTerminationCoordinator(
+            pendingStore: unconfiguredStore,
+            client: nil,
+            operationGate: unconfiguredGate
+        )
+        await check(
+            unconfiguredCoordinator.terminatePendingCheckout()
+                == .unavailable(RUBillingSafeErrors.pendingCheckoutTerminationUnavailable)
+        )
+        await check(unconfiguredGate.isFinancialOperationBlocked())
+
+        let unclearedStore = PendingStore(
+            context(expectation: tokens),
+            allowsClear: false
+        )
+        let unclearedGate = MonetizationOperationGate()
+        unclearedGate.registerPendingOperationBlocker(unclearedStore)
+        let unclearedCoordinator = RUPendingCheckoutTerminationCoordinator(
+            pendingStore: unclearedStore,
+            client: TerminationRepository(.terminated(.expired)),
+            operationGate: unclearedGate
+        )
+        await check(
+            unclearedCoordinator.terminatePendingCheckout()
+                == .unavailable(RUBillingSafeErrors.pendingCheckoutTerminationUnavailable)
+        )
+        await check(unclearedGate.isFinancialOperationBlocked())
+    }
+
     private static func run(
         _ repository: PolicyRepository,
         binding: SubjectAuthorizationBinding,
@@ -162,8 +247,45 @@ enum RUAccountPolicyProbe {
         )
     }
 
+    static func terminationRequest(
+        _ context: PendingRUCheckoutContext
+    ) -> RUPendingCheckoutTerminationRequest {
+        .init(
+            checkoutSessionID: context.checkoutSessionID,
+            attemptID: context.attemptID,
+            productID: context.productID,
+            checkoutMethod: context.checkoutMethod
+        )
+    }
+
     static func check(_ value: Bool, line: UInt = #line) {
         precondition(value, "Account policy contract failed at \(line)")
+    }
+}
+
+private actor TerminationRepository: RUCheckoutTerminationClientProtocol {
+    var calls = 0
+    var request: RUPendingCheckoutTerminationRequest?
+    let outcome: RUPendingCheckoutTerminationResult
+    let slow: Bool
+
+    init(
+        _ outcome: RUPendingCheckoutTerminationResult,
+        slow: Bool = false
+    ) {
+        self.outcome = outcome
+        self.slow = slow
+    }
+
+    func terminatePendingCheckout(
+        _ request: RUPendingCheckoutTerminationRequest
+    ) async -> RUPendingCheckoutTerminationResult {
+        calls += 1
+        self.request = request
+        if slow {
+            try? await Task.sleep(for: .milliseconds(40))
+        }
+        return outcome
     }
 }
 
@@ -202,8 +324,14 @@ private struct Entitlement: RefreshEntitlementUseCaseProtocol {
 private actor PendingStore: PendingRUCheckoutStoreProtocol {
     nonisolated let pendingOperationBlockerKey = PendingOperationBlockerKey(kind: .ruCheckout, applicationIdentifier: "fixture")
     var context: PendingRUCheckoutContext?
-    init(_ context: PendingRUCheckoutContext) {
+    let allowsClear: Bool
+
+    init(
+        _ context: PendingRUCheckoutContext?,
+        allowsClear: Bool = true
+    ) {
         self.context = context
+        self.allowsClear = allowsClear
     }
 
     func state() -> PendingRUCheckoutState {
@@ -219,7 +347,10 @@ private actor PendingStore: PendingRUCheckoutStoreProtocol {
     }
 
     func clear(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID) -> Bool {
-        guard context?.checkoutSessionID == checkoutSessionID, context?.attemptID == attemptID else { return false }
+        guard allowsClear,
+              context?.checkoutSessionID == checkoutSessionID,
+              context?.attemptID == attemptID
+        else { return false }
         context = nil
         return true
     }

@@ -191,6 +191,7 @@
 | Case | `case subscriptions` |
 | Case | `case substitutedPaywall` |
 | Case | `case synchronized(SpecialOfferTrustedTime)` |
+| Case | `case terminated(RUCheckoutTerminalStatus)` |
 | Case | `case timedOut` |
 | Case | `case tokenPurchase` |
 | Case | `case tokens` |
@@ -242,6 +243,7 @@
 | Class | `actor PurchaseSelectedProductUseCase` |
 | Class | `actor RUBillingExperimentTracker` |
 | Class | `actor RUPaymentReturnCoordinator` |
+| Class | `actor RUPendingCheckoutTerminationCoordinator` |
 | Class | `actor ResolveSpecialOfferCampaignUseCase` |
 | Class | `actor ResolveSpecialOfferUseCase` |
 | Class | `actor RestorePurchasesUseCase` |
@@ -306,6 +308,7 @@
 | Enumeration | `enum RUCatalogLoadOutcome` |
 | Enumeration | `enum RUCatalogProductKind` |
 | Enumeration | `enum RUCheckoutFlowOutcome` |
+| Enumeration | `enum RUCheckoutTerminalStatus` |
 | Enumeration | `enum RUExperimentAssignOutcome` |
 | Enumeration | `enum RUExperimentCatalogKind` |
 | Enumeration | `enum RUExperimentCatalogSelectionSource` |
@@ -315,6 +318,8 @@
 | Enumeration | `enum RUPaymentReturnOutcome` |
 | Enumeration | `enum RUPaymentStatus` |
 | Enumeration | `enum RUPaymentStatusOutcome` |
+| Enumeration | `enum RUPendingCheckoutTerminationOutcome` |
+| Enumeration | `enum RUPendingCheckoutTerminationResult` |
 | Enumeration | `enum RUSubscriptionCancellationOutcome` |
 | Enumeration | `enum RUSubscriptionManagementLoadOutcome` |
 | Enumeration | `enum RemoteConfigurationLoadOutcome` |
@@ -376,6 +381,7 @@
 | Initializer | `init(catalogProductID: RUCatalogProductID, kind: RUCatalogProductKind, appStoreProductID: ProductID?, price: Money?, displayPrice: String?, subscriptionPeriod: SubscriptionPeriod, supportedMethods: [CheckoutMethod], title: String? = nil, credits: Int? = nil, isSpecialOffer: Bool = false, isDefault: Bool = false)` |
 | Initializer | `init(catalogRepository: any RUCatalogRepositoryProtocol, matcher: RUCatalogProductMatcher = RUCatalogProductMatcher())` |
 | Initializer | `init(checkout: any CheckoutSelectedProductUseCaseProtocol, restorePurchases: any RestorePurchasesUseCaseProtocol)` |
+| Initializer | `init(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID, productID: RUCatalogProductID, checkoutMethod: CheckoutMethod)` |
 | Initializer | `init(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID, productID: RUCatalogProductID, checkoutMethod: CheckoutMethod, paywallPresentationID: PaywallPresentationID? = nil, paywallVariationID: PaywallVariationID? = nil, requestedPlacementID: PlacementID? = nil, resolvedPlacementID: PlacementID? = nil, startedAt: Date, expiresAt: Date?, accountExpectation: RUAccountCheckoutExpectation? = nil)` |
 | Initializer | `init(checkoutSessionID: CheckoutSessionID, status: RUPaymentStatus, checkedAt: Date)` |
 | Initializer | `init(client: any PrimaryBackendEntitlementClientProtocol, clock: CacheClock = .system)` |
@@ -503,7 +509,7 @@
 | Initializer | `init(subject: EntitlementSubject, activate: any ActivateMonetizationUseCaseProtocol, refreshEntitlement: any RefreshEntitlementUseCaseProtocol, recoverTokenAccount: (any RecoverTokenAccountUseCaseProtocol)? = nil, loadRUSubscription: (any LoadRUSubscriptionStatusUseCaseProtocol)? = nil)` |
 | Initializer | `init(subject: EntitlementSubject, appBundleIdentifier: String, productCatalog: ApplePremiumProductCatalog, ownershipPolicy: StoreKitEntitlementOwnershipPolicy)` |
 | Initializer | `init(subject: EntitlementSubject, applicationIdentifier: String, authorizationBinding: SubjectAuthorizationBinding, cache: any CacheRepositoryProtocol, retention: TimeInterval = 24 * 60 * 60, clock: CacheClock = .system)` |
-| Initializer | `init(subject: EntitlementSubject, applicationIdentifier: String, authorizationProvider: any SubjectAuthorizationProviderProtocol, authorizationBinding: SubjectAuthorizationBinding, cache: any CacheRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol = NoOpMonetizationAnalytics(), paymentURLOpener: any PaymentURLOpenerProtocol = UIApplicationPaymentURLOpener(), deviceContextProvider: any RUBillingDeviceContextProviderProtocol = SystemRUBillingDeviceContextProvider(), productMappingPolicy: any RUCatalogProductMappingPolicyProtocol = ExactOnlyRUCatalogProductMappingPolicy(), additionalEntitlementClients: [any RUBillingEntitlementClientProtocol] = [], clock: CacheClock = .system, debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(), logger: any BroadLoggerProtocol = NoOpBroadLogger(), accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)? = nil)` |
+| Initializer | `init(subject: EntitlementSubject, applicationIdentifier: String, authorizationProvider: any SubjectAuthorizationProviderProtocol, authorizationBinding: SubjectAuthorizationBinding, cache: any CacheRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol = NoOpMonetizationAnalytics(), paymentURLOpener: any PaymentURLOpenerProtocol = UIApplicationPaymentURLOpener(), deviceContextProvider: any RUBillingDeviceContextProviderProtocol = SystemRUBillingDeviceContextProvider(), productMappingPolicy: any RUCatalogProductMappingPolicyProtocol = ExactOnlyRUCatalogProductMappingPolicy(), additionalEntitlementClients: [any RUBillingEntitlementClientProtocol] = [], clock: CacheClock = .system, debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(), logger: any BroadLoggerProtocol = NoOpBroadLogger(), accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)? = nil, checkoutTerminationClient: (any RUCheckoutTerminationClientProtocol)? = nil)` |
 | Initializer | `init(subject: EntitlementSubject, applicationIdentifier: String, cache: any CacheRepositoryProtocol, retention: TimeInterval = 7 * 24 * 60 * 60, clock: CacheClock = .system)` |
 | Initializer | `init(subject: EntitlementSubject, applicationIdentifier: String, cache: any CacheRepositoryProtocol, reviewInterval: TimeInterval = 24 * 60 * 60, clock: CacheClock = .system)` |
 | Initializer | `init(subject: EntitlementSubject, freshnessPolicy: EntitlementFreshnessPolicy)` |
@@ -701,6 +707,8 @@
 | Instance Method | `func state() async -> PendingTokenPurchaseState` |
 | Instance Method | `func state(for configuration: SpecialOfferConfiguration) async -> SpecialOfferStateLoadOutcome` |
 | Instance Method | `func string(from money: Money) -> String?` |
+| Instance Method | `func terminatePendingCheckout() async -> RUPendingCheckoutTerminationOutcome` |
+| Instance Method | `func terminatePendingCheckout(_ request: RUPendingCheckoutTerminationRequest) async -> RUPendingCheckoutTerminationResult` |
 | Instance Method | `func track(_ event: MonetizationAnalyticsEvent) async` |
 | Instance Method | `func trackShown(_ paywall: PaywallPayload, placement: String) async -> RUExperimentTrackingOutcome` |
 | Instance Method | `func uniqueSpecialOfferProduct(in catalog: RUCatalogPayload) -> RUCatalogProduct?` |
@@ -771,6 +779,7 @@
 | Instance Property | `let checkoutMethod: CheckoutMethod` |
 | Instance Property | `let checkoutProduct: any CheckoutSelectedProductUseCaseProtocol` |
 | Instance Property | `let checkoutSessionID: CheckoutSessionID` |
+| Instance Property | `let checkoutTerminationClient: (any RUCheckoutTerminationClientProtocol)?` |
 | Instance Property | `let clock: CacheClock` |
 | Instance Property | `let closeDelay: TimeInterval?` |
 | Instance Property | `let closeDelay: [String]` |
@@ -889,6 +898,7 @@
 | Instance Property | `let paywallVariationID: PaywallVariationID?` |
 | Instance Property | `let pendingApplePurchase: PendingApplePurchaseCoordinator?` |
 | Instance Property | `let pendingCheckoutRetention: TimeInterval` |
+| Instance Property | `let pendingCheckoutTermination: RUPendingCheckoutTerminationCoordinator` |
 | Instance Property | `let periodText: String?` |
 | Instance Property | `let periodWeights: ProductPricePresenter.PeriodWeights` |
 | Instance Property | `let phase: PendingApplePurchaseIntent.Phase` |
@@ -1096,6 +1106,7 @@
 | Protocol | `protocol RUCatalogResponseDecoderProtocol : Sendable` |
 | Protocol | `protocol RUCheckoutRequestEncoderProtocol : Sendable` |
 | Protocol | `protocol RUCheckoutResponseDecoderProtocol : Sendable` |
+| Protocol | `protocol RUCheckoutTerminationClientProtocol : Sendable` |
 | Protocol | `protocol RUEntitlementRequestEncoderProtocol : Sendable` |
 | Protocol | `protocol RUEntitlementResponseDecoderProtocol : Sendable` |
 | Protocol | `protocol RUExperimentRepositoryProtocol : Sendable` |
@@ -1265,6 +1276,7 @@
 | Structure | `struct RUPaymentPollingPolicy` |
 | Structure | `struct RUPaymentStatusSnapshot` |
 | Structure | `struct RUPaymentStatusWireAdapters` |
+| Structure | `struct RUPendingCheckoutTerminationRequest` |
 | Structure | `struct RUSubscriptionID` |
 | Structure | `struct RUSubscriptionManagementStatus` |
 | Structure | `struct RecoverCustomerAccessUseCase` |

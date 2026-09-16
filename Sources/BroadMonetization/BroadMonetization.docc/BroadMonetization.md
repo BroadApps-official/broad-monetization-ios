@@ -5,6 +5,10 @@ Omit ``RUBillingEndpointConfiguration/paymentStatus`` to select this mode.
 ``RUAccountCheckoutExpectation`` persists the token balance captured before checkout.
 Call ``RUPaymentReturnCoordinator/applicationDidBecomeActive()`` after payment-page dismissal or foreground return.
 ``RUPaymentReturnOutcome/tokensCredited(_:)`` updates balance without granting premium.
+For an explicitly abandoned checkout, inject
+``RUCheckoutTerminationClientProtocol`` and call
+``RUPendingCheckoutTerminationCoordinator/terminatePendingCheckout()``. The
+durable blocker is removed only after the backend returns a terminal status.
 
 Provider-neutral monetization contracts and production adapters for BroadApps iPhone applications.
 
@@ -77,6 +81,9 @@ unfinished/history scans remain recovery fallbacks, not the normal proof path.
 - ``ResolveRUSpecialOfferProductUseCase``
 - ``FlatRUCatalogResponseDecoder``
 - ``RUBillingWireAdapters``
+- ``RUCheckoutTerminationClientProtocol``
+- ``RUPendingCheckoutTerminationCoordinator``
+- ``RUPendingCheckoutTerminationOutcome``
 
 ### RU Billing experiments
 

@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 4.0.1" src="https://img.shields.io/badge/release-4.0.1-10B981">
+  <img alt="Release 4.1.0" src="https://img.shields.io/badge/release-4.1.0-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -67,7 +67,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "4.0.1"
+        from: "4.1.0"
     )
 ]
 ```
@@ -218,6 +218,11 @@ checkout Storefront и gate проверяются повторно.
 SDK cache, Dashboard fallback и persistent cache BroadMonetization не
 авторизуют СБП/карту. Возврат из внешней формы не является success: он запускает
 backend reconciliation, а неопределённый результат остаётся `pending`.
+В account-policy режиме явно брошенный checkout можно завершить через
+`pendingCheckoutTermination`, но только если подключённый backend client
+атомарно отменил его или подтвердил `failed/cancelled/expired`. Закрытие страницы
+и локальный таймаут блокировку не снимают. Подробности и пример:
+[account-policy termination](Documentation/RUAccountPolicy.md#pending-и-смысл-подтверждения).
 
 ### Продукты RU Billing с backend
 

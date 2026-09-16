@@ -71,6 +71,8 @@ public struct RUBillingCompositionDependencies: Sendable {
     public let debugOverrideStore: RUBillingDebugOverrideStore
     public let logger: any BroadLoggerProtocol
     public let accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)?
+    public let checkoutTerminationClient:
+        (any RUCheckoutTerminationClientProtocol)?
 
     public init(
         subject: EntitlementSubject,
@@ -88,7 +90,9 @@ public struct RUBillingCompositionDependencies: Sendable {
         clock: CacheClock = .system,
         debugOverrideStore: RUBillingDebugOverrideStore = RUBillingDebugOverrideStore(),
         logger: any BroadLoggerProtocol = NoOpBroadLogger(),
-        accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)? = nil
+        accountPolicyRepository: (any RUAccountPolicyRepositoryProtocol)? = nil,
+        checkoutTerminationClient:
+        (any RUCheckoutTerminationClientProtocol)? = nil
     ) {
         precondition(
             MonetizationIdentifierPolicy.isValid(applicationIdentifier),
@@ -112,6 +116,7 @@ public struct RUBillingCompositionDependencies: Sendable {
         self.debugOverrideStore = debugOverrideStore
         self.logger = logger
         self.accountPolicyRepository = accountPolicyRepository
+        self.checkoutTerminationClient = checkoutTerminationClient
     }
 }
 
@@ -127,6 +132,7 @@ public struct RUBillingCheckoutServices: Sendable {
     /// Typed token route. Enabled only with account-policy confirmation.
     public let startSelectedToken: any StartSelectedRUCheckoutUseCaseProtocol
     public let applicationReturn: RUPaymentReturnCoordinator
+    public let pendingCheckoutTermination: RUPendingCheckoutTerminationCoordinator
     public let cancelSubscription: any CancelRUSubscriptionUseCaseProtocol
     public let loadSubscriptionStatus:
         any LoadRUSubscriptionStatusUseCaseProtocol

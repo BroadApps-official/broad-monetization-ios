@@ -18,6 +18,7 @@ for source in \
     Application/RUBilling/RefreshRUPaymentUseCase.swift \
     Application/RUBilling/RefreshRUAccountPaymentUseCase.swift \
     Application/RUBilling/RUPaymentReturnCoordinator.swift \
+    Application/RUBilling/RUPendingCheckoutTerminationCoordinator.swift \
     Data/RUBilling/PendingRUCheckoutStore.swift \
     Infrastructure/Analytics/NonBlockingMonetizationAnalytics.swift \
     Infrastructure/RUBilling/RUBillingHTTPConfiguration.swift \
