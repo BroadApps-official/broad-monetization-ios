@@ -443,7 +443,7 @@
 | Initializer | `init(placementID: PlacementID, variationID: PaywallVariationID?, window: SpecialOfferCampaignWindow, resolvedAt: Date)` |
 | Initializer | `init(placementIDs: [PlacementID], gatePlacementID: PlacementID = .main, windowDuration: TimeInterval = Self.defaultWindowDuration, cooldownDuration: TimeInterval = Self.defaultCooldownDuration, timePolicy: SpecialOfferCampaignTimePolicy = .requireServerTime)` |
 | Initializer | `init(presentationID: PaywallPresentationID, paywallReference: PaywallReference, variationID: PaywallVariationID? = nil, origin: PaywallOrigin, products: [MonetizationProduct], remoteConfiguration: RemotePaywallConfiguration = .empty, remoteConfigurationProvenance: PaywallRemoteConfigurationProvenance = .legacyUnqualified, fetchedAt: Date)` |
-| Initializer | `init(presentationID: ProductPresentationID, reference: ProductReference, productID: ProductID, commercialFingerprint: String? = nil, kind: MonetizationProductKind, title: String? = nil, subtitle: String? = nil, price: Money? = nil, displayPrice: String? = nil, subscriptionPeriod: SubscriptionPeriod = .unknown, catalogSource: CatalogSource)` |
+| Initializer | `init(presentationID: ProductPresentationID, reference: ProductReference, productID: ProductID, commercialFingerprint: String? = nil, kind: MonetizationProductKind, title: String? = nil, subtitle: String? = nil, price: Money? = nil, displayPrice: String? = nil, priceLocaleIdentifier: String? = nil, subscriptionPeriod: SubscriptionPeriod = .unknown, catalogSource: CatalogSource)` |
 | Initializer | `init(presentationID: ProductPresentationID, weeklyPrice: Money? = nil, savingsPercent: Int? = nil, isBestValue: Bool = false)` |
 | Initializer | `init(primary: any RUSubscriptionRepositoryProtocol, legacy: (any RUSubscriptionRepositoryProtocol)?, allowsLegacyFallback: Bool)` |
 | Initializer | `init(product: MonetizationProduct)` |
@@ -658,6 +658,7 @@
 | Instance Method | `func parse(_ dictionary: [String : Any]) -> RemotePaywallConfiguration` |
 | Instance Method | `func paywallShown(_ event: RUExperimentEvent) async -> RUExperimentShownOutcome` |
 | Instance Method | `func preparedForNewPresentation() -> PaywallPayload` |
+| Instance Method | `func presentation(for product: MonetizationProduct, among products: [MonetizationProduct]) -> ProductPricePresentation?` |
 | Instance Method | `func presentationDidAppear(_ analyticsContext: PaywallAnalyticsContext) async` |
 | Instance Method | `func presentationDidAppear(_ context: PaywallAnalyticsContext) async` |
 | Instance Method | `func presentationDidAppear(_: PaywallAnalyticsContext) async` |
@@ -707,6 +708,7 @@
 | Instance Method | `func update(_ mode: RUBillingDebugOverrideMode)` |
 | Instance Method | `func verifiedTransactionUpdated(_ transaction: VerifiedApplePurchaseTransaction) async -> PendingApplePurchaseOutcome` |
 | Instance Method | `func verifyEntitlement(for subject: EntitlementSubject) async -> EntitlementSourceResolution` |
+| Instance Method | `func weeks(in period: SubscriptionPeriod) -> Decimal?` |
 | Instance Method | `func windowForPresentation(now: Date, windowDuration: TimeInterval, cooldownDuration: TimeInterval) async -> SpecialOfferCampaignWindowDecision` |
 | Instance Method | `func write(_ assertion: EntitlementSourceAssertion, for scope: EntitlementCacheScope) async throws` |
 | Instance Method | `func writePaywall(_ paywall: PaywallPayload, for placementID: PlacementID) async -> PaywallCacheWriteOutcome` |
@@ -902,6 +904,7 @@
 | Instance Property | `let presentationID: PaywallPresentationID` |
 | Instance Property | `let presentationID: ProductPresentationID` |
 | Instance Property | `let price: Money?` |
+| Instance Property | `let priceLocaleIdentifier: String?` |
 | Instance Property | `let priceMultiplier: Decimal?` |
 | Instance Property | `let priceMultiplier: [String]` |
 | Instance Property | `let primaryLanguageIdentifier: String?` |
@@ -1050,6 +1053,7 @@
 | Instance Property | `var isRussian: Bool { get }` |
 | Instance Property | `var monetizationOperationGate: MonetizationOperationGate { get }` |
 | Instance Property | `var paywallPresentationLifecycle: AdaptyPaywallPresentationLifecycle { get }` |
+| Instance Property | `var priceLocale: Locale? { get }` |
 | Instance Property | `var productID: ProductID { get }` |
 | Instance Property | `var remainingTimeInterval: TimeInterval { get }` |
 | Instance Property | `var shouldAttemptFallback: Bool { get }` |

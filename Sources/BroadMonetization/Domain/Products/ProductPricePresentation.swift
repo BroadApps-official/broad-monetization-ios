@@ -118,6 +118,47 @@ public struct ProductPricePresenter: Sendable {
         }
     }
 
+    /// Derives the presentation of one product within its set.
+    ///
+    /// Savings and the badge are relative to the whole paywall, so the set is
+    /// still needed; this only saves a caller from matching the result back by
+    /// `presentationID` on every redraw. `nil` when `product` is not one of
+    /// `products`.
+    public func presentation(
+        for product: MonetizationProduct,
+        among products: [MonetizationProduct]
+    ) -> ProductPricePresentation? {
+        presentations(for: products).first { presentation in
+            presentation.presentationID == product.presentationID
+        }
+    }
+
+    /// How many weeks a billing period lasts under ``periodWeights``.
+    ///
+    /// The same figure the weekly price is derived from, so a host ordering
+    /// plans by length does not have to restate the month and year weights.
+    /// `nil` for a period that cannot be normalized — ``SubscriptionPeriod/Unit/custom(_:)``,
+    /// ``SubscriptionPeriod/Unit/unknown``, or a missing count.
+    public func weeks(in period: SubscriptionPeriod) -> Decimal? {
+        guard let count = period.count else {
+            return nil
+        }
+
+        let multiplier = Decimal(count)
+        switch period.unit {
+        case .day:
+            return multiplier / 7
+        case .week:
+            return multiplier
+        case .month:
+            return multiplier * periodWeights.weeksPerMonth
+        case .year:
+            return multiplier * periodWeights.weeksPerYear
+        case .custom, .unknown:
+            return nil
+        }
+    }
+
     // MARK: - Derivation
 
     /// The index carrying the badge: the single largest positive saving. `nil`
@@ -159,26 +200,6 @@ public struct ProductPricePresenter: Sendable {
             amount: money.amount / weeks,
             currencyCode: money.currencyCode
         )
-    }
-
-    private func weeks(in period: SubscriptionPeriod) -> Decimal? {
-        guard let count = period.count else {
-            return nil
-        }
-
-        let multiplier = Decimal(count)
-        switch period.unit {
-        case .day:
-            return multiplier / 7
-        case .week:
-            return multiplier
-        case .month:
-            return multiplier * periodWeights.weeksPerMonth
-        case .year:
-            return multiplier * periodWeights.weeksPerYear
-        case .custom, .unknown:
-            return nil
-        }
     }
 
     private func savings(of rate: Decimal?, comparedTo reference: Decimal?) -> Int? {

@@ -33,10 +33,33 @@ filter/sort/dedup.
 ```swift
 let presenter = ProductPricePresenter()
 let rows = presenter.presentations(for: payload.products)
+
+// Одна строка на перерисовке — без сопоставления результата по presentationID:
+let row = presenter.presentation(for: product, among: payload.products)
 ```
 
 Конвертацию месяцев и лет в недели можно настроить через
-`ProductPricePresenter.PeriodWeights`.
+`ProductPricePresenter.PeriodWeights`. Та же длина периода доступна напрямую —
+`presenter.weeks(in: product.subscriptionPeriod)`: приложению, которое сортирует
+тарифы по длине, не нужно повторять у себя веса месяца и года.
+
+### Локаль цены
+
+`MonetizationProduct.priceLocaleIdentifier` и `priceLocale` — локаль, в которой
+магазин отформатировал `displayPrice`, если provider её сообщил. Производную
+цифру (цену за неделю, зачёркнутую цену) форматируйте этой локалью, иначе два
+числа в одной строке пейвола будут написаны по-разному: `US$6,99` рядом с
+`$49.99`.
+
+```swift
+let formatter = NumberFormatter()
+formatter.numberStyle = .currency
+formatter.locale = product.priceLocale ?? .current
+formatter.currencyCode = weeklyPrice.currencyCode
+```
+
+`nil` означает, что provider локаль не сообщил — тогда берите локаль устройства.
+Продукты, закэшированные до появления поля, декодируются как прежде.
 
 ## Special Offer
 

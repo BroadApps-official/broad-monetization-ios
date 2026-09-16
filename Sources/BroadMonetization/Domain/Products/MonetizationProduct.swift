@@ -26,6 +26,7 @@ public struct MonetizationProduct: Identifiable, Codable, Equatable, Sendable {
         case subtitle
         case price
         case displayPrice
+        case priceLocaleIdentifier
         case subscriptionPeriod
         case catalogSource
     }
@@ -51,8 +52,24 @@ public struct MonetizationProduct: Identifiable, Codable, Equatable, Sendable {
     public let subtitle: String?
     public let price: Money?
     public let displayPrice: String?
+    /// Identifier of the locale the store formatted ``displayPrice`` in, when
+    /// the provider reported one.
+    ///
+    /// A derived figure — a weekly equivalent, a crossed-out price — has to be
+    /// written the way the store wrote its own, or the two numbers disagree on
+    /// the same row. The provider knows this locale; without carrying it, a host
+    /// can only guess it back from the formatted string.
+    public let priceLocaleIdentifier: String?
     public let subscriptionPeriod: SubscriptionPeriod
     public let catalogSource: CatalogSource
+
+    /// The locale the store formatted ``displayPrice`` in, when it is known.
+    ///
+    /// Format derived figures with it; fall back to the device locale only when
+    /// it is `nil`.
+    public var priceLocale: Locale? {
+        priceLocaleIdentifier.map(Locale.init(identifier:))
+    }
 
     /// Whether the shared premium checkout can safely start for this product.
     ///
@@ -84,6 +101,7 @@ public struct MonetizationProduct: Identifiable, Codable, Equatable, Sendable {
         subtitle: String? = nil,
         price: Money? = nil,
         displayPrice: String? = nil,
+        priceLocaleIdentifier: String? = nil,
         subscriptionPeriod: SubscriptionPeriod = .unknown,
         catalogSource: CatalogSource
     ) {
@@ -100,6 +118,7 @@ public struct MonetizationProduct: Identifiable, Codable, Equatable, Sendable {
         self.subtitle = subtitle.nonBlank
         self.price = price
         self.displayPrice = displayPrice.nonBlank
+        self.priceLocaleIdentifier = priceLocaleIdentifier.nonBlank
         self.subscriptionPeriod = subscriptionPeriod
         self.catalogSource = catalogSource
     }
@@ -130,6 +149,10 @@ public struct MonetizationProduct: Identifiable, Codable, Equatable, Sendable {
             subtitle: container.decodeIfPresent(String.self, forKey: .subtitle),
             price: container.decodeIfPresent(Money.self, forKey: .price),
             displayPrice: container.decodeIfPresent(String.self, forKey: .displayPrice),
+            priceLocaleIdentifier: container.decodeIfPresent(
+                String.self,
+                forKey: .priceLocaleIdentifier
+            ),
             subscriptionPeriod: container.decode(
                 SubscriptionPeriod.self,
                 forKey: .subscriptionPeriod
@@ -151,6 +174,7 @@ public struct MonetizationProduct: Identifiable, Codable, Equatable, Sendable {
             subtitle: subtitle,
             price: price,
             displayPrice: displayPrice,
+            priceLocaleIdentifier: priceLocaleIdentifier,
             subscriptionPeriod: subscriptionPeriod,
             catalogSource: catalogSource
         )

@@ -27,6 +27,7 @@ extension AdaptyPaywallRepository {
                 // position, but can never authorize either Apple or RU checkout.
                 price: hasValidatedVendorProductID ? money(product) : nil,
                 displayPrice: displayPrice(product),
+                priceLocaleIdentifier: product.priceLocale.identifier,
                 subscriptionPeriod: subscriptionPeriod(product),
                 catalogSource: .adapty
             )
