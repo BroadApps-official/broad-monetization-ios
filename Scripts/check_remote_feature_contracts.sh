@@ -90,9 +90,9 @@ require_pattern \
     'case[[:space:]]+\.platformCache,[[:space:]]+\.legacyUnqualified:(?s:.*?)[[:space:]]+false'
 
 require_pattern \
-    "RU Billing requires verified-fresh remote provenance" \
+    "A current Adapty/provider payload may drive the explicit RU Billing gate" \
     "$provenance_file" \
-    'authorizesRUBillingPresentation:[[:space:]]*Bool[[:space:]]*\{[[:space:]]*self[[:space:]]*==[[:space:]]*\.verifiedFreshRemote'
+    'authorizesRUBillingPresentation:[[:space:]]*Bool[[:space:]]*\{(?s:.*?)case[[:space:]]+\.verifiedFreshRemote,[[:space:]]+\.providerCacheFallbackPossible:(?s:.*?)[[:space:]]+true(?s:.*?)case[[:space:]]+\.platformCache,[[:space:]]+\.legacyUnqualified:(?s:.*?)[[:space:]]+false'
 
 require_pattern \
     "Only a received placement configuration is marked provider-managed" \

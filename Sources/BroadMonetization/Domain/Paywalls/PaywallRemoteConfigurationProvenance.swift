@@ -34,10 +34,16 @@ public enum PaywallRemoteConfigurationProvenance: String, Codable, Equatable, Se
         }
     }
 
-    /// RU Billing stays fail-closed unless the exact payload is proven fresh.
-    /// This authority is deliberately stricter than Special Offer authority.
+    /// A current provider response may authorize RU Billing even when the
+    /// provider transparently substituted its managed cache. BroadMonetization's
+    /// own persisted cache and legacy payloads remain unqualified.
     public var authorizesRUBillingPresentation: Bool {
-        self == .verifiedFreshRemote
+        switch self {
+        case .verifiedFreshRemote, .providerCacheFallbackPossible:
+            true
+        case .platformCache, .legacyUnqualified:
+            false
+        }
     }
 
     @available(

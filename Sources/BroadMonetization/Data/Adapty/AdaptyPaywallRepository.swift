@@ -297,8 +297,9 @@ private extension AdaptyPaywallRepository {
             ),
             products: mappedProducts,
             remoteConfiguration: remoteConfiguration,
-            // Both configuration sources are current SDK responses, which can
-            // include provider cache and cannot prove RU freshness.
+            // Both configuration sources belong to this SDK request. Adapty may
+            // return its managed cache, but the payload still carries the
+            // resolved provider configuration's explicit feature-gate decisions.
             remoteConfigurationProvenance: remoteConfigurationProvenance,
             fetchedAt: clock.now()
         )

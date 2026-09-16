@@ -11,14 +11,15 @@ Sandbox использует typed fixtures. Для проверки загру�
 отсутствие подписочного fallback и сохранение произвольных custom ID.
 Custom repositories передают config текущего placement с fallback на main.
 
-RU A/B fixture section demonstrates optional metadata and its removal for
-unqualified provider cache. No tracker networking is started by this sandbox.
+RU A/B fixture section demonstrates optional metadata from the current provider
+payload and its removal for the persistent platform cache. No tracker networking
+is started by this sandbox.
 Executable selection/reporting scenarios run through the module gate;
 [production wiring](../../Documentation/RUBillingExperiments.md) uses the existing
 RU composition. Legacy initializers remain valid without the optional tracker.
 
 Fixture-only iPhone app для проверки products-first pipeline, Special Offer
-provenance/countdown и отдельной verified-fresh RU authority.
+provenance/countdown и current-provider RU authority.
 
 ```bash
 bash Scripts/generate_sandbox.sh

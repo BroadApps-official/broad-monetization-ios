@@ -203,7 +203,7 @@ Countdown идёт до конца текущего окна и на нуле и
 RU methods показываются, только если одновременно выполнены все условия:
 
 1. host app зарегистрировал RU Billing adapters;
-2. verified-fresh provider payload содержит `ru_pay = true` **или** явно подключён
+2. текущий provider payload содержит `ru_pay = true` **или** явно подключён
    [резервный сценарий недоступного Adapty](Documentation/RUProviderFallback.md);
 3. App Store storefront — `RU/RUS` **или** регион iPhone — `RU/RUS`;
 4. RU catalog не пуст и точно сопоставлен выбранному product;
@@ -215,8 +215,10 @@ Billing. Если Storefront временно недоступен, достат
 iPhone; при нероссийском регионе flow остаётся закрытым. Перед созданием
 checkout Storefront и gate проверяются повторно.
 
-SDK cache, Dashboard fallback и persistent cache BroadMonetization не
-авторизуют СБП/карту. Возврат из внешней формы не является success: он запускает
+Adapty SDK cache и Dashboard fallback считаются текущим provider payload:
+они могут авторизовать СБП/карту только с explicit `ru_pay = true`. Persistent
+cache BroadMonetization по-прежнему не авторизует RU Billing. Возврат из
+внешней формы не является success: он запускает
 backend reconciliation, а неопределённый результат остаётся `pending`.
 В account-policy режиме явно брошенный checkout можно завершить через
 `pendingCheckoutTermination`, но только если подключённый backend client

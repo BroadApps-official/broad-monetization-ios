@@ -16,6 +16,12 @@
 
 ### Fixed
 
+- Обычный Adapty paywall с explicit `ru_pay=true` теперь открывает
+  RU Billing. Provenance `.providerCacheFallbackPossible` сохраняет RU gate
+  и experiment metadata, потому что Adapty SDK не различает network
+  response, managed cache и Dashboard fallback в публичном payload.
+- Persistent cache BroadMonetization, legacy payload, `ru_pay=false`, absent и
+  malformed значения по-прежнему не авторизуют СБП/карту.
 - Брошенный СБП/card checkout больше не обязан навсегда блокировать purchase и
   restore в account-policy режиме: платформа предоставляет безопасный путь
   серверного завершения попытки.
@@ -23,6 +29,12 @@
   pending, потому что не исключают позднее списание.
 
 ### Почему
+
+Adapty 3.17.3 может вернуть managed cache при ошибке и не передаёт
+признак источника. Прежнее требование `.verifiedFreshRemote`
+делало обычный production path недостижимым даже при свежем ответе.
+Теперь текущий SDK payload может применить только явное решение
+placement; кеш самой платформы остаётся fail-closed.
 
 `GET /v1/policy/effective` подтверждает только новое состояние аккаунта и не
 может доказать отказ конкретного checkout. Для снятия финансовой блокировки

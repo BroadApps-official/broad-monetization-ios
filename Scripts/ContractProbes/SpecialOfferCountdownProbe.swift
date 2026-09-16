@@ -11,7 +11,7 @@ enum SpecialOfferRuntimeProbe {
         check(elapsed: 86401, expected: 0)
         check(elapsed: 172_800, expected: 0)
         print(
-            "PASS: the ordinary paywall authorizes Special Offer without weakening RU Billing; "
+            "PASS: the ordinary provider paywall authorizes explicit Special Offer and RU Billing gates; "
                 + "the 24-hour countdown expires at zero and does not loop"
         )
     }
@@ -38,7 +38,7 @@ enum SpecialOfferRuntimeProbe {
             by: .providerCacheFallbackPossible
         )
         guard providerPayloadConfiguration.specialOffer?.isEnabled == true,
-              !providerPayloadConfiguration.authorizesRUBillingPresentation,
+              providerPayloadConfiguration.authorizesRUBillingPresentation,
               SpecialOfferPresentationAuthorization(
                   paywallPresentationID: presentationID,
                   gatePaywallPresentationID: gatePresentationID,
@@ -49,7 +49,7 @@ enum SpecialOfferRuntimeProbe {
               ) != nil
         else {
             fatalError(
-                "A standard provider payload must authorize Special Offer but not RU Billing"
+                "A standard provider payload must retain explicit Special Offer and RU Billing gates"
             )
         }
 

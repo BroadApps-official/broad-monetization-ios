@@ -12,7 +12,7 @@ extension RUProviderFallbackProbe {
 
     static func providerPayload(
         identifiers: [String], configuration: RemotePaywallConfiguration = .init(isRUBillingEnabled: true),
-        provenance: PaywallRemoteConfigurationProvenance = .verifiedFreshRemote
+        provenance: PaywallRemoteConfigurationProvenance = .providerCacheFallbackPossible
     ) -> PaywallPayload {
         PaywallPayload(
             presentationID: .generated(), paywallReference: .init(rawValue: "adapty-defaults-fixture"),

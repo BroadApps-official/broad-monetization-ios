@@ -24,9 +24,10 @@ enum RUExperimentProbe {
         _ = await lastValid.resolve(valid, for: .main)
         let next = await lastValid.resolve(.empty, for: .main)
         check(next.ruExperiment == nil && next.isRUBillingEnabled != true)
-        for provenance: PaywallRemoteConfigurationProvenance in [.legacyUnqualified, .platformCache, .providerCacheFallbackPossible] {
+        for provenance: PaywallRemoteConfigurationProvenance in [.legacyUnqualified, .platformCache] {
             check(payload(remote: valid, provenance: provenance).remoteConfiguration.ruExperiment == nil)
         }
+        check(payload(remote: valid, provenance: .providerCacheFallbackPossible).remoteConfiguration.ruExperiment != nil)
         let fresh = payload(remote: valid)
         check(fresh.remoteConfiguration.ruExperiment != nil)
         let restored = try JSONDecoder().decode(PaywallPayload.self, from: JSONEncoder().encode(fresh))
@@ -125,7 +126,7 @@ enum RUExperimentProbe {
         remote: RemotePaywallConfiguration = RemotePaywallConfigurationParser().parse([
             "ru_pay": true, "experiment_code": "fixture", "segment_code": "a"
         ]),
-        provenance: PaywallRemoteConfigurationProvenance = .verifiedFreshRemote
+        provenance: PaywallRemoteConfigurationProvenance = .providerCacheFallbackPossible
     ) -> PaywallPayload {
         PaywallPayload(
             presentationID: .generated(), paywallReference: .init(rawValue: "fixture-paywall"),

@@ -33,21 +33,21 @@
    Продукты и placement отчёта относятся к фактически показанному paywall.
    Оба кода — строки длиной 1–64,
    без окружающих пробелов и управляющих символов. Числа/bool не приводятся к строке.
-3. `ru_pay = true` из текущего подтверждённо свежего payload и регион iPhone
-   RU/RUS **или** текущий Storefront RU/RUS. Кэш не восстанавливает разрешение
-   и старые коды эксперимента.
+3. `ru_pay = true` из текущего provider payload и регион iPhone RU/RUS
+   **или** текущий Storefront RU/RUS. Managed cache/fallback Adapty сохраняет
+   явное решение resolved provider config; persistent cache BroadMonetization не
+   восстанавливает разрешение и старые коды эксперимента.
 4. Подтверждённые backend endpoints. `.broadApps` задаёт пути
    `/v1/billing/cloudpayments/experiments/assign` и
    `/v1/billing/cloudpayments/experiments/paywall-shown` относительно вашего
    существующего `http.baseURL`. Другие пути передаются явно.
 
-**Свежесть уже является требованием RU Billing платформы.** Стандартный
-Adapty 3.17.3 adapter помечает payload как `providerCacheFallbackPossible`:
-успешный SDK callback сам по себе не доказывает свежесть Remote Config.
-В таком приложении добавление tracker не откроет RU-ветку. Сохраните существующий
-проверенный источник `.verifiedFreshRemote`; если его нет, сначала согласуйте
-контракт проверки свежести. Не переименовывайте cache в fresh и не включайте
-Debug override в Release ради A/B-теста.
+Adapty 3.17.3 adapter помечает payload как
+`providerCacheFallbackPossible`, потому что SDK может незаметно вернуть managed
+cache или Dashboard fallback. Эта provenance разрешает RU Billing и A/B metadata,
+если payload содержит explicit `ru_pay = true`. `.platformCache` и
+`.legacyUnqualified` по-прежнему fail-closed. Не включайте Debug override в
+Release ради A/B-теста.
 
 ## Подключить кодом
 

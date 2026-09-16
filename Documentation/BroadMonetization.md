@@ -132,9 +132,11 @@ payment page и локальное время не считаются доказ
 [Полный контракт account-policy и termination](RUAccountPolicy.md).
 
 RU path разрешён только при host opt-in, explicit valid `ru_pay = true`,
-verified-fresh remote payload, App Store storefront `RU/RUS` **или** регионе
+текущем provider payload, App Store storefront `RU/RUS` **или** регионе
 iPhone `RU/RUS`, exact catalog match и доступных backend methods. Язык
-приложения и системный язык не участвуют. Debug override по умолчанию locked.
+приложения и системный язык не участвуют. Managed cache/fallback Adapty
+считается provider payload, а persistent cache BroadMonetization остаётся
+закрытым. Debug override по умолчанию locked.
 
 Перед созданием checkout Storefront и gate проверяются повторно. Возврат из
 внешней формы создаёт только pending/reconciliation path; Premium подтверждает

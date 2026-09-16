@@ -68,7 +68,7 @@ struct MonetizationSandboxView: View {
 
                 Section("Special Offer authority") {
                     LabeledContent(
-                        "Provider payload",
+                        "Current provider payload",
                         value: yesNo(providerConfiguration.specialOffer?.isEnabled == true)
                     )
                     LabeledContent(
@@ -80,7 +80,7 @@ struct MonetizationSandboxView: View {
 
                 Section("RU Billing authority") {
                     LabeledContent(
-                        "Provider payload",
+                        "Current provider payload",
                         value: yesNo(
                             PaywallRemoteConfigurationProvenance
                                 .providerCacheFallbackPossible
@@ -100,7 +100,7 @@ struct MonetizationSandboxView: View {
                 Section("RU A/B · opt-in") {
                     LabeledContent("Experiment", value: parsedConfiguration.ruExperiment?.experimentCode ?? "absent")
                     LabeledContent("Segment", value: parsedConfiguration.ruExperiment?.segmentCode ?? "absent")
-                    LabeledContent("Provider cache metadata", value: yesNo(providerConfiguration.ruExperiment != nil))
+                    LabeledContent("Provider metadata", value: yesNo(providerConfiguration.ruExperiment != nil))
                     LabeledContent(
                         "Verified fresh metadata",
                         value: yesNo(qualifiedConfiguration(for: .verifiedFreshRemote).ruExperiment != nil)

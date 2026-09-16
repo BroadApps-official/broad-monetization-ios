@@ -22,7 +22,8 @@ Scripts/ContractProbes                    executable non-test probes
 - Provider product array не filter/sort/dedup; occurrence identity уникальна.
 - Special Offer gate выполняется после paywall + all-products mapping.
 - Provider-managed payload может разрешить Special Offer; platform cache нет.
-- RU Billing требует verified-fresh remote authority и explicit `ru_pay = true`.
+- RU Billing требует current provider authority и explicit `ru_pay = true`;
+  persistent cache BroadMonetization не авторизует финансовый UI.
 - Timeout/offline не превращают pending operation в success/failure и не повторяют charge.
 - Cache не авторизует entitlement, purchase или remote feature.
 - Raw URL/error/receipt/token/user/payment data не логируются.
