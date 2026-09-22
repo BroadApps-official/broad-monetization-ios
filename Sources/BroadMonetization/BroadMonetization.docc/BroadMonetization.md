@@ -47,6 +47,12 @@ unfinished/history scans remain recovery fallbacks, not the normal proof path.
 
 ### Special Offer
 
+The canonical placement is `special_offer`. When its persisted state is absent,
+``PersistedSpecialOfferStateRepository`` imports a matching `special-offer`
+configuration without changing active-window or cooldown dates. Existing canonical
+state always wins. Resets leave a durable eligible marker so an old snapshot cannot
+restore a cleared cycle after relaunch; storage failures remain unavailable.
+
 - ``ResolveSpecialOfferUseCase``
 - ``SpecialOfferResolution``
 - ``SpecialOfferPresentationAuthorization``
