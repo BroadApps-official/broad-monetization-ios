@@ -102,15 +102,22 @@ private extension RUCheckoutFlowCoordinator {
         }
 
         var expectation = accountExpectation
-        if expectation?.kind == .tokens {
+        if let currentExpectation = expectation {
             guard let repository = accountPolicyRepository,
                   let binding = authorizationBinding, binding.isCurrent(),
                   case let .loaded(policy) = await repository.loadPolicy(for: binding.subject),
-                  binding.isCurrent(), !Task.isCancelled, policy.subject == binding.subject,
-                  let balance = policy.creditsBalance, balance >= 0 else {
+                  binding.isCurrent(), !Task.isCancelled, policy.subject == binding.subject else {
                 return .unavailable(RUBillingSafeErrors.checkoutUnavailable)
             }
-            expectation = RUAccountCheckoutExpectation(kind: .tokens, creditsBalanceBeforeCheckout: balance)
+            if currentExpectation.kind == .subscription, policy.isSubscribed {
+                return .unavailable(RUBillingSafeErrors.checkoutUnavailable)
+            }
+            if currentExpectation.kind == .tokens {
+                guard let balance = policy.creditsBalance, balance >= 0 else {
+                    return .unavailable(RUBillingSafeErrors.checkoutUnavailable)
+                }
+                expectation = RUAccountCheckoutExpectation(kind: .tokens, creditsBalanceBeforeCheckout: balance)
+            }
         }
         let attemptID = MonetizationAttemptID.generated()
         let analyticsContext = RUCheckoutAnalyticsContext(

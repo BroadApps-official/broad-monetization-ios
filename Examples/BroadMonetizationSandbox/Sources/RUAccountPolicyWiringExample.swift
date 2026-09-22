@@ -41,6 +41,16 @@ enum RUAccountPolicyWiringExample {
         await services.checkout.applicationReturn.applicationDidBecomeActive()
     }
 
+    /// No payment was confirmed during the local wait. Present neutral copy,
+    /// then read operationGate for retry availability; do not grant access.
+    static func waitingEnded(_ outcome: RUPaymentReturnOutcome) -> Bool {
+        if case .waitingCompleted = outcome {
+            return true
+        }
+        return false
+    }
+
+    /// Optional server cancellation, not required to allow a retry after waiting.
     /// Present explicit confirmation before calling this route. The injected
     /// repository must make the checkout terminal on the backend.
     static func abandonPayment(

@@ -32,7 +32,8 @@ public actor RUPendingCheckoutTerminationCoordinator {
 
     /// Call only after explicit user intent to abandon the checkout. A terminal
     /// backend result clears the exact durable attempt and releases the shared
-    /// financial-operation gate. Every uncertain result remains blocked.
+    /// financial-operation gate. Uncertain results leave local waiting state
+    /// unchanged; account-policy polling may already have released its blocker.
     public func terminatePendingCheckout() async -> RUPendingCheckoutTerminationOutcome {
         let context: PendingRUCheckoutContext
         switch await readPendingState() {
@@ -40,7 +41,7 @@ public actor RUPendingCheckoutTerminationCoordinator {
             return .noPendingCheckout
         case .blockedByAnotherSubject, .unavailable:
             return .unavailable(RUBillingSafeErrors.pendingCheckoutTerminationUnavailable)
-        case let .pending(value):
+        case let .pending(value), let .awaitingReconciliation(value):
             context = value
         }
 

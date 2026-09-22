@@ -5,10 +5,17 @@ Omit ``RUBillingEndpointConfiguration/paymentStatus`` to select this mode.
 ``RUAccountCheckoutExpectation`` persists the token balance captured before checkout.
 Call ``RUPaymentReturnCoordinator/applicationDidBecomeActive()`` after payment-page dismissal or foreground return.
 ``RUPaymentReturnOutcome/tokensCredited(_:)`` updates balance without granting premium.
-For an explicitly abandoned checkout, inject
+After bounded account-policy polling, ``RUPaymentReturnOutcome/waitingCompleted``
+releases the local wait without cancelling the payment. The last attempt is
+retained as ``PendingRUCheckoutState/awaitingReconciliation(_:)`` until account
+reconciliation or a new checkout replaces it. Errors remain unavailable, but
+also finish the local wait when persistence and identity checks succeed.
+Before each account-policy checkout, fresh subscription/balance state is required.
+Payment-status mode retains its durable blocker until backend resolution.
+For optional server cancellation of an explicitly abandoned checkout, inject
 ``RUCheckoutTerminationClientProtocol`` and call
 ``RUPendingCheckoutTerminationCoordinator/terminatePendingCheckout()``. The
-durable blocker is removed only after the backend returns a terminal status.
+attempt is removed only after the backend returns a terminal status.
 
 Provider-neutral monetization contracts and production adapters for BroadApps iPhone applications.
 

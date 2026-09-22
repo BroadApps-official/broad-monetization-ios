@@ -123,11 +123,11 @@ validation. Доступ здесь **не** выдаётся: транзакц�
 
 ## RU Billing
 
-В account-policy режиме незавершённый checkout остаётся общим финансовым
-блокером. Для явной отмены host подключает
-`RUCheckoutTerminationClientProtocol`: модуль очищает точный pending
-attempt только после серверного `failed`, `cancelled` или `expired`. Закрытие
-payment page и локальное время не считаются доказательством.
+В account-policy режиме ограниченный polling завершает локальное ожидание:
+последняя попытка остаётся для reconciliation, а новая покупка разрешена после
+свежей проверки аккаунта. Это не отменяет платёж и не меняет срок жизни ссылки.
+Для настоящей серверной отмены host опционально подключает
+`RUCheckoutTerminationClientProtocol`. Режим с paymentStatus остаётся строгим.
 
 [Полный контракт account-policy и termination](RUAccountPolicy.md).
 

@@ -6,6 +6,9 @@ public enum RUPaymentReturnOutcome: Equatable, Sendable {
     /// Fresh account balance increased. Does not grant subscription access.
     case tokensCredited(Int)
     case pending
+    /// Account-policy waiting ended without confirmation. Retry is allowed;
+    /// the existing payment link may still settle later.
+    case waitingCompleted
     case inactive
     case unavailable(AppError)
 }
@@ -25,6 +28,7 @@ public actor RUPaymentReturnCoordinator {
     private let refreshPayment: any RefreshRUPaymentUseCaseProtocol
     private let operationGate: MonetizationOperationGate
     private let analytics: (any MonetizationAnalyticsProtocol)?
+    private let usesAccountPolicy: Bool
 
     private var returnedAttempts: Set<MonetizationAttemptID> = []
     private var timedOutAttempts: Set<MonetizationAttemptID> = []
@@ -36,12 +40,14 @@ public actor RUPaymentReturnCoordinator {
         pendingStore: any PendingRUCheckoutStoreProtocol,
         refreshPayment: any RefreshRUPaymentUseCaseProtocol,
         operationGate: MonetizationOperationGate,
-        analytics: (any MonetizationAnalyticsProtocol)? = nil
+        analytics: (any MonetizationAnalyticsProtocol)? = nil,
+        usesAccountPolicy: Bool = false
     ) {
         self.pendingStore = pendingStore
         self.refreshPayment = refreshPayment
         self.operationGate = operationGate
         self.analytics = analytics.map(NonBlockingMonetizationAnalytics.wrapping)
+        self.usesAccountPolicy = usesAccountPolicy
     }
 
     /// Call after foreground return or embedded payment-page dismissal.
@@ -53,7 +59,7 @@ public actor RUPaymentReturnCoordinator {
             return .noPendingCheckout
         case .blockedByAnotherSubject, .unavailable:
             return .unavailable(RUBillingSafeErrors.paymentStatusUnavailable)
-        case let .pending(value):
+        case let .pending(value), let .awaitingReconciliation(value):
             context = value
         }
 
@@ -137,8 +143,7 @@ private extension RUPaymentReturnCoordinator {
             await analytics?.track(.ruCheckoutConfirmed(context.analyticsContext))
             return .active(snapshot)
         case .pending:
-            await trackTimedOutIfNeeded(context)
-            return .pending
+            return await resolveUnconfirmed(context)
         case .inactive:
             guard await pendingStore.clear(
                 checkoutSessionID: context.checkoutSessionID,
@@ -151,9 +156,32 @@ private extension RUPaymentReturnCoordinator {
             await operationGate.notifyFinancialOperationStateChanged()
             return .inactive
         case let .unavailable(error):
+            if usesAccountPolicy {
+                _ = await finishWaiting(for: context)
+            }
             await trackTimedOutIfNeeded(context)
             return .unavailable(error)
         }
+    }
+
+    func resolveUnconfirmed(_ context: PendingRUCheckoutContext) async -> RUPaymentReturnOutcome {
+        if usesAccountPolicy {
+            guard await finishWaiting(for: context) else {
+                return .unavailable(RUBillingSafeErrors.paymentStatusUnavailable)
+            }
+            await trackTimedOutIfNeeded(context)
+            return .waitingCompleted
+        }
+        await trackTimedOutIfNeeded(context)
+        return .pending
+    }
+
+    func finishWaiting(for context: PendingRUCheckoutContext) async -> Bool {
+        guard await pendingStore.finishWaiting(
+            checkoutSessionID: context.checkoutSessionID, attemptID: context.attemptID
+        ) else { return false }
+        await operationGate.notifyFinancialOperationStateChanged()
+        return true
     }
 
     func trackTimedOutIfNeeded(_ context: PendingRUCheckoutContext) async {

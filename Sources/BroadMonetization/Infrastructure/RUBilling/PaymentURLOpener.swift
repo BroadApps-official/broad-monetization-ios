@@ -1,11 +1,6 @@
 import Foundation
 import UIKit
 
-public protocol PaymentURLOpenerProtocol: Sendable {
-    @MainActor
-    func open(_ url: URL) async -> Bool
-}
-
 public struct UIApplicationPaymentURLOpener: PaymentURLOpenerProtocol {
     public init() {}
 

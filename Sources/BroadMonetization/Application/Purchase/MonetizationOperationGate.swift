@@ -46,8 +46,9 @@ public struct PendingOperationBlockerKey: Hashable, Sendable {
 
 /// One application-wide gate shared by every payment and restore entry point.
 /// It protects direct callers and multiple paywall view models, not only one
-/// screen's busy state. Durable Apple and RU operations remain blockers after
-/// their short-lived SDK/browser leases have been released.
+/// screen's busy state. Durable Apple and payment-status RU operations remain
+/// blockers after their short-lived SDK/browser leases have been released.
+/// Account-policy RU attempts stop blocking once their local wait is completed.
 public actor MonetizationOperationGate {
     private nonisolated let blockerRegistry = PendingOperationBlockerRegistry()
     private var activeLease: MonetizationOperationLease?

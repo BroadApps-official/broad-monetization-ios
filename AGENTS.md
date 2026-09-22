@@ -20,11 +20,12 @@
 - RU Special Offer выбирает backend row только по `isSpecialOffer`;
   обычный paywall не использует эту строку.
 - RU Billing/entitlements/purchase/recovery сохраняют fail-closed authority.
-- Для host integration с RU account-policy требуйте app-owned
-  `checkoutTerminationClient` и явный UI-вызов `pendingCheckoutTermination`
-  только после подтверждения пользователя. Отсутствующий backend terminal
-  contract — blocker интеграции, а не повод очищать pending по timeout,
-  закрытию web view или foreground.
+- В RU account-policy завершение ограниченного polling переводит попытку в
+  `awaitingReconciliation` и снимает локальную блокировку, не отменяя платёж.
+  Сохраняйте последнюю попытку до сверки или следующего checkout; перед новым
+  checkout перечитывайте account policy. `checkoutTerminationClient` опционален;
+  серверная отмена вызывается только после подтверждения пользователя.
+  Режим с paymentStatus, Apple pending и token fulfillment сохраняют прежние gates.
 - Не добавляйте `Tests/`, test targets, XCTest, Swift Testing или UI tests.
 - Не добавляйте secrets, real IDs и raw error/URL/receipt/token/user/payment data.
 - Public API меняется вместе с DocC, sandbox, report, changelog и SemVer intent.
