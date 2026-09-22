@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 4.1.0" src="https://img.shields.io/badge/release-4.1.0-10B981">
+  <img alt="Release 5.0.0" src="https://img.shields.io/badge/release-5.0.0-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -67,7 +67,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "4.1.0"
+        from: "5.0.0"
     )
 ]
 ```
@@ -219,11 +219,12 @@ Adapty SDK cache и Dashboard fallback считаются текущим provide
 они могут авторизовать СБП/карту только с explicit `ru_pay = true`. Persistent
 cache BroadMonetization по-прежнему не авторизует RU Billing. Возврат из
 внешней формы не является success: он запускает
-backend reconciliation, а неопределённый результат остаётся `pending`.
-В account-policy режиме явно брошенный checkout можно завершить через
-`pendingCheckoutTermination`, но только если подключённый backend client
-атомарно отменил его или подтвердил `failed/cancelled/expired`. Закрытие страницы
-и локальный таймаут блокировку не снимают. Подробности и пример:
+backend reconciliation. В account-policy режиме ограниченное ожидание заканчивается
+`waitingCompleted`: последняя попытка сохраняется без блокировки новой покупки.
+Ошибка проверки остаётся `unavailable`; доступ выдаётся только по backend authority.
+Перед новым checkout обновляется account policy. Настоящая серверная отмена через
+`pendingCheckoutTermination` опциональна. Режим с paymentStatus сохраняет блокировку
+до окончательного ответа. Подробности и пример:
 [account-policy termination](Documentation/RUAccountPolicy.md#pending-и-смысл-подтверждения).
 
 ### Продукты RU Billing с backend
@@ -279,8 +280,8 @@ Adapty Special Offer. RU-ветка меняет только источник �
 [optional tracker и selector](Documentation/RUBillingExperiments.md).
 
 СБП/карта дополнительно требуют обычный strict RU gate. Возврат из hosted
-checkout оставляет pending, пока authoritative entitlement/backend не вернул
-`active`.
+checkout запускает проверку через backend. Account-policy завершает ограниченное
+ожидание без блокировки новой покупки; Premium требует authoritative `active`.
 
 [Полная инструкция →](Documentation/RUSpecialOffer.md) ·
 [Публичная инструкция разработчику →](https://broadapps-ios-docs.nkhsnv.chatgpt.site/docs/ru-special-offer)

@@ -195,7 +195,7 @@ private extension RUBillingCompositionFactory {
                 pendingStore: pendingStore,
                 refreshPayment: refresh,
                 operationGate: operationGate,
-                analytics: dependencies.analytics
+                analytics: dependencies.analytics, usesAccountPolicy: usesAccountPolicy
             ),
             pendingCheckoutTermination: makePendingCheckoutTermination(
                 pendingStore: pendingStore, operationGate: operationGate

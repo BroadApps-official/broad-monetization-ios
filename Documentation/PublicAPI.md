@@ -29,6 +29,7 @@
 | Case | `case autoRenewableSubscription` |
 | Case | `case available` |
 | Case | `case available(Storefront)` |
+| Case | `case awaitingReconciliation(PendingRUCheckoutContext)` |
 | Case | `case blockedByAnotherSubject` |
 | Case | `case cache` |
 | Case | `case cacheMiss` |
@@ -217,6 +218,7 @@
 | Case | `case verified(StoreKitCurrentEntitlementRecord.Verified)` |
 | Case | `case verified(TokenTransactionEvidence)` |
 | Case | `case verifiedFreshRemote` |
+| Case | `case waitingCompleted` |
 | Case | `case week` |
 | Case | `case year` |
 | Class | `actor AdaptyPaywallRepository` |
@@ -620,6 +622,8 @@
 | Instance Method | `func evidence(productID: ProductID, purchasedAfter: Date) async -> TokenEvidenceResolution` |
 | Instance Method | `func financialOperationStatusChanges() -> AsyncStream<Void>` |
 | Instance Method | `func finish()` |
+| Instance Method | `func finishWaiting(checkoutSessionID _: CheckoutSessionID, attemptID _: MonetizationAttemptID) async -> Bool` |
+| Instance Method | `func finishWaiting(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID) async -> Bool` |
 | Instance Method | `func fulfill(_ request: TokenFulfillmentRequest) async -> TokenFulfillmentOutcome` |
 | Instance Method | `func handle(_ event: MonetizationAnalyticsEvent) async` |
 | Instance Method | `func hasPendingMonetizationOperation() async -> Bool` |

@@ -1,5 +1,30 @@
 # Changelog
 
+## 5.0.0
+
+### Changed
+
+- Account-policy polling теперь завершает локальное ожидание без обязательной
+  серверной отмены. `waitingCompleted` не означает cancelled/expired/success.
+  Ошибка проверки остаётся unavailable, но также завершает локальное ожидание,
+  если durable storage и identity позволяют сохранить изменение.
+- Последний checkout хранится как `awaitingReconciliation` без общего financial
+  block. Новая попытка заменяет его атомарно; старый ответ не очищает новую.
+  Перед checkout требуется fresh policy; активная подписка запрещает повторный
+  subscription checkout, токены получают свежий baseline.
+- Payment-status, Apple pending и token fulfillment gates не изменены.
+  `checkoutTerminationClient` остаётся optional server cancellation.
+
+### Migration and validation
+
+- SemVer intent: major, новые cases в public enums и новое поведение retry.
+  Custom pending stores реализуют `finishWaiting`; default сохраняет блокировку.
+- Sandbox/DocC/API report описывают новое состояние. Executable contract probes
+  проверяют polling timeout/offline, coalescing, поздний баланс, durable restart,
+  CAS replacement, stale callback, storage failure и прежний payment-status gate.
+- Две действующие ссылки могут быть оплачены; дедупликация и expiry принадлежат
+  backend. Локальное завершение ожидания не является финансовой отменой.
+
 ## 4.1.0
 
 ### Added

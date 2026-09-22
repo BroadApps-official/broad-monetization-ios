@@ -11,6 +11,10 @@ if [[ "$simulator_arch" == "x86_64" && "$translation_state" == "1" ]]; then
 fi
 
 module_directory="$module_root/.build/${simulator_arch}-apple-ios-simulator/debug/Modules"
+if [[ ! -e "$module_directory/$module_name.swiftmodule" ]]; then
+    # Newer Swift toolchains default to swiftbuild; native SwiftPM used the path above.
+    module_directory="$module_root/.build/out/Products/Debug-iphonesimulator"
+fi
 symbol_directory="$module_root/.build/PublicAPI/SymbolGraphs"
 current_report="$module_root/.build/PublicAPI/PublicAPI.md"
 committed_report="$module_root/Documentation/PublicAPI.md"

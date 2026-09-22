@@ -13,6 +13,8 @@ enum RUAccountPolicyProbe {
         try persistenceContracts()
         await pollingContracts()
         await returnContracts()
+        await accountWaitingContracts()
+        await RUWaitingStoreProbe.run()
         await terminationContracts()
         print("RU account-policy contracts passed: wire, persistence, plan, balance, retry, subject, epoch, return and termination.")
     }
@@ -128,6 +130,37 @@ enum RUAccountPolicyProbe {
         await retainedTerminationContracts()
     }
 
+    static func accountWaitingContracts() async {
+        let session = SubjectAuthorizationSession()
+        let binding = session.begin(for: .anonymous)
+        for outcome: RUAccountPolicyOutcome in [.loaded(account(plan: nil, balance: 100)), .unavailable(failure)] {
+            let original = context(expectation: tokens)
+            let store = PendingStore(original)
+            let gate = MonetizationOperationGate()
+            gate.registerPendingOperationBlocker(store)
+            let repository = PolicyRepository([outcome], slow: true)
+            let coordinator = RUPaymentReturnCoordinator(
+                pendingStore: store, refreshPayment: refresh(repository, binding: binding),
+                operationGate: gate, usesAccountPolicy: true
+            )
+            async let foreground = coordinator.applicationDidBecomeActive()
+            async let dismiss = coordinator.applicationDidBecomeActive()
+            let results = await [foreground, dismiss]
+            let expected: RUPaymentReturnOutcome = outcome == .unavailable(failure) ? .unavailable(failure) : .waitingCompleted
+            check(results == [expected, expected])
+            await check(repository.calls == 8)
+            await check(!gate.isFinancialOperationBlocked())
+            await check(store.state() == .awaitingReconciliation(original))
+            let late = RUPaymentReturnCoordinator(
+                pendingStore: store,
+                refreshPayment: refresh(PolicyRepository([.loaded(account(plan: nil, balance: 101))]), binding: binding),
+                operationGate: gate, usesAccountPolicy: true
+            )
+            await check(late.applicationDidBecomeActive() == .tokensCredited(101))
+            await check(late.applicationDidBecomeActive() == .noPendingCheckout)
+        }
+    }
+
     static func terminalTerminationContract() async {
         let terminalContext = context(expectation: tokens)
         let terminalStore = PendingStore(terminalContext)
@@ -241,7 +274,7 @@ enum RUAccountPolicyProbe {
             attemptID: .generated(),
             productID: productID,
             checkoutMethod: .card,
-            startedAt: Date(),
+            startedAt: Date(timeIntervalSince1970: 1_700_000_000),
             expiresAt: nil,
             accountExpectation: expectation
         )
@@ -325,6 +358,7 @@ private actor PendingStore: PendingRUCheckoutStoreProtocol {
     nonisolated let pendingOperationBlockerKey = PendingOperationBlockerKey(kind: .ruCheckout, applicationIdentifier: "fixture")
     var context: PendingRUCheckoutContext?
     let allowsClear: Bool
+    var waitingCompleted = false
 
     init(
         _ context: PendingRUCheckoutContext?,
@@ -335,15 +369,24 @@ private actor PendingStore: PendingRUCheckoutStoreProtocol {
     }
 
     func state() -> PendingRUCheckoutState {
-        context.map(PendingRUCheckoutState.pending) ?? .none
+        guard let context else { return .none }
+        return waitingCompleted ? .awaitingReconciliation(context) : .pending(context)
     }
 
     func hasPendingMonetizationOperation() -> Bool {
-        context != nil
+        context != nil && !waitingCompleted
     }
 
     func save(_ context: PendingRUCheckoutContext) -> Bool {
-        self.context = context; return true
+        self.context = context; waitingCompleted = false; return true
+    }
+
+    func finishWaiting(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID) -> Bool {
+        guard context?.accountExpectation != nil,
+              context?.checkoutSessionID == checkoutSessionID,
+              context?.attemptID == attemptID else { return false }
+        waitingCompleted = true
+        return true
     }
 
     func clear(checkoutSessionID: CheckoutSessionID, attemptID: MonetizationAttemptID) -> Bool {
