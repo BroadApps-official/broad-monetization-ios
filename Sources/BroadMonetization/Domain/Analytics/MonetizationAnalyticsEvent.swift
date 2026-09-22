@@ -124,9 +124,9 @@ public struct EntitlementAnalyticsContext: Equatable, Sendable {
 
 /// Contains only app-generated correlation and catalog metadata. It deliberately
 /// excludes email, payment URL, checkout session ID, bearer and user identity.
-public struct RUCheckoutAnalyticsContext: Equatable, Sendable {
+public struct ProviderCheckoutAnalyticsContext: Equatable, Sendable {
     public let attemptID: MonetizationAttemptID
-    public let productID: RUCatalogProductID
+    public let productID: ProductID
     public let checkoutMethod: CheckoutMethod
     public let paywallPresentationID: PaywallPresentationID?
     public let paywallVariationID: PaywallVariationID?
@@ -135,7 +135,7 @@ public struct RUCheckoutAnalyticsContext: Equatable, Sendable {
 
     public init(
         attemptID: MonetizationAttemptID,
-        productID: RUCatalogProductID,
+        productID: ProductID,
         checkoutMethod: CheckoutMethod,
         paywallPresentationID: PaywallPresentationID? = nil,
         paywallVariationID: PaywallVariationID? = nil,
@@ -143,8 +143,8 @@ public struct RUCheckoutAnalyticsContext: Equatable, Sendable {
         resolvedPlacementID: PlacementID? = nil
     ) {
         precondition(
-            checkoutMethod == .sbp || checkoutMethod == .card,
-            "RU checkout analytics supports only SBP or card"
+            checkoutMethod != .apple,
+            "External checkout analytics requires an external payment method"
         )
         let hasCompletePaywallOrigin = paywallPresentationID != nil
             && requestedPlacementID != nil
@@ -154,11 +154,11 @@ public struct RUCheckoutAnalyticsContext: Equatable, Sendable {
             && resolvedPlacementID == nil
         precondition(
             hasCompletePaywallOrigin || hasNoPaywallOrigin,
-            "RU checkout analytics requires a complete paywall origin"
+            "External checkout analytics requires a complete paywall origin"
         )
         precondition(
             paywallVariationID == nil || paywallPresentationID != nil,
-            "RU checkout variation requires a paywall presentation"
+            "External checkout variation requires a paywall presentation"
         )
         self.attemptID = attemptID
         self.productID = productID
@@ -172,7 +172,7 @@ public struct RUCheckoutAnalyticsContext: Equatable, Sendable {
     public init(
         attemptID: MonetizationAttemptID,
         selection: ProductSelection,
-        productID: RUCatalogProductID,
+        productID: ProductID,
         checkoutMethod: CheckoutMethod
     ) {
         self.init(
@@ -216,9 +216,9 @@ public enum MonetizationAnalyticsEvent: Equatable, Sendable {
 
     case entitlementResolved(EntitlementAnalyticsContext)
 
-    case ruCheckoutCreated(RUCheckoutAnalyticsContext)
-    case ruCheckoutOpenFailed(RUCheckoutAnalyticsContext, failure: MonetizationAnalyticsFailure)
-    case ruCheckoutSafariReturned(RUCheckoutAnalyticsContext)
-    case ruCheckoutConfirmed(RUCheckoutAnalyticsContext)
-    case ruCheckoutTimedOut(RUCheckoutAnalyticsContext)
+    case providerCheckoutCreated(ProviderCheckoutAnalyticsContext)
+    case providerCheckoutOpenFailed(ProviderCheckoutAnalyticsContext, failure: MonetizationAnalyticsFailure)
+    case providerCheckoutSafariReturned(ProviderCheckoutAnalyticsContext)
+    case providerCheckoutConfirmed(ProviderCheckoutAnalyticsContext)
+    case providerCheckoutTimedOut(ProviderCheckoutAnalyticsContext)
 }

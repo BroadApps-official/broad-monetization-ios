@@ -2,6 +2,11 @@
 
 ## 5.0.0
 
+### Optional providers
+
+- RU logic moves to BroadRUBilling 1.0.0. Base services expose generic checkout, paywall parsing, loader and view-reporting interfaces. Payment method/source identifiers are extensible string values with unchanged single-value Codable encoding. Requires BroadCore 3.0.0.
+- Existing pending records and their financial authority are preserved by the new provider. RU recovery is composed through RecoverRUCustomerAccessUseCase.
+
 ### Changed
 
 - Account-policy polling теперь завершает локальное ожидание без обязательной

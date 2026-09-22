@@ -123,54 +123,7 @@ validation. Доступ здесь **не** выдаётся: транзакц�
 
 ## RU Billing
 
-В account-policy режиме ограниченный polling завершает локальное ожидание:
-последняя попытка остаётся для reconciliation, а новая покупка разрешена после
-свежей проверки аккаунта. Это не отменяет платёж и не меняет срок жизни ссылки.
-Для настоящей серверной отмены host опционально подключает
-`RUCheckoutTerminationClientProtocol`. Режим с paymentStatus остаётся строгим.
-
-[Полный контракт account-policy и termination](RUAccountPolicy.md).
-
-RU path разрешён только при host opt-in, explicit valid `ru_pay = true`,
-текущем provider payload, App Store storefront `RU/RUS` **или** регионе
-iPhone `RU/RUS`, exact catalog match и доступных backend methods. Язык
-приложения и системный язык не участвуют. Managed cache/fallback Adapty
-считается provider payload, а persistent cache BroadMonetization остаётся
-закрытым. Debug override по умолчанию locked.
-
-Перед созданием checkout Storefront и gate проверяются повторно. Возврат из
-внешней формы создаёт только pending/reconciliation path; Premium подтверждает
-authoritative entitlement source.
-
-### Спешл оффер RU Billing
-
-Backend отмечает Special Offer strict boolean полем
-`isSpecialOffer`. Обычный paywall исключает помеченную строку, а
-Special Offer требует marker и exact case-sensitive ID выбранного
-Adapty product. При отсутствующем, неоднозначном marker или
-несовпадающем ID checkout закрыт. Цена, валюта и `productId`
-берутся из этой точной backend-строки. RU Billing A/B-тесты
-подключаются отдельно: [настройка в 1.4.0](RUBillingExperiments.md).
-
-[Полный контракт →](RUSpecialOffer.md)
-
-### Backend catalog
-
-Обычный Adapty paywall передаёт UI весь provider array без filter/sort/dedup.
-RU catalog загружается через app-owned HTTPS configuration и authorization
-adapter. `FlatRUCatalogResponseDecoder` поддерживает текущий ответ
-`{ "products": [...] }`, `productId`/`product_id`, title, kind, period, price,
-currency, credits и optional exact App Store ID.
-
-```swift
-let wire = RUBillingWireAdapters.broadAppsFlatCatalog(
-    supportedMethods: [.sbp, .card]
-)
-```
-
-Способы оплаты задаются явно, если backend не возвращает их в каталоге. Модуль
-не угадывает methods, product mapping или единицы цены. Другой backend contract
-подключает собственный `RUCatalogResponseDecoderProtocol`.
+RU services and their UI moved to the optional [BroadRUBilling package](https://github.com/BroadApps-official/broad-ru-billing-ios). See [5.0 migration](OptionalProviders.md) for provider composition and durable state compatibility.
 
 ## Entitlements and recovery
 

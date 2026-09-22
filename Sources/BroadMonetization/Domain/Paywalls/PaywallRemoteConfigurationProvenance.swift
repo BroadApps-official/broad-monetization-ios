@@ -34,10 +34,10 @@ public enum PaywallRemoteConfigurationProvenance: String, Codable, Equatable, Se
         }
     }
 
-    /// A current provider response may authorize RU Billing even when the
+    /// A current provider response may authorize provider features even when the
     /// provider transparently substituted its managed cache. BroadMonetization's
     /// own persisted cache and legacy payloads remain unqualified.
-    public var authorizesRUBillingPresentation: Bool {
+    public var authorizesProviderFeatures: Bool {
         switch self {
         case .verifiedFreshRemote, .providerCacheFallbackPossible:
             true
@@ -49,7 +49,7 @@ public enum PaywallRemoteConfigurationProvenance: String, Codable, Equatable, Se
     @available(
         *,
         deprecated,
-        message: "Use authorizesSpecialOfferPresentation or authorizesRUBillingPresentation"
+        message: "Use authorizesSpecialOfferPresentation or authorizesProviderFeatures"
     )
     public var authorizesProviderManagedFeatureGates: Bool {
         authorizesSpecialOfferPresentation
@@ -58,7 +58,7 @@ public enum PaywallRemoteConfigurationProvenance: String, Codable, Equatable, Se
     @available(
         *,
         deprecated,
-        message: "Use the dedicated Special Offer or RU Billing capability"
+        message: "Use the dedicated Special Offer or provider features capability"
     )
     public var authorizesTimeSensitiveFeatures: Bool {
         self == .verifiedFreshRemote

@@ -77,8 +77,6 @@ ru_composition_factory_file="$platform_root/Sources/BroadMonetization/Applicatio
 adapty_configuration_file="$platform_root/Sources/BroadMonetization/Infrastructure/Adapty/AdaptyPlatformConfiguration.swift"
 adapty_activation_file="$platform_root/Sources/BroadMonetization/Infrastructure/Adapty/AdaptySDKActivationGate.swift"
 
-echo "Remote Config feature-gate contract matrix"
-
 require_pattern \
     "A current Adapty/provider payload may drive the Special Offer gate" \
     "$provenance_file" \
@@ -92,7 +90,7 @@ require_pattern \
 require_pattern \
     "A current Adapty/provider payload may drive the explicit RU Billing gate" \
     "$provenance_file" \
-    'authorizesRUBillingPresentation:[[:space:]]*Bool[[:space:]]*\{(?s:.*?)case[[:space:]]+\.verifiedFreshRemote,[[:space:]]+\.providerCacheFallbackPossible:(?s:.*?)[[:space:]]+true(?s:.*?)case[[:space:]]+\.platformCache,[[:space:]]+\.legacyUnqualified:(?s:.*?)[[:space:]]+false'
+    'authorizesProviderFeatures:[[:space:]]*Bool[[:space:]]*\{(?s:.*?)case[[:space:]]+\.verifiedFreshRemote,[[:space:]]+\.providerCacheFallbackPossible:(?s:.*?)[[:space:]]+true(?s:.*?)case[[:space:]]+\.platformCache,[[:space:]]+\.legacyUnqualified:(?s:.*?)[[:space:]]+false'
 
 require_pattern \
     "Only a received placement configuration is marked provider-managed" \
@@ -115,9 +113,9 @@ require_pattern \
     'specialOffer:[[:space:]]*provenance\.authorizesSpecialOfferPresentation[[:space:]]*\?[[:space:]]*specialOffer[[:space:]]*:[[:space:]]*nil'
 
 require_pattern \
-    "Remote configuration resolves RU authority through its independent capability" \
+    "Remote configuration resolves provider authority through its independent capability" \
     "$configuration_file" \
-    'authorizesRUBillingPresentation:[[:space:]]*provenance(?s:.*?)\.authorizesRUBillingPresentation'
+    'authorizesProviderFeatures:[[:space:]]*provenance(?s:.*?)\.authorizesProviderFeatures'
 
 require_pattern \
     "Special-offer resolution checks its dedicated provenance capability" \
@@ -205,102 +203,6 @@ require_pattern \
     'parseStrictBool\(rawValue\)(?s:.*?)isFoundationBoolean\(value\)'
 
 require_pattern \
-    "RU Billing requires provider authorization or a live opt-in outage capability" \
-    "$ru_gate_file" \
-    'case[[:space:]]+\.enabled:(?s:.*?)guard[[:space:]]+remoteConfiguration\.authorizesRUBillingPresentation[[:space:]]*\|\|[[:space:]]*remoteConfiguration\.authorizesRUProviderFallback[[:space:]]+else'
-
-require_pattern \
-    "Explicit false remains a RU Billing kill switch" \
-    "$ru_gate_file" \
-    'case[[:space:]]+\.disabled:[[:space:]]*return[[:space:]]+\.remoteFlagDisabled'
-
-require_pattern \
-    "Malformed ru_pay remains fail-closed" \
-    "$ru_gate_file" \
-    'case[[:space:]]+\.invalid:[[:space:]]*return[[:space:]]+\.remoteFlagInvalid'
-
-require_pattern \
-    "Missing ru_pay without a live outage capability remains fail-closed" \
-    "$ru_gate_file" \
-    'case[[:space:]]+\.absent:(?s:.*?)return[[:space:]]+\.remoteFlagAbsent'
-
-require_pattern \
-    "RU Billing accepts a Russian Storefront or Russian iPhone region" \
-    "$ru_gate_file" \
-    'storefront\?\.isRussian[[:space:]]*==[[:space:]]*true(?s:.*?)\|\|[[:space:]]*deviceContextProvider\.currentContext\(\)\.isRussian'
-
-forbid_pattern \
-    "Language never enables RU Billing" \
-    '(primaryLanguageIdentifier[[:space:]]*==|primaryLanguageIdentifier\?\.hasPrefix|preferredLanguages)' \
-    "$ru_device_context_file" \
-    "$platform_root/Sources/BroadMonetization/Infrastructure/RUBilling/SystemRUBillingDeviceContextProvider.swift"
-
-require_pattern \
-    "Checkout method resolution loads Storefront before evaluating the RU gate" \
-    "$ru_resolution_file" \
-    'storefrontRepository\.currentStorefront\(\)(?s:.*?)gate\.availabilityReason\((?s:.*?)storefront:[[:space:]]*storefront'
-
-require_pattern \
-    "Final checkout rechecks the current Storefront" \
-    "$ru_checkout_flow_file" \
-    'storefrontRepository\.currentStorefront\(\)(?s:.*?)gate\.allows\((?s:.*?)storefront:[[:space:]]*storefront'
-
-require_pattern \
-    "Flat backend catalog preserves the response array one-to-one" \
-    "$ru_flat_catalog_file" \
-    'products:[[:space:]]*response\.products\.map\(makeDomainProduct\)'
-
-forbid_pattern \
-    "Flat backend catalog does not sort, deduplicate or truncate products" \
-    '\.(sorted|filter|compactMap|prefix)\(|Dictionary\(' \
-    "$ru_flat_catalog_file"
-
-require_pattern \
-    "RU catalog preserves the backend Special Offer marker" \
-    "$ru_catalog_product_file" \
-    'public[[:space:]]+let[[:space:]]+isSpecialOffer:[[:space:]]*Bool'
-
-require_pattern \
-    "Ordinary RU product matching excludes marked Special Offer rows" \
-    "$ru_catalog_matcher_file" \
-    '\$0\.kind[[:space:]]*==[[:space:]]*kind[[:space:]]*&&[[:space:]]*!\$0\.isSpecialOffer'
-
-require_pattern \
-    "RU Special Offer matching requires the explicit backend marker" \
-    "$ru_catalog_matcher_file" \
-    '\$0\.isSpecialOffer(?s:.*?)catalogProductID\.rawValue[[:space:]]*==[[:space:]]*requestedID'
-
-require_pattern \
-    "RU Billing exposes typed modes for custom-named Debug configurations" \
-    "$ru_debug_override_file" \
-    'case[[:space:]]+followAdapty(?s:.*?)case[[:space:]]+forceEnabled(?s:.*?)case[[:space:]]+forceDisabled'
-
-require_pattern \
-    "RU Billing production store rejects manual overrides by default" \
-    "$ru_debug_override_file" \
-    'allowsManualOverrides:[[:space:]]*Bool[[:space:]]*=[[:space:]]*false(?s:.*?)mode[[:space:]]*=[[:space:]]*allowsManualOverrides[[:space:]]*\?[[:space:]]*initialMode[[:space:]]*:[[:space:]]*\.followAdapty(?s:.*?)self\.mode[[:space:]]*=[[:space:]]*allowsManualOverrides[[:space:]]*\?[[:space:]]*mode[[:space:]]*:[[:space:]]*\.followAdapty'
-
-require_pattern \
-    "RU Billing gate consumes the locked store before the Adapty decision" \
-    "$ru_gate_file" \
-    'switch[[:space:]]+debugOverrideStore\.currentMode(?s:.*?)case[[:space:]]+\.forceEnabled:(?s:.*?)case[[:space:]]+\.forceDisabled:(?s:.*?)switch[[:space:]]+remoteConfiguration\.ruBillingGateDecision'
-
-require_pattern \
-    "RU Billing logs the resolved availability reason without payload data" \
-    "$ru_resolution_file" \
-    '\.ruBillingAvailabilityEvaluated\([[:space:]]*reason:[[:space:]]*reason\.logValue,[[:space:]]*methodCount:[[:space:]]*methods\.count'
-
-require_pattern \
-    "RU Billing composition owns one shared Debug override store" \
-    "$ru_composition_models_file" \
-    'public[[:space:]]+let[[:space:]]+debugOverrideStore:[[:space:]]*RUBillingDebugOverrideStore'
-
-require_pattern \
-    "Method resolution and final checkout recheck share the Debug override" \
-    "$ru_composition_factory_file" \
-    'let[[:space:]]+gate[[:space:]]*=[[:space:]]*RUBillingGate\((?s:.*?)debugOverrideStore:[[:space:]]*dependencies\.debugOverrideStore(?s:.*?)ResolveCheckoutMethodsUseCase\((?s:.*?)debugOverrideStore:[[:space:]]*dependencies\.debugOverrideStore'
-
-require_pattern \
     "Adapty configuration accepts only a typed local fallback file URL" \
     "$adapty_configuration_file" \
     'public[[:space:]]+let[[:space:]]+fallbackFileURL:[[:space:]]*URL\?(?s:.*?)\$0\.isFileURL[[:space:]]*&&[[:space:]]*\$0\.pathExtension\.lowercased\(\)[[:space:]]*==[[:space:]]*"json"'
@@ -311,13 +213,13 @@ require_pattern \
     'Adapty\.setFallback\(fileURL:[[:space:]]*fallbackFileURL\)(?s:.*?)Adapty\.activate'
 
 require_pattern \
-    "Last-valid storage never resurrects old RU or special-offer gates" \
+    "Last-valid storage never resurrects old provider or special-offer gates" \
     "$last_valid_file" \
-    'ruBillingGateDecision:[[:space:]]*parsed\.ruBillingGateDecision(?s:.*?)specialOffer:[[:space:]]*parsed\.specialOffer'
+    'specialOffer:[[:space:]]*parsed\.specialOffer(?s:.*?)providerConfigurations:[[:space:]]*parsed\.providerConfigurations'
 
 forbid_pattern \
-    "Last-valid storage contains no previous RU/special gate fallback" \
-    'previous\?\.(ruBillingGateDecision|isRUBillingEnabled|specialOffer)' \
+    "Last-valid storage contains no previous provider/special gate fallback" \
+    'previous\?\.(providerConfigurations|specialOffer)' \
     "$last_valid_file"
 
 require_pattern \
@@ -362,12 +264,6 @@ forbid_pattern \
     '(?i)\b(ExperimentAssignment|CohortAssignment|SegmentAssignment|ExperimentRandomizer|CohortRandomizer|ClientSideRandomizer|arc4random|randomElement)\b' \
     "$platform_root/Sources/BroadMonetization" \
     --glob '*.swift'
-
-if ((failure_count > 0)); then
-    echo "Remote Config feature-gate contract matrix failed: $failure_count item(s)."
-    exit 1
-fi
-
+if ((failure_count > 0)); then exit 1; fi
 bash "$platform_root/Scripts/check_special_offer_runtime_contract.sh"
-
-echo "Remote Config feature-gate contract matrix passed."
+echo "Remote configuration contracts passed."

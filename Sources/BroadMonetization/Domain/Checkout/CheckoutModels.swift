@@ -1,108 +1,38 @@
 import BroadCore
 import Foundation
 
-public enum CheckoutMethod: String, Codable, CaseIterable, Equatable, Sendable {
-    case apple
-    case sbp
-    case card
-}
-
-public enum RUBillingAvailabilityReason: String, Equatable, Sendable {
-    case available
-    case productNotEligible = "product-not-eligible"
-    case hostDisabled = "host-disabled"
-    case debugForcedEnabled = "debug-forced-enabled"
-    case debugForcedDisabled = "debug-forced-disabled"
-    case remoteFlagAbsent = "remote-flag-absent"
-    case remoteFlagDisabled = "remote-flag-disabled"
-    case remoteFlagInvalid = "remote-flag-invalid"
-    case unqualifiedRemoteConfiguration = "unqualified-remote-configuration"
-    case deviceContextNotRussian = "device-context-not-russian"
-    case catalogUnavailable = "catalog-unavailable"
-    case productNotMatched = "product-not-matched"
-    case methodsUnavailable = "methods-unavailable"
-}
-
-extension RUBillingAvailabilityReason {
-    var allowsRUBilling: Bool {
-        self == .available || self == .debugForcedEnabled
+public struct CheckoutMethod: RawRepresentable, Codable, Hashable, Sendable, ValidatedMonetizationIdentifier {
+    public let rawValue: String
+    public init(rawValue: String) {
+        precondition(MonetizationIdentifierPolicy.isValid(rawValue))
+        self.rawValue = rawValue
     }
+
+    public static let apple = Self(rawValue: "apple")
 }
 
+/// Provider metadata is interpreted only by the explicitly installed provider.
 public struct CheckoutMethodsResolution: Equatable, Sendable {
     public let methods: [CheckoutMethod]
     public let storefront: Storefront?
-    public let ruBillingAvailability: RUBillingAvailabilityReason
-    /// Exact backend row used for RU price/currency presentation and checkout.
-    public let ruProduct: RUCatalogProduct?
-
-    public init(
-        methods: [CheckoutMethod],
-        storefront: Storefront?,
-        ruBillingAvailability: RUBillingAvailabilityReason,
-        ruProduct: RUCatalogProduct? = nil
-    ) {
-        precondition(
-            Set(methods).count == methods.count,
-            "Available checkout methods must not contain duplicates"
-        )
-
+    public let providerID: String?
+    public let providerData: Data?
+    public init(methods: [CheckoutMethod], storefront: Storefront?, providerData: Data? = nil, providerID: String? = nil) {
+        precondition(Set(methods).count == methods.count)
         self.methods = methods
         self.storefront = storefront
-        self.ruBillingAvailability = ruBillingAvailability
-        self.ruProduct = ruProduct
-    }
-
-    /// Keeps existing host adapters source-compatible. New adapters should
-    /// pass an explicit typed reason so Debug Status and OSLog can explain the
-    /// decision precisely.
-    public init(
-        methods: [CheckoutMethod],
-        storefront: Storefront?
-    ) {
-        self.init(
-            methods: methods,
-            storefront: storefront,
-            ruBillingAvailability: methods.contains(.sbp) || methods.contains(.card)
-                ? .available
-                : .hostDisabled,
-            ruProduct: nil
-        )
-    }
-}
-
-/// Extra information collected by the UI before a non-App-Store checkout.
-/// Apple purchases intentionally use `.standard` and never receive RU legal or
-/// receipt fields.
-public struct RUCheckoutDetails: Codable, Equatable, Sendable {
-    public let acceptsOfferAndPersonalDataProcessing: Bool
-    public let acceptsRecurringCharge: Bool
-    public let receiptEmail: String?
-
-    public init(
-        acceptsOfferAndPersonalDataProcessing: Bool,
-        acceptsRecurringCharge: Bool,
-        receiptEmail: String? = nil
-    ) {
-        self.acceptsOfferAndPersonalDataProcessing =
-            acceptsOfferAndPersonalDataProcessing
-        self.acceptsRecurringCharge = acceptsRecurringCharge
-        let normalizedEmail = receiptEmail?.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-        self.receiptEmail = normalizedEmail?.isEmpty == false
-            ? normalizedEmail
-            : nil
+        self.providerID = providerID
+        self.providerData = providerData
     }
 }
 
 public struct CheckoutOptions: Codable, Equatable, Sendable {
     public static let standard = CheckoutOptions()
-
-    public let ruDetails: RUCheckoutDetails?
-
-    public init(ruDetails: RUCheckoutDetails? = nil) {
-        self.ruDetails = ruDetails
+    public let providerID: String?
+    public let providerData: Data?
+    public init(providerID: String? = nil, providerData: Data? = nil) {
+        self.providerID = providerID
+        self.providerData = providerData
     }
 }
 
@@ -276,7 +206,7 @@ public enum PurchaseOutcome: Equatable, Sendable {
 }
 
 /// Provider-neutral checkout result consumed by paywall presentation.
-/// An RU payment page that merely opened resolves as `.pending`; only an
+/// An external payment page that merely opened resolves as `.pending`; only an
 /// authoritative entitlement refresh may produce `.activated`.
 public enum CheckoutSelectedProductOutcome: Equatable, Sendable {
     case activated(EntitlementSnapshot)

@@ -3,20 +3,21 @@ import Foundation
 
 public struct RemotePaywallConfigurationParser: Sendable {
     private let keys: RemoteConfigKeyRegistry
+    private let providers: [any ProviderRemoteConfigParserProtocol]
 
-    public init(keys: RemoteConfigKeyRegistry = .broadApps) {
+    public init(keys: RemoteConfigKeyRegistry = .broadApps, providers: [any ProviderRemoteConfigParserProtocol] = []) {
+        precondition(Set(providers.map(\.providerID)).count == providers.count)
         self.keys = keys
+        self.providers = providers
     }
 
     var fallbackKeyGroups: [[String]] {
         [
-            keys.ruBillingGate, keys.automaticRevenueView, keys.hardPaywall,
+            keys.automaticRevenueView, keys.hardPaywall,
             keys.closeDelay, keys.uiVariant, keys.specialOfferGate,
             keys.crossedPrice, keys.crossedValue, keys.priceMultiplier,
-            keys.specialOfferBadge, keys.specialOfferPeriodText,
-            // Keep an A/B assignment together; never combine different variants.
-            [keys.ruExperimentCode, keys.ruSegmentCode]
-        ]
+            keys.specialOfferBadge, keys.specialOfferPeriodText
+        ] + providers.flatMap(\.fallbackKeyGroups)
     }
 
     public func parse(
@@ -26,7 +27,6 @@ public struct RemotePaywallConfigurationParser: Sendable {
             .flatMap(parseAccessPolicy)
 
         return RemotePaywallConfiguration(
-            ruBillingGateDecision: parseRUBillingGate(in: dictionary),
             isAutomaticRevenueViewEnabled: value(
                 in: dictionary,
                 aliases: keys.automaticRevenueView
@@ -39,59 +39,14 @@ public struct RemotePaywallConfigurationParser: Sendable {
                 .flatMap(validIdentifier)
                 .map(PaywallUIVariantID.init(rawValue:)),
             specialOffer: parseSpecialOffer(dictionary),
-            authorizesRUBillingPresentation: false,
-            ruExperiment: parseRUExperiment(dictionary)
+            providerConfigurations: Dictionary(uniqueKeysWithValues: providers.compactMap { provider in
+                provider.parse(dictionary).map { (provider.providerID, $0) }
+            })
         )
     }
 }
 
 private extension RemotePaywallConfigurationParser {
-    func parseRUExperiment(_ dictionary: [String: Any]) -> RUExperimentMetadata? {
-        // Codes are strict strings from the selected configuration. In particular,
-        // NSNumber/Bool and variation IDs are not alternate segment codes.
-        guard let experiment = dictionary[keys.ruExperimentCode] as? String,
-              let segment = dictionary[keys.ruSegmentCode] as? String
-        else {
-            return nil
-        }
-        return RUExperimentMetadata(experimentCode: experiment, segmentCode: segment)
-    }
-
-    func parseRUBillingGate(
-        in dictionary: [String: Any]
-    ) -> RemoteRUBillingGateDecision {
-        var didFindKey = false
-        var didFindInvalidValue = false
-        var parsedValues: [Bool] = []
-
-        for alias in keys.ruBillingGate where dictionary.keys.contains(alias) {
-            didFindKey = true
-            guard let rawValue = dictionary[alias],
-                  let parsed = parseBool(rawValue)
-            else {
-                didFindInvalidValue = true
-                continue
-            }
-            parsedValues.append(parsed)
-        }
-
-        guard didFindKey else {
-            return .absent
-        }
-        // An explicit kill switch always wins, including over a malformed or
-        // conflicting alias with higher lookup priority.
-        if parsedValues.contains(false) {
-            return .disabled
-        }
-        guard !didFindInvalidValue,
-              !parsedValues.isEmpty,
-              parsedValues.allSatisfy({ $0 })
-        else {
-            return .invalid
-        }
-        return .enabled
-    }
-
     func validIdentifier(_ value: String) -> String? {
         MonetizationIdentifierPolicy.isValid(value) ? value : nil
     }

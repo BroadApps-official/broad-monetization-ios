@@ -24,7 +24,7 @@ public protocol RemoteConfigRepositoryProtocol: Sendable {
 
 public protocol StorefrontRepositoryProtocol: Sendable {
     /// Current App Store storefront. A Russian value is one positive regional
-    /// signal; it never replaces the mandatory explicit `ru_pay = true`.
+    /// signal; it never replaces the installed provider's authorization rules.
     func currentStorefront() async -> StorefrontResolution
 }
 

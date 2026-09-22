@@ -30,4 +30,3 @@ do
 done
 
 echo "Release metadata is consistent for $expected_version."
-

@@ -1,6 +1,5 @@
 public struct RemoteConfigKeyRegistry: Sendable {
     public static let broadApps = RemoteConfigKeyRegistry(
-        ruBillingGate: ["ru_pay", "pay", "russian_payment", "ru_billing"],
         automaticRevenueView: [
             "auto_revenue_view",
             "auto_revnue_view",
@@ -50,7 +49,6 @@ public struct RemoteConfigKeyRegistry: Sendable {
         ]
     )
 
-    public let ruBillingGate: [String]
     public let automaticRevenueView: [String]
     public let hardPaywall: [String]
     public let closeDelay: [String]
@@ -63,11 +61,8 @@ public struct RemoteConfigKeyRegistry: Sendable {
     public let priceMultiplier: [String]
     public let specialOfferBadge: [String]
     public let specialOfferPeriodText: [String]
-    public let ruExperimentCode: String
-    public let ruSegmentCode: String
 
     public init(
-        ruBillingGate: [String],
         automaticRevenueView: [String] = ["auto_revenue_view"],
         hardPaywall: [String],
         closeDelay: [String],
@@ -79,12 +74,9 @@ public struct RemoteConfigKeyRegistry: Sendable {
         crossedValue: [String],
         priceMultiplier: [String],
         specialOfferBadge: [String],
-        specialOfferPeriodText: [String],
-        ruExperimentCode: String = "experiment_code",
-        ruSegmentCode: String = "segment_code"
+        specialOfferPeriodText: [String]
     ) {
         let groups = [
-            ruBillingGate,
             automaticRevenueView,
             hardPaywall,
             closeDelay,
@@ -103,7 +95,6 @@ public struct RemoteConfigKeyRegistry: Sendable {
             "Every remote-config field requires non-empty, unique aliases"
         )
 
-        self.ruBillingGate = ruBillingGate
         self.automaticRevenueView = automaticRevenueView
         self.hardPaywall = hardPaywall
         self.closeDelay = closeDelay
@@ -116,11 +107,5 @@ public struct RemoteConfigKeyRegistry: Sendable {
         self.priceMultiplier = priceMultiplier
         self.specialOfferBadge = specialOfferBadge
         self.specialOfferPeriodText = specialOfferPeriodText
-        precondition(
-            !ruExperimentCode.isEmpty && !ruSegmentCode.isEmpty && ruExperimentCode != ruSegmentCode,
-            "RU experiment keys must be nonempty and distinct"
-        )
-        self.ruExperimentCode = ruExperimentCode
-        self.ruSegmentCode = ruSegmentCode
     }
 }

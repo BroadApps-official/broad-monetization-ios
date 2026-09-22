@@ -7,23 +7,18 @@ public struct RecoverCustomerAccessUseCase:
     private let refreshEntitlement: any RefreshEntitlementUseCaseProtocol
     private let recoverTokenAccount:
         (any RecoverTokenAccountUseCaseProtocol)?
-    private let loadRUSubscription:
-        (any LoadRUSubscriptionStatusUseCaseProtocol)?
 
     public init(
         subject: EntitlementSubject,
         activate: any ActivateMonetizationUseCaseProtocol,
         refreshEntitlement: any RefreshEntitlementUseCaseProtocol,
         recoverTokenAccount:
-        (any RecoverTokenAccountUseCaseProtocol)? = nil,
-        loadRUSubscription:
-        (any LoadRUSubscriptionStatusUseCaseProtocol)? = nil
+        (any RecoverTokenAccountUseCaseProtocol)? = nil
     ) {
         self.subject = subject
         self.activate = activate
         self.refreshEntitlement = refreshEntitlement
         self.recoverTokenAccount = recoverTokenAccount
-        self.loadRUSubscription = loadRUSubscription
     }
 
     public func callAsFunction() async -> CustomerAccessRecoverySnapshot {
@@ -32,13 +27,11 @@ public struct RecoverCustomerAccessUseCase:
             policy: .startNewGeneration
         )
         async let tokens = recoverTokens()
-        async let ruSubscription = recoverRUSubscription()
 
         return await CustomerAccessRecoverySnapshot(
             activation: activation,
             entitlement: entitlement,
-            tokens: tokens,
-            ruSubscription: ruSubscription
+            tokens: tokens
         )
     }
 }
@@ -60,23 +53,6 @@ private extension RecoverCustomerAccessUseCase {
         switch await recoverTokenAccount() {
         case let .restored(balance):
             return .restored(balance)
-        case let .unavailable(error):
-            return .unavailable(error)
-        }
-    }
-
-    func recoverRUSubscription()
-        async -> CustomerAccessRecoveryComponent<RUSubscriptionManagementStatus> {
-        guard let loadRUSubscription else {
-            return .notConfigured
-        }
-        guard hasStableAccount else {
-            return .authenticationRequired
-        }
-
-        switch await loadRUSubscription() {
-        case let .loaded(status):
-            return .restored(status)
         case let .unavailable(error):
             return .unavailable(error)
         }

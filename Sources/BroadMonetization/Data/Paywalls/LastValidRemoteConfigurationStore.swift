@@ -3,7 +3,7 @@ public actor LastValidRemoteConfigurationStore {
 
     public init() {}
 
-    /// Missing ordinary UI fields retain their last valid value. `ru_pay` and
+    /// Missing ordinary UI fields retain their last valid value. provider extensions and
     /// `special_offer` are different: only the current provider payload may
     /// enable them, so an absent, malformed, or false value must never be
     /// resurrected from a previous response.
@@ -13,15 +13,13 @@ public actor LastValidRemoteConfigurationStore {
     ) -> RemotePaywallConfiguration {
         let previous = configurations[placementID]
         let resolved = RemotePaywallConfiguration(
-            ruBillingGateDecision: parsed.ruBillingGateDecision,
             isAutomaticRevenueViewEnabled: parsed.isAutomaticRevenueViewEnabled
                 ?? previous?.isAutomaticRevenueViewEnabled,
             accessPolicy: parsed.accessPolicy ?? previous?.accessPolicy,
             closeDelay: parsed.closeDelay ?? previous?.closeDelay,
             uiVariantID: parsed.uiVariantID ?? previous?.uiVariantID,
             specialOffer: parsed.specialOffer,
-            authorizesRUBillingPresentation: false,
-            ruExperiment: parsed.ruExperiment
+            providerConfigurations: parsed.providerConfigurations
         )
         configurations[placementID] = resolved
         return resolved

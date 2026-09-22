@@ -5,6 +5,13 @@ public struct SubjectBoundAuthorization: Sendable {
 
     let headerValue: String
 
+    /// Applies the credential to a request without exposing it as a loggable field.
+    public func applying(to request: URLRequest) -> URLRequest {
+        var authorized = request
+        authorized.setValue(headerValue, forHTTPHeaderField: "Authorization")
+        return authorized
+    }
+
     /// Creates a subject-bound RFC 6750 bearer credential.
     ///
     /// The initializer returns `nil` for malformed credentials instead of crashing the app.
@@ -108,15 +115,15 @@ public struct SubjectAuthorizationBinding: Sendable {
         self.epochID = epochID
     }
 
-    func isCurrent() -> Bool {
+    public func isCurrent() -> Bool {
         session.isCurrent(subject: subject, epochID: epochID)
     }
 
-    var cachePartition: String {
+    public var cachePartition: String {
         "authorization-epoch-\(epochID.uuidString.lowercased())"
     }
 
-    var cacheStoragePartition: String {
+    public var cacheStoragePartition: String {
         "authorization-session"
     }
 }
@@ -161,16 +168,16 @@ extension SubjectAuthorizationBinding: CustomStringConvertible, CustomDebugStrin
 
 /// A transient identity for one exact subject-bound credential.
 ///
-/// RU billing carries this proof across suspension points so a response created
+/// A backend adapter carries this proof across suspension points so a response created
 /// for an old login session cannot be accepted after logout, account switch or
 /// credential rotation. Its private value remains transient, redacted and
 /// module-internal; it is never persisted or logged.
-struct SubjectAuthorizationProof: Sendable {
-    let subject: EntitlementSubject
+public struct SubjectAuthorizationProof: Sendable {
+    public let subject: EntitlementSubject
     private let binding: SubjectAuthorizationBinding
     private let headerValue: String
 
-    init(
+    public init(
         authorization: SubjectBoundAuthorization,
         binding: SubjectAuthorizationBinding
     ) {
@@ -183,7 +190,7 @@ struct SubjectAuthorizationProof: Sendable {
         headerValue = authorization.headerValue
     }
 
-    func matches(_ authorization: SubjectBoundAuthorization) -> Bool {
+    public func matches(_ authorization: SubjectBoundAuthorization) -> Bool {
         binding.isCurrent()
             && subject == authorization.subject
             && headerValue == authorization.headerValue
@@ -192,15 +199,15 @@ struct SubjectAuthorizationProof: Sendable {
 
 extension SubjectAuthorizationProof: CustomStringConvertible, CustomDebugStringConvertible,
     CustomReflectable {
-    var description: String {
+    public var description: String {
         "SubjectAuthorizationProof(<redacted>)"
     }
 
-    var debugDescription: String {
+    public var debugDescription: String {
         description
     }
 
-    var customMirror: Mirror {
+    public var customMirror: Mirror {
         Mirror(
             self,
             children: ["credential": "<redacted>"],
@@ -220,7 +227,7 @@ public protocol SubjectAuthorizationProviderProtocol: Sendable {
     ) async -> SubjectBoundAuthorization?
 }
 
-extension SubjectAuthorizationProviderProtocol {
+public extension SubjectAuthorizationProviderProtocol {
     func stillOwns(_ proof: SubjectAuthorizationProof) async -> Bool {
         guard proof.isSessionCurrent,
               !Task.isCancelled,
@@ -232,7 +239,7 @@ extension SubjectAuthorizationProviderProtocol {
     }
 }
 
-extension SubjectAuthorizationProof {
+public extension SubjectAuthorizationProof {
     var isSessionCurrent: Bool {
         binding.isCurrent()
     }

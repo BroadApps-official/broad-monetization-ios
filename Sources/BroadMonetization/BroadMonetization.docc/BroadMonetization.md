@@ -1,22 +1,5 @@
 # ``BroadMonetization``
 
-RU checkout can use fresh account policy without a payment-status endpoint.
-Omit ``RUBillingEndpointConfiguration/paymentStatus`` to select this mode.
-``RUAccountCheckoutExpectation`` persists the token balance captured before checkout.
-Call ``RUPaymentReturnCoordinator/applicationDidBecomeActive()`` after payment-page dismissal or foreground return.
-``RUPaymentReturnOutcome/tokensCredited(_:)`` updates balance without granting premium.
-After bounded account-policy polling, ``RUPaymentReturnOutcome/waitingCompleted``
-releases the local wait without cancelling the payment. The last attempt is
-retained as ``PendingRUCheckoutState/awaitingReconciliation(_:)`` until account
-reconciliation or a new checkout replaces it. Errors remain unavailable, but
-also finish the local wait when persistence and identity checks succeed.
-Before each account-policy checkout, fresh subscription/balance state is required.
-Payment-status mode retains its durable blocker until backend resolution.
-For optional server cancellation of an explicitly abandoned checkout, inject
-``RUCheckoutTerminationClientProtocol`` and call
-``RUPendingCheckoutTerminationCoordinator/terminatePendingCheckout()``. The
-attempt is removed only after the backend returns a terminal status.
-
 Provider-neutral monetization contracts and production adapters for BroadApps iPhone applications.
 
 Since 2.0.1, Remote Config comes from the selected paywall of the requested
@@ -27,7 +10,7 @@ Products, variation, purchase handles and shown analytics belong to the actual
 paywall. Token IDs try the configured spelling first, then token/tokens when
 no paywall is returned. Neither spelling falls back to subscription products.
 Custom repositories preserve the same configuration contract and report provenance
-honestly; an SDK response that can use cache does not prove RU freshness.
+honestly; an SDK response that can use cache does not prove fresh backend state.
 
 Since 4.0.1, consumable fulfillment captures the verified StoreKit JWS directly
 from the Adapty/StoreKit purchase result before provider auto-finish can remove it
@@ -84,36 +67,7 @@ restore a cleared cycle after relaunch; storage failures remain unavailable.
 - ``TokenFulfillmentOutcome``
 - ``TokenFulfillmentRepositoryProtocol``
 - ``AppleTransactionUpdatesBridge``
-- ``RUBillingGate``
-- ``RUBillingDeviceContext``
 - ``Storefront``
-- ``RUCatalogProduct``
-- ``RUCatalogSections``
-- ``ResolveRUCatalogProductUseCase``
-- ``ResolveRUSpecialOfferProductUseCase``
-- ``ResolveRUSpecialOfferProductUseCase``
-- ``FlatRUCatalogResponseDecoder``
-- ``RUBillingWireAdapters``
-- ``RUCheckoutTerminationClientProtocol``
-- ``RUPendingCheckoutTerminationCoordinator``
-- ``RUPendingCheckoutTerminationOutcome``
-
-### RU Billing experiments
-
-- ``RUExperimentMetadata``
-- ``RUExperimentEvent``
-- ``RUExperimentAssignedSegment``
-- ``RUExperimentAssignOutcome``
-- ``RUExperimentShownOutcome``
-- ``RUExperimentTrackingOutcome``
-- ``RUExperimentRepositoryProtocol``
-- ``RUExperimentHTTPConfiguration``
-- ``URLSessionRUExperimentRepository``
-- ``RUBillingExperimentTracker``
-- ``RUExperimentCatalogSelector``
-- ``RUExperimentCatalogSelection``
-- ``RUExperimentCatalogSelectionSource``
-- ``RUExperimentCatalogKind``
 
 ### Composition
 
@@ -123,30 +77,13 @@ restore a cleared cycle after relaunch; storage failures remain unavailable.
 - ``AdaptyMonetizationFactory``
 - ``AdaptyAnonymousIdentityProvider``
 
-### RU provider outage fallback
+### Optional providers
 
-Explicitly opt in with ``LoadPaywallWithRUFallbackUseCase`` or the composition
-factory. A Russian Storefront or device region can qualify when the provider
-returns no configuration or cannot load products. A received false, invalid or
-absent flag closes this path. No capability is persisted; checkout and Premium
-still require the backend. Existing APIs keep their previous behavior.
+RU implementation and UI live in the separate BroadRUBilling package. Base modules do not import it.
 
-- ``LoadPaywallWithRUFallbackUseCase``
-- ``RUFallbackPaywallRepositoryProtocol``
-- ``RUFallbackPaywallAttempt``
-- ``FreshRUCatalogRepositoryProtocol``
-
-`tokens` and `special_offer` keep their own products and prices. Neither loader
-substitutes `main` or the ordinary RU subscription catalog for these placements.
-
-Since 1.5.3, a successful empty provider product array also triggers the opt-in
-RU catalog when either the device region or Storefront is Russian. A received
-false, missing or invalid `ru_pay` remains a prohibition.
-
-Since 1.5.4, the opt-in loader uses ``RUExperimentCatalogSelector`` to display
-all default subscriptions when the provider is unavailable, empty, or has no
-exact backend ID matches. Without defaults, the complete subscription section
-remains the compatibility fallback. Any exact match keeps the provider payload;
-defaults are never attached to a mismatched Apple card. Live nonempty provider
-products require the existing fresh RU gate before backend selection. Selected
-backend rows retain their original indices and terms for fresh checkout validation.
+- ``AppleCheckoutMethodsUseCase``
+- ``CheckoutSelectedProductUseCase``
+- ``PaywallLoaderFactoryProtocol``
+- ``PaywallViewReportingPolicyProtocol``
+- ``ProviderRemoteConfigParserProtocol``
+- ``ProviderPaywallAttemptRepositoryProtocol``

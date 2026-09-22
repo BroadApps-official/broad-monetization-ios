@@ -3,7 +3,7 @@ public struct EntitlementSubject: Equatable, Hashable, Sendable {
         cacheKeyComponent: "anonymous"
     )
 
-    let cacheKeyComponent: String
+    public let cacheKeyComponent: String
 
     public static func fingerprinted(
         _ fingerprint: EntitlementSubjectFingerprint

@@ -4,7 +4,7 @@ import BroadCore
 /// SDK, catalog or HTTP details to presentation.
 public actor CheckoutSelectedProductUseCase: CheckoutSelectedProductUseCaseProtocol {
     private let applePurchase: any PurchaseSelectedProductUseCaseProtocol
-    private let ruCheckout: any StartSelectedRUCheckoutUseCaseProtocol
+    private let additionalCheckout: (any CheckoutSelectedProductUseCaseProtocol)?
     private let inProgressError: AppError
     private let unsupportedProductError: AppError
 
@@ -12,13 +12,12 @@ public actor CheckoutSelectedProductUseCase: CheckoutSelectedProductUseCaseProto
 
     public init(
         applePurchase: any PurchaseSelectedProductUseCaseProtocol,
-        ruCheckout: any StartSelectedRUCheckoutUseCaseProtocol =
-            DisabledSelectedRUCheckoutUseCase(),
+        additionalCheckout: (any CheckoutSelectedProductUseCaseProtocol)? = nil,
         inProgressError: AppError? = nil,
         unsupportedProductError: AppError? = nil
     ) {
         self.applePurchase = applePurchase
-        self.ruCheckout = ruCheckout
+        self.additionalCheckout = additionalCheckout
         self.inProgressError = inProgressError ?? Self.defaultInProgressError
         self.unsupportedProductError = unsupportedProductError
             ?? Self.defaultUnsupportedProductError
@@ -31,7 +30,7 @@ public actor CheckoutSelectedProductUseCase: CheckoutSelectedProductUseCaseProto
         options: CheckoutOptions
     ) async -> CheckoutSelectedProductOutcome {
         // This is the provider-routing boundary, so direct callers cannot
-        // bypass UI validation and reach either Apple or RU checkout with an
+        // bypass UI validation and reach either any checkout with an
         // unpriced/unsupported generic product.
         guard selection.product.isEligibleForGenericPurchase else {
             return .failed(unsupportedProductError)
@@ -51,15 +50,9 @@ public actor CheckoutSelectedProductUseCase: CheckoutSelectedProductUseCaseProto
                     using: .apple
                 )
             )
-        case .sbp, .card:
-            return await map(
-                ruCheckout(
-                    selection,
-                    using: checkoutMethod,
-                    remoteConfiguration: remoteConfiguration,
-                    options: options
-                )
-            )
+        default:
+            guard let additionalCheckout else { return .failed(unsupportedProductError) }
+            return await additionalCheckout(selection, using: checkoutMethod, remoteConfiguration: remoteConfiguration, options: options)
         }
     }
 }
@@ -92,15 +85,6 @@ private extension CheckoutSelectedProductUseCase {
         case .pending:
             .pending
         case let .failed(error):
-            .failed(error)
-        }
-    }
-
-    func map(_ outcome: RUCheckoutFlowOutcome) -> CheckoutSelectedProductOutcome {
-        switch outcome {
-        case .opened:
-            .pending
-        case let .unavailable(error), let .failed(error):
             .failed(error)
         }
     }
