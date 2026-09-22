@@ -56,7 +56,7 @@ actor StartSelectedRUCheckoutUseCase:
     ) async -> RUCheckoutFlowOutcome {
         let eligible = tokenOnly
             ? usesAccountPolicy && selection.product.kind == .consumable && selection.product.price != nil
-            && selection.requestedPlacementID != .specialOffer
+            && !selection.requestedPlacementID.isSpecialOfferPlacement
             : selection.product.isEligibleForGenericPurchase
         guard eligible else {
             return .unavailable(RUBillingSafeErrors.checkoutNotEligible)
@@ -116,7 +116,7 @@ actor StartSelectedRUCheckoutUseCase:
         if tokenOnly {
             return matcher.match(product: selection.product, kind: .tokens, in: catalog)
         }
-        return selection.requestedPlacementID == .specialOffer
+        return selection.requestedPlacementID.isSpecialOfferPlacement
             ? matcher.matchSpecialOfferProduct(selection.product, in: catalog)
             : matcher.matchPremiumEntitlementProduct(selection.product, in: catalog)
     }

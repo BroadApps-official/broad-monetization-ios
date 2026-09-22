@@ -152,7 +152,7 @@ enum RUProviderFallbackProbe {
     }
 
     static func dedicatedPlacementContracts() async {
-        for placement in [PlacementID.tokens, .specialOffer] {
+        for placement in [PlacementID.tokens, .specialOffer, PlacementID(rawValue: "special-offer")] {
             let provider = DedicatedPlacementProvider()
             let ordinary = LoadPaywallUseCase(
                 repository: provider, analytics: NoOpMonetizationAnalytics(), staleLoadError: error
