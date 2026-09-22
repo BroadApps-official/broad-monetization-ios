@@ -82,11 +82,11 @@ private extension DeduplicatingMonetizationAnalytics {
              .restoreSuccess,
              .restoreNothingFound,
              .restoreUnavailable,
-             .ruCheckoutCreated,
-             .ruCheckoutOpenFailed,
-             .ruCheckoutSafariReturned,
-             .ruCheckoutConfirmed,
-             .ruCheckoutTimedOut:
+             .providerCheckoutCreated,
+             .providerCheckoutOpenFailed,
+             .providerCheckoutSafariReturned,
+             .providerCheckoutConfirmed,
+             .providerCheckoutTimedOut:
             nil
         }
     }

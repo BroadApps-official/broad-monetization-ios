@@ -37,14 +37,14 @@ public struct PlacementID: RawRepresentable, Codable, Hashable, Sendable, Valida
         PlacementID(rawValue: rawValue)
     }
 
-    var isTokenPlacement: Bool {
+    public var isTokenPlacement: Bool {
         ["token", "tokens"].contains(rawValue.lowercased())
     }
 
     /// A dedicated Special Offer placement: never replaced by the `main` fallback
     /// and never treated as an ordinary subscription paywall. Both spellings
     /// are accepted so apps configured with the legacy ID keep their rules.
-    var isSpecialOfferPlacement: Bool {
+    public var isSpecialOfferPlacement: Bool {
         ["special_offer", "special-offer"].contains(rawValue.lowercased())
     }
 }
@@ -145,22 +145,6 @@ public struct MonetizationAttemptID: RawRepresentable, Codable, Hashable, Sendab
     }
 }
 
-public struct RUCatalogProductID: RawRepresentable, Codable, Hashable, Sendable, ValidatedMonetizationIdentifier {
-    public let rawValue: String
-
-    public init(rawValue: String) {
-        self.rawValue = validatedMonetizationIdentifier(rawValue, name: "RU catalog product ID")
-    }
-}
-
-public struct RUSubscriptionID: RawRepresentable, Codable, Hashable, Sendable, ValidatedMonetizationIdentifier {
-    public let rawValue: String
-
-    public init(rawValue: String) {
-        self.rawValue = validatedMonetizationIdentifier(rawValue, name: "RU subscription ID")
-    }
-}
-
 private func validatedMonetizationIdentifier(
     _ rawValue: String,
     name: String
@@ -172,10 +156,10 @@ private func validatedMonetizationIdentifier(
     return rawValue
 }
 
-protocol ValidatedMonetizationIdentifier: RawRepresentable where RawValue == String {}
+public protocol ValidatedMonetizationIdentifier: RawRepresentable where RawValue == String {}
 
-extension ValidatedMonetizationIdentifier {
-    public init(from decoder: any Decoder) throws {
+public extension ValidatedMonetizationIdentifier {
+    init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let rawValue = try container.decode(String.self)
         guard MonetizationIdentifierPolicy.isValid(rawValue),

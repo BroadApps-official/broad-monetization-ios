@@ -5,20 +5,20 @@ public struct AdaptyPaywallPresentationLifecycle: PaywallPresentationLifecyclePr
     private let identityProvider: any AdaptyIdentityProviderProtocol
     private let context: AdaptyRepositoryContext
     private let placementRegistry: AdaptyPlacementRegistry?
-    private let ruBillingExperiments: RUBillingExperimentTracker?
+    private let viewReporting: (any PaywallViewReportingPolicyProtocol)?
 
     init(
         configuration: AdaptyPlatformConfiguration,
         identityProvider: any AdaptyIdentityProviderProtocol,
         context: AdaptyRepositoryContext,
         placementRegistry: AdaptyPlacementRegistry? = nil,
-        ruBillingExperiments: RUBillingExperimentTracker? = nil
+        viewReporting: (any PaywallViewReportingPolicyProtocol)? = nil
     ) {
         self.configuration = configuration
         self.identityProvider = identityProvider
         self.context = context
         self.placementRegistry = placementRegistry
-        self.ruBillingExperiments = ruBillingExperiments
+        self.viewReporting = viewReporting
     }
 
     public func presentationDidAppear(
@@ -33,7 +33,7 @@ public struct AdaptyPaywallPresentationLifecycle: PaywallPresentationLifecyclePr
 
         // Register the attempt before returning, so a fast close cannot race
         // its reservation. No network request delays the presentation lifecycle.
-        let report = await ruBillingExperiments?.beginTracking(
+        let report = await viewReporting?.reserveReport(
             analyticsContext,
             placement: placementRegistry?.adaptyPlacement(
                 for: analyticsContext.resolvedPlacementID
@@ -44,8 +44,8 @@ public struct AdaptyPaywallPresentationLifecycle: PaywallPresentationLifecyclePr
         // release the registry immediately. SDK logging owns its captured raw
         // value and cannot hold the financial resource registry hostage.
         Task {
-            if let report, await report.value != .useAdapty {
-                // RU failures remain in the RU branch. Falling through would
+            if let report, await report.value != .usePrimaryProvider {
+                // Extension failures remain with their reporting destination. Falling through would
                 // send a view to a counter that cannot observe this purchase.
                 return
             }
@@ -67,6 +67,6 @@ public struct AdaptyPaywallPresentationLifecycle: PaywallPresentationLifecyclePr
             presentationID: analyticsContext.presentationID,
             reference: analyticsContext.paywallReference
         )
-        await ruBillingExperiments?.presentationDidEnd(analyticsContext.presentationID)
+        await viewReporting?.presentationDidEnd(analyticsContext.presentationID)
     }
 }

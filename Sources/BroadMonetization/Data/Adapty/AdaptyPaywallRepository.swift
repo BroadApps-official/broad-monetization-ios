@@ -3,7 +3,7 @@ import BroadCore
 import Foundation
 
 public actor AdaptyPaywallRepository:
-    RUFallbackPaywallRepositoryProtocol,
+    ProviderPaywallAttemptRepositoryProtocol,
     RemoteConfigRepositoryProtocol {
     private let configuration: AdaptyPlatformConfiguration
     private let identityProvider: any AdaptyIdentityProviderProtocol
@@ -49,14 +49,14 @@ public actor AdaptyPaywallRepository:
     public func loadPaywall(
         for placementID: PlacementID
     ) async -> PaywallLoadOutcome {
-        await loadRUFallbackAttempt(for: placementID).outcome
+        await loadProviderAttempt(for: placementID).outcome
     }
 
-    public func loadRUFallbackAttempt(
+    public func loadProviderAttempt(
         for placementID: PlacementID
-    ) async -> RUFallbackPaywallAttempt {
+    ) async -> ProviderPaywallAttempt {
         guard placementRegistry.contains(placementID) else {
-            return RUFallbackPaywallAttempt(
+            return ProviderPaywallAttempt(
                 outcome: unavailable(code: "monetization.paywall.placement-not-configured"),
                 availability: .notConfigured
             )
@@ -83,7 +83,7 @@ public actor AdaptyPaywallRepository:
                     await loadAdaptyPaywall(logicalPlacementID: placementID)
                 }
             )
-            return outcome ?? RUFallbackPaywallAttempt(
+            return outcome ?? ProviderPaywallAttempt(
                 outcome: unavailable(code: "monetization.paywall.activation-unavailable"),
                 availability: .unavailable(receivedConfiguration: nil)
             )
@@ -114,7 +114,7 @@ public actor AdaptyPaywallRepository:
 private extension AdaptyPaywallRepository {
     struct InFlightLoad {
         let token: UInt64
-        let task: Task<RUFallbackPaywallAttempt, Never>
+        let task: Task<ProviderPaywallAttempt, Never>
         var pendingDeliveries: Int
     }
 
@@ -122,7 +122,7 @@ private extension AdaptyPaywallRepository {
         _ inFlightLoad: InFlightLoad,
         for placementID: PlacementID,
         requiresUniquePresentation: Bool
-    ) async -> RUFallbackPaywallAttempt {
+    ) async -> ProviderPaywallAttempt {
         let attempt = await inFlightLoad.task.value
         let outcome = attempt.outcome
         let deliveredOutcome = await prepareDelivery(
@@ -134,7 +134,7 @@ private extension AdaptyPaywallRepository {
             for: placementID,
             outcome: outcome
         )
-        return RUFallbackPaywallAttempt(outcome: deliveredOutcome, availability: attempt.availability)
+        return ProviderPaywallAttempt(outcome: deliveredOutcome, availability: attempt.availability)
     }
 
     func prepareDelivery(
@@ -217,7 +217,7 @@ private extension AdaptyPaywallRepository {
         }
     }
 
-    func loadAdaptyPaywall(logicalPlacementID: PlacementID) async -> RUFallbackPaywallAttempt {
+    func loadAdaptyPaywall(logicalPlacementID: PlacementID) async -> ProviderPaywallAttempt {
         let parser = remoteConfigurationParser
         let source = await placementConfigurationLoader.load(
             for: logicalPlacementID,
@@ -229,7 +229,7 @@ private extension AdaptyPaywallRepository {
         // Preserve the selected placement's decision if products loading fails.
         let receivedConfiguration = source.remoteConfiguration
         guard let paywall = source.paywall else {
-            return RUFallbackPaywallAttempt(
+            return ProviderPaywallAttempt(
                 outcome: unavailable(code: "monetization.paywall.load-unavailable"),
                 availability: .unavailable(receivedConfiguration: receivedConfiguration)
             )
@@ -251,14 +251,14 @@ private extension AdaptyPaywallRepository {
                 remoteConfigurationProvenance: receivedConfiguration == nil
                     ? .legacyUnqualified : .providerCacheFallbackPossible
             )
-            return RUFallbackPaywallAttempt(
+            return ProviderPaywallAttempt(
                 outcome: .loaded(payload),
                 availability: mappedProducts.isEmpty
                     ? .unavailable(receivedConfiguration: receivedConfiguration)
                     : .available
             )
         } catch {
-            return RUFallbackPaywallAttempt(
+            return ProviderPaywallAttempt(
                 outcome: unavailable(code: "monetization.paywall.load-unavailable"),
                 availability: .unavailable(receivedConfiguration: receivedConfiguration)
             )

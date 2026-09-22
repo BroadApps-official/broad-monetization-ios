@@ -290,6 +290,6 @@ extension EntitlementAggregator {
     }
 
     private func sourceIndex(_ source: EntitlementSource) -> Int {
-        EntitlementSource.allCases.firstIndex(of: source) ?? .max
+        [EntitlementSource.apple, .primaryBackend].firstIndex(of: source) ?? .max
     }
 }

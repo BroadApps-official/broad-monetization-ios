@@ -1,10 +1,15 @@
 import Foundation
 
-public enum CatalogSource: String, Codable, Equatable, Sendable {
-    case adapty
-    case storeKit = "store-kit"
-    case ruBackend = "ru-backend"
-    case cache
+public struct CatalogSource: RawRepresentable, Codable, Hashable, Sendable, ValidatedMonetizationIdentifier {
+    public let rawValue: String
+    public init(rawValue: String) {
+        precondition(MonetizationIdentifierPolicy.isValid(rawValue))
+        self.rawValue = rawValue
+    }
+
+    public static let adapty = Self(rawValue: "adapty")
+    public static let storeKit = Self(rawValue: "store-kit")
+    public static let cache = Self(rawValue: "cache")
 }
 
 public enum MonetizationProductKind: String, Codable, Equatable, Sendable {

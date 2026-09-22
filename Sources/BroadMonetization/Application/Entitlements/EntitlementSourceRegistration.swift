@@ -23,6 +23,28 @@ public struct EntitlementSourceRegistration: Sendable {
         )
     }
 
+    /// Binds a backend source and its cache to the current authenticated session.
+    public init(
+        source: EntitlementSource,
+        subject: EntitlementSubject,
+        freshnessPolicy: EntitlementFreshnessPolicy,
+        repository: any EntitlementSourceRepositoryProtocol,
+        authorizationBinding: SubjectAuthorizationBinding
+    ) {
+        precondition(authorizationBinding.subject == subject)
+        self.init(
+            source: source,
+            subject: subject,
+            freshnessPolicy: freshnessPolicy,
+            repository: repository,
+            acceptanceGate: EntitlementSourceAcceptanceGate(
+                cachePartition: authorizationBinding.cachePartition,
+                cacheStoragePartition: authorizationBinding.cacheStoragePartition,
+                isCurrent: { authorizationBinding.isCurrent() }
+            )
+        )
+    }
+
     init(
         source: EntitlementSource,
         subject: EntitlementSubject,

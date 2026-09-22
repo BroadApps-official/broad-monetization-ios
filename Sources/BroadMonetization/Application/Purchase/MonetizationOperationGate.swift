@@ -1,10 +1,15 @@
 import Foundation
 
-public enum MonetizationOperationKind: Equatable, Sendable {
-    case purchase
-    case tokenPurchase
-    case restore
-    case ruCheckout
+public struct MonetizationOperationKind: RawRepresentable, Codable, Hashable, Sendable, ValidatedMonetizationIdentifier {
+    public let rawValue: String
+    public init(rawValue: String) {
+        precondition(MonetizationIdentifierPolicy.isValid(rawValue))
+        self.rawValue = rawValue
+    }
+
+    public static let purchase = Self(rawValue: "purchase")
+    public static let tokenPurchase = Self(rawValue: "token-purchase")
+    public static let restore = Self(rawValue: "restore")
 }
 
 public struct MonetizationOperationLease: Equatable, Sendable {
@@ -25,10 +30,15 @@ public protocol PendingOperationBlockerProtocol: Sendable {
 }
 
 public struct PendingOperationBlockerKey: Hashable, Sendable {
-    public enum Kind: String, Hashable, Sendable {
-        case applePurchase = "apple-purchase"
-        case tokenPurchase = "token-purchase"
-        case ruCheckout = "ru-checkout"
+    public struct Kind: RawRepresentable, Codable, Hashable, Sendable, ValidatedMonetizationIdentifier {
+        public let rawValue: String
+        public init(rawValue: String) {
+            precondition(MonetizationIdentifierPolicy.isValid(rawValue))
+            self.rawValue = rawValue
+        }
+
+        public static let applePurchase = Self(rawValue: "apple-purchase")
+        public static let tokenPurchase = Self(rawValue: "token-purchase")
     }
 
     public let kind: Kind
@@ -46,9 +56,8 @@ public struct PendingOperationBlockerKey: Hashable, Sendable {
 
 /// One application-wide gate shared by every payment and restore entry point.
 /// It protects direct callers and multiple paywall view models, not only one
-/// screen's busy state. Durable Apple and payment-status RU operations remain
-/// blockers after their short-lived SDK/browser leases have been released.
-/// Account-policy RU attempts stop blocking once their local wait is completed.
+/// screen's busy state. Each provider decides whether its durable operation
+/// remains blocking after a short-lived SDK/browser lease is released.
 public actor MonetizationOperationGate {
     private nonisolated let blockerRegistry = PendingOperationBlockerRegistry()
     private var activeLease: MonetizationOperationLease?

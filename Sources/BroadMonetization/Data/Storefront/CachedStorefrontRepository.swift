@@ -5,6 +5,12 @@ public actor CachedStorefrontRepository:
     StorefrontRepositoryProtocol,
     LiveStorefrontRepositoryProtocol,
     StorefrontHintRepositoryProtocol {
+    private static let storefrontUnavailable = AppError(
+        kind: .unavailable,
+        userMessage: "Storefront is unavailable.",
+        diagnosticCode: "monetization.storefront.unavailable",
+        isRetryable: true
+    )
     private let client: any StoreKitStorefrontClientProtocol
     private let cache: any CacheRepositoryProtocol
     private let cacheKey: CacheKey<Storefront>
@@ -46,7 +52,7 @@ public actor CachedStorefrontRepository:
         }
 
         guard let cached = try? await cache.read(cacheKey) else {
-            return .unavailable(RUBillingSafeErrors.storefrontUnavailable)
+            return .unavailable(Self.storefrontUnavailable)
         }
 
         switch cached {
@@ -54,7 +60,7 @@ public actor CachedStorefrontRepository:
             sessionValue = (envelope.value, envelope.expiresAt)
             return .available(envelope.value)
         case .stale, .missing:
-            return .unavailable(RUBillingSafeErrors.storefrontUnavailable)
+            return .unavailable(Self.storefrontUnavailable)
         }
     }
 
@@ -62,7 +68,7 @@ public actor CachedStorefrontRepository:
         switch await client.loadCurrentStorefront() {
         case let .available(storefront):
             guard !Task.isCancelled else {
-                return .unavailable(RUBillingSafeErrors.storefrontUnavailable)
+                return .unavailable(Self.storefrontUnavailable)
             }
             let now = clock.now()
             let expiresAt = now.addingTimeInterval(cacheTimeToLive)
@@ -73,7 +79,7 @@ public actor CachedStorefrontRepository:
             try? await cache.write(storefront, for: cacheKey)
             return .available(storefront)
         case .unavailable:
-            return .unavailable(RUBillingSafeErrors.storefrontUnavailable)
+            return .unavailable(Self.storefrontUnavailable)
         }
     }
 }

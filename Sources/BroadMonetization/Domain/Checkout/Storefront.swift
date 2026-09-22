@@ -46,12 +46,6 @@ public struct Storefront: Codable, Equatable, Sendable {
             countryCode: countryCode
         )
     }
-
-    /// A Russian App Store storefront is one of the two positive regional
-    /// signals accepted by the RU billing gate.
-    public var isRussian: Bool {
-        countryCode == "RU" || countryCode == "RUS"
-    }
 }
 
 public enum StorefrontResolution: Equatable, Sendable {

@@ -14,9 +14,6 @@ struct MonetizationSandboxView: View {
     )
     private let parsedConfiguration = RemotePaywallConfigurationParser().parse([
         "special_offer": true,
-        "ru_pay": true,
-        "experiment_code": "fixture",
-        "segment_code": "a",
         "special_offer_badge": "Fixture"
     ])
 
@@ -78,39 +75,8 @@ struct MonetizationSandboxView: View {
                     LabeledContent("Countdown", value: "24h window → 24h cooldown")
                 }
 
-                Section("RU Billing authority") {
-                    LabeledContent(
-                        "Current provider payload",
-                        value: yesNo(
-                            PaywallRemoteConfigurationProvenance
-                                .providerCacheFallbackPossible
-                                .authorizesRUBillingPresentation
-                        )
-                    )
-                    LabeledContent(
-                        "Verified fresh",
-                        value: yesNo(
-                            PaywallRemoteConfigurationProvenance
-                                .verifiedFreshRemote
-                                .authorizesRUBillingPresentation
-                        )
-                    )
-                }
-
-                Section("RU A/B · opt-in") {
-                    LabeledContent("Experiment", value: parsedConfiguration.ruExperiment?.experimentCode ?? "absent")
-                    LabeledContent("Segment", value: parsedConfiguration.ruExperiment?.segmentCode ?? "absent")
-                    LabeledContent("Provider metadata", value: yesNo(providerConfiguration.ruExperiment != nil))
-                    LabeledContent(
-                        "Verified fresh metadata",
-                        value: yesNo(qualifiedConfiguration(for: .verifiedFreshRemote).ruExperiment != nil)
-                    )
-                    LabeledContent("Without tracker", value: "existing Adapty lifecycle")
-                    Text("Exact IDs → isDefault → full section. Backend order and duplicates are preserved.")
-                }
-
                 Section("Safety") {
-                    Text("Fixture-only: SDK activation, purchase, restore and RU payment are not executed.")
+                    Text("Fixture-only: SDK activation, purchase and restore are not executed.")
                 }
             }
             .navigationTitle("BroadMonetization")

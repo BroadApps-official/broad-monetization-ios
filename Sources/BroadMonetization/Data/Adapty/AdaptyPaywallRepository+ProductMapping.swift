@@ -24,7 +24,7 @@ extension AdaptyPaywallRepository {
                 title: product.localizedTitle,
                 subtitle: nil,
                 // A malformed provider SKU remains visible in its original
-                // position, but can never authorize either Apple or RU checkout.
+                // position, but can never authorize any checkout.
                 price: hasValidatedVendorProductID ? money(product) : nil,
                 displayPrice: displayPrice(product),
                 subscriptionPeriod: subscriptionPeriod(product),

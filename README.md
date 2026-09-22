@@ -17,7 +17,7 @@
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
 Adapty/StoreKit adapters, entitlements, purchase/restore coordination, Special
-Offer, RU Billing и safe analytics.
+Offer и safe analytics.
 
 [Документация BroadApps iOS](https://broadapps-ios-docs.nkhsnv.chatgpt.site) ·
 [Создание приложения](https://broadapps-ios-docs.nkhsnv.chatgpt.site/docs/app-creation) ·
@@ -28,12 +28,12 @@ Offer, RU Billing и safe analytics.
 **Быстрый маршрут:** [установка](#installation) ·
 [Adapty setup](#базовая-настройка-adapty) ·
 [Special Offer](#special-offer-где-теперь-стоит-gate) ·
-[RU Billing](#ru-billing) · [RU Special Offer](#спешл-оффер-ru-billing) · [tokens](#token-purchases-и-recovery) ·
+[RU Billing](#ru-billing) · [tokens](#token-purchases-и-recovery) ·
 [проверка](#проверка)
 
 ## Что делает модуль
 
-RU Billing A/B подключается отдельно в 1.4.0: [настройка кодом и с агентом](Documentation/RUBillingExperiments.md).
+RU Billing вынесен в отдельный пакет: [настройка кодом и с агентом](Documentation/RUBillingExperiments.md).
 Обновление зависимости без нового optional tracker сохраняет прежнее поведение.
 
 - загружает paywall и все products в provider order без filter/sort/dedup;
@@ -55,7 +55,7 @@ RU Billing A/B подключается отдельно в 1.4.0: [настро
 
 | Product | Platform | BroadApps dependency | External dependencies |
 |---|---|---|---|
-| `BroadMonetization` | iOS 17+, iPhone | `BroadCore` from `2.0.0` | Adapty `3.17.3`, Swinject `2.10.0` |
+| `BroadMonetization` | iOS 17+, iPhone | `BroadCore` from `3.0.0` | Adapty `3.17.3`, Swinject `2.10.0` |
 
 Host app подключает этот repository только по надобности. Обязательного
 umbrella package нет. Если app напрямую импортирует `BroadCore`, его product
@@ -200,91 +200,11 @@ Countdown идёт до конца текущего окна и на нуле и
 
 ## RU Billing
 
-RU methods показываются, только если одновременно выполнены все условия:
-
-1. host app зарегистрировал RU Billing adapters;
-2. текущий provider payload содержит `ru_pay = true` **или** явно подключён
-   [резервный сценарий недоступного Adapty](Documentation/RUProviderFallback.md);
-3. App Store storefront — `RU/RUS` **или** регион iPhone — `RU/RUS`;
-4. RU catalog не пуст и точно сопоставлен выбранному product;
-5. backend authorization/kill switch разрешает checkout;
-6. entitlement не подтверждает уже активный premium.
-
-Язык приложения, системный язык, клавиатура, IP и timezone не включают RU
-Billing. Если Storefront временно недоступен, достаточно российского региона
-iPhone; при нероссийском регионе flow остаётся закрытым. Перед созданием
-checkout Storefront и gate проверяются повторно.
-
-Adapty SDK cache и Dashboard fallback считаются текущим provider payload:
-они могут авторизовать СБП/карту только с explicit `ru_pay = true`. Persistent
-cache BroadMonetization по-прежнему не авторизует RU Billing. Возврат из
-внешней формы не является success: он запускает
-backend reconciliation. В account-policy режиме ограниченное ожидание заканчивается
-`waitingCompleted`: последняя попытка сохраняется без блокировки новой покупки.
-Ошибка проверки остаётся `unavailable`; доступ выдаётся только по backend authority.
-Перед новым checkout обновляется account policy. Настоящая серверная отмена через
-`pendingCheckoutTermination` опциональна. Режим с paymentStatus сохраняет блокировку
-до окончательного ответа. Подробности и пример:
-[account-policy termination](Documentation/RUAccountPolicy.md#pending-и-смысл-подтверждения).
-
-### Продукты RU Billing с backend
-
-Adapty placement остаётся источником Apple products и `ru_pay`. RU price,
-backend product ID и доступные карта/СБП приходят из backend catalog. Модуль не
-сортирует, не сокращает и не объединяет ответ: UI получает все occurrences в
-backend order. Конкретное приложение может отдельно выбрать собственное
-подмножество.
-
-Для текущего плоского ответа `{ "products": [...] }` используйте готовый wire
-adapter и явно укажите подтверждённые backend methods:
-
-```swift
-let ruWire = RUBillingWireAdapters.broadAppsFlatCatalog(
-    supportedMethods: [.sbp, .card]
-)
-```
-
-Decoder принимает `productId` или `product_id`, `title`, `kind`, `period`,
-`price`, `currency`, `credits` и optional exact App Store product ID. Числовой
-`price` считается суммой в основных единицах валюты. Если backend отдаёт
-копейки, другую envelope-модель или раздельные endpoints подписок и токенов,
-host передаёт собственный `RUCatalogResponseDecoderProtocol`.
-
-Сопоставление выполняется только по exact ID либо явной app-owned mapping
-policy. По цене или периоду продукт не угадывается. Полученный `false`, отсутствующий или
-некорректный `ru_pay` закрывает RU methods. **Нет ответа Adapty** — отдельный
-случай: в 1.5.0 можно явно подключить серверный каталог при российском Storefront
-или регионе iPhone. Значение `true` не подставляется, старые API не меняют поведения.
-
-С 1.5.4 подключённый резерв при отсутствии точных совпадений или продуктов Adapty
-показывает все обычные подписки с `isDefault=true`. Если отметок нет, используется
-полный раздел подписок. Выбранные строки сохраняют исходные индексы, порядок,
-дубли, серверные ID и цены; Apple checkout для них недоступен.
-
-## Спешл оффер RU Billing
-
-Для coupon-offer не нужен отдельный target или второй payment manager.
-Backend catalog передаёт strict boolean `isSpecialOffer`. Обычный
-paywall игнорирует помеченную строку, а RU Special Offer выбирает
-её только по marker и exact product ID. При отсутствии marker обычный
-продукт не подставляется. Price, currency и `productId` берутся из
-этой backend-строки.
-
-```swift
-let coupons = RUCatalogSections(catalog: payload).coupons
-```
-
-Цикл окна/cooldown, источник флага и закрытие на нуле общие с
-Adapty Special Offer. RU-ветка меняет только источник продукта и
-маршрут checkout. RU Billing A/B подключается отдельно через
-[optional tracker и selector](Documentation/RUBillingExperiments.md).
-
-СБП/карта дополнительно требуют обычный strict RU gate. Возврат из hosted
-checkout запускает проверку через backend. Account-policy завершает ограниченное
-ожидание без блокировки новой покупки; Premium требует authoritative `active`.
-
-[Полная инструкция →](Documentation/RUSpecialOffer.md) ·
-[Публичная инструкция разработчику →](https://broadapps-ios-docs.nkhsnv.chatgpt.site/docs/ru-special-offer)
+RU logic, HTTP adapters, callbacks, polling and payment UI now belong to the optional
+[BroadRUBilling repository](https://github.com/BroadApps-official/broad-ru-billing-ios).
+Do not add it to applications that only use App Store billing.
+Use `AppleCheckoutMethodsUseCase` and `CheckoutSelectedProductUseCase(applePurchase:)`
+for the base composition. See [5.0 migration](Documentation/OptionalProviders.md).
 
 ## Token purchases и recovery
 
@@ -357,7 +277,7 @@ bash Scripts/check_token_purchase_contracts.sh
 ```
 
 Проверки компилируют production types и фиксируют order/provenance,
-product identity, Special Offer countdown и RU fail-closed contracts без
+product identity, Special Offer countdown и provider authority без
 XCTest/Swift Testing.
 
 ## Sandbox
@@ -367,7 +287,7 @@ bash Scripts/generate_sandbox.sh
 open Examples/BroadMonetizationSandbox/BroadMonetizationSandbox.xcodeproj
 ```
 
-Sandbox показывает fixture products, parsed remote flags, Special Offer/RU
+Sandbox показывает fixture products, parsed remote flags, Special Offer/provider
 authority и countdown. Он не активирует SDK и не вызывает financial
 operations.
 

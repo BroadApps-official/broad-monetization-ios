@@ -5,16 +5,13 @@ public extension BroadMonetizationServices {
         subject: EntitlementSubject,
         refreshEntitlement: any RefreshEntitlementUseCaseProtocol,
         recoverTokenAccount:
-        (any RecoverTokenAccountUseCaseProtocol)? = nil,
-        loadRUSubscription:
-        (any LoadRUSubscriptionStatusUseCaseProtocol)? = nil
+        (any RecoverTokenAccountUseCaseProtocol)? = nil
     ) -> RecoverCustomerAccessUseCase {
         RecoverCustomerAccessUseCase(
             subject: subject,
             activate: activate,
             refreshEntitlement: refreshEntitlement,
-            recoverTokenAccount: recoverTokenAccount,
-            loadRUSubscription: loadRUSubscription
+            recoverTokenAccount: recoverTokenAccount
         )
     }
 }

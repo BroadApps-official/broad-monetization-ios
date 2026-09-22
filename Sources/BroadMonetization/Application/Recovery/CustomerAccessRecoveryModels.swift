@@ -9,7 +9,7 @@ public enum TokenAccountRecoveryOutcome: Equatable, Sendable {
 
 public protocol RecoverTokenAccountUseCaseProtocol: Sendable {
     /// Fetches one full balance snapshot for the authenticated app account.
-    /// StoreKit transaction and RU checkout identifiers belong to fulfillment
+    /// Provider transaction identifiers belong to fulfillment
     /// duplicate protection; the device does not submit an ID list or rebuild
     /// the balance during ordinary recovery.
     func callAsFunction() async -> TokenAccountRecoveryOutcome
@@ -28,20 +28,15 @@ public struct CustomerAccessRecoverySnapshot: Equatable, Sendable {
     public let activation: MonetizationActivationOutcome
     public let entitlement: EntitlementSnapshot
     public let tokens: CustomerAccessRecoveryComponent<TokenBalanceSnapshot>
-    public let ruSubscription:
-        CustomerAccessRecoveryComponent<RUSubscriptionManagementStatus>
 
     public init(
         activation: MonetizationActivationOutcome,
         entitlement: EntitlementSnapshot,
-        tokens: CustomerAccessRecoveryComponent<TokenBalanceSnapshot>,
-        ruSubscription:
-        CustomerAccessRecoveryComponent<RUSubscriptionManagementStatus>
+        tokens: CustomerAccessRecoveryComponent<TokenBalanceSnapshot>
     ) {
         self.activation = activation
         self.entitlement = entitlement
         self.tokens = tokens
-        self.ruSubscription = ruSubscription
     }
 }
 

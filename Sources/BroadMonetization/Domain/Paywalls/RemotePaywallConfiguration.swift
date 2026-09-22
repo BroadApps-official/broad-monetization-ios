@@ -5,45 +5,27 @@ public enum PaywallAccessPolicy: String, Codable, Equatable, Sendable {
     case hard
 }
 
-public enum RemoteRUBillingGateDecision: String, Codable, Equatable, Sendable {
-    case absent
-    case enabled
-    case disabled
-    case invalid
-
-    var booleanValue: Bool? {
-        switch self {
-        case .enabled: true
-        case .disabled: false
-        case .absent, .invalid: nil
-        }
-    }
-}
-
 /// Parsed domain configuration. `nil` fields mean "not supplied" and allow the
 /// repository to retain a previous valid value instead of resetting it silently.
 public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
     public static let empty = RemotePaywallConfiguration()
 
-    public let isRUBillingEnabled: Bool?
-    public let ruBillingGateDecision: RemoteRUBillingGateDecision
     public let isAutomaticRevenueViewEnabled: Bool?
     public let accessPolicy: PaywallAccessPolicy?
     public let closeDelay: TimeInterval?
     public let uiVariantID: PaywallUIVariantID?
     public let specialOffer: SpecialOfferRemoteConfiguration?
-    public let ruExperiment: RUExperimentMetadata?
-    private(set) var authorizesRUBillingPresentation: Bool
-    var authorizesRUProviderFallback = false
+    public let providerConfigurations: [String: ProviderRemoteConfiguration]
+    public private(set) var authorizesProviderFeatures: Bool
+    public var authorizesProviderFallback = false
 
     public init(
-        isRUBillingEnabled: Bool? = nil,
         isAutomaticRevenueViewEnabled: Bool? = nil,
         accessPolicy: PaywallAccessPolicy? = nil,
         closeDelay: TimeInterval? = nil,
         uiVariantID: PaywallUIVariantID? = nil,
         specialOffer: SpecialOfferRemoteConfiguration? = nil,
-        ruExperiment: RUExperimentMetadata? = nil
+        providerConfigurations: [String: ProviderRemoteConfiguration] = [:]
     ) {
         if let closeDelay {
             precondition(
@@ -52,30 +34,23 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
             )
         }
 
-        self.isRUBillingEnabled = isRUBillingEnabled
-        ruBillingGateDecision = switch isRUBillingEnabled {
-        case .some(true): .enabled
-        case .some(false): .disabled
-        case .none: .absent
-        }
         self.isAutomaticRevenueViewEnabled = isAutomaticRevenueViewEnabled
         self.accessPolicy = accessPolicy
         self.closeDelay = closeDelay
         self.uiVariantID = uiVariantID
         self.specialOffer = specialOffer
-        self.ruExperiment = ruExperiment
-        authorizesRUBillingPresentation = false
+        self.providerConfigurations = providerConfigurations
+        authorizesProviderFeatures = false
     }
 
     init(
-        ruBillingGateDecision: RemoteRUBillingGateDecision,
         isAutomaticRevenueViewEnabled: Bool?,
         accessPolicy: PaywallAccessPolicy?,
         closeDelay: TimeInterval?,
         uiVariantID: PaywallUIVariantID?,
         specialOffer: SpecialOfferRemoteConfiguration?,
-        authorizesRUBillingPresentation: Bool,
-        ruExperiment: RUExperimentMetadata? = nil
+        authorizesProviderFeatures: Bool,
+        providerConfigurations: [String: ProviderRemoteConfiguration] = [:]
     ) {
         if let closeDelay {
             precondition(
@@ -83,23 +58,19 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
                 "Paywall close delay must be finite and non-negative"
             )
         }
-        isRUBillingEnabled = ruBillingGateDecision.booleanValue
-        self.ruBillingGateDecision = ruBillingGateDecision
         self.isAutomaticRevenueViewEnabled = isAutomaticRevenueViewEnabled
         self.accessPolicy = accessPolicy
         self.closeDelay = closeDelay
         self.uiVariantID = uiVariantID
         self.specialOffer = specialOffer
-        self.authorizesRUBillingPresentation = authorizesRUBillingPresentation
-        self.ruExperiment = ruExperiment
+        self.authorizesProviderFeatures = authorizesProviderFeatures
+        self.providerConfigurations = providerConfigurations
     }
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let closeDelay = try Self.decodeCloseDelay(from: container)
-        let gateDecision = try Self.decodeGateDecision(from: container)
         try self.init(
-            ruBillingGateDecision: gateDecision,
             isAutomaticRevenueViewEnabled: container.decodeIfPresent(
                 Bool.self,
                 forKey: .isAutomaticRevenueViewEnabled
@@ -117,17 +88,15 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
                 SpecialOfferRemoteConfiguration.self,
                 forKey: .specialOffer
             ),
-            authorizesRUBillingPresentation: false,
+            authorizesProviderFeatures: false,
             // Experiment metadata belongs to this live response. A persisted
             // payload cannot revive an old reporting assignment.
-            ruExperiment: nil
+            providerConfigurations: [:]
         )
     }
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(isRUBillingEnabled, forKey: .isRUBillingEnabled)
-        try container.encode(ruBillingGateDecision, forKey: .ruBillingGateDecision)
         try container.encodeIfPresent(
             isAutomaticRevenueViewEnabled,
             forKey: .isAutomaticRevenueViewEnabled
@@ -138,11 +107,10 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
         try container.encodeIfPresent(specialOffer, forKey: .specialOffer)
     }
 
-    func qualified(
+    public func qualified(
         by provenance: PaywallRemoteConfigurationProvenance
     ) -> RemotePaywallConfiguration {
         var qualified = RemotePaywallConfiguration(
-            ruBillingGateDecision: ruBillingGateDecision,
             isAutomaticRevenueViewEnabled: isAutomaticRevenueViewEnabled,
             accessPolicy: accessPolicy,
             closeDelay: closeDelay,
@@ -150,24 +118,26 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
             specialOffer: provenance.authorizesSpecialOfferPresentation
                 ? specialOffer
                 : nil,
-            authorizesRUBillingPresentation: provenance
-                .authorizesRUBillingPresentation,
-            ruExperiment: provenance.authorizesRUBillingPresentation ? ruExperiment : nil
+            authorizesProviderFeatures: provenance
+                .authorizesProviderFeatures,
+            providerConfigurations: providerConfigurations.mapValues { value in
+                ProviderRemoteConfiguration(
+                    decisionData: value.decisionData,
+                    liveMetadata: provenance.authorizesProviderFeatures ? value.liveMetadata : nil
+                )
+            }
         )
-        qualified.authorizesRUProviderFallback = authorizesRUProviderFallback
+        qualified.authorizesProviderFallback = authorizesProviderFallback
             && provenance != .platformCache
         return qualified
     }
 
     private enum CodingKeys: String, CodingKey {
-        case isRUBillingEnabled
-        case ruBillingGateDecision
         case isAutomaticRevenueViewEnabled
         case accessPolicy
         case closeDelay
         case uiVariantID
         case specialOffer
-        case ruExperiment
     }
 
     private static func decodeCloseDelay(
@@ -187,37 +157,5 @@ public struct RemotePaywallConfiguration: Codable, Equatable, Sendable {
             )
         }
         return closeDelay
-    }
-
-    private static func decodeGateDecision(
-        from container: KeyedDecodingContainer<CodingKeys>
-    ) throws -> RemoteRUBillingGateDecision {
-        let decodedBoolean = try container.decodeIfPresent(
-            Bool.self,
-            forKey: .isRUBillingEnabled
-        )
-        let decodedDecision = try container.decodeIfPresent(
-            RemoteRUBillingGateDecision.self,
-            forKey: .ruBillingGateDecision
-        )
-        let decision = decodedDecision ?? decision(for: decodedBoolean)
-        guard decision.booleanValue == decodedBoolean else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .ruBillingGateDecision,
-                in: container,
-                debugDescription: "RU billing gate decision is inconsistent"
-            )
-        }
-        return decision
-    }
-
-    private static func decision(
-        for value: Bool?
-    ) -> RemoteRUBillingGateDecision {
-        switch value {
-        case .some(true): .enabled
-        case .some(false): .disabled
-        case .none: .absent
-        }
     }
 }

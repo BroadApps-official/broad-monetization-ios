@@ -1,6 +1,6 @@
 /// Evidence from this provider request, including a configuration received
 /// before StoreKit products failed to load. Never reconstruct it from disk.
-public struct RUFallbackPaywallAttempt: Sendable {
+public struct ProviderPaywallAttempt: Sendable {
     public enum Availability: Sendable {
         case available
         case notConfigured
@@ -18,6 +18,6 @@ public struct RUFallbackPaywallAttempt: Sendable {
 
 /// Opt-in provider boundary. Existing PaywallRepositoryProtocol callers keep
 /// their original loading and cache behavior.
-public protocol RUFallbackPaywallRepositoryProtocol: PaywallRepositoryProtocol {
-    func loadRUFallbackAttempt(for placementID: PlacementID) async -> RUFallbackPaywallAttempt
+public protocol ProviderPaywallAttemptRepositoryProtocol: PaywallRepositoryProtocol {
+    func loadProviderAttempt(for placementID: PlacementID) async -> ProviderPaywallAttempt
 }

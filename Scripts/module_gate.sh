@@ -31,6 +31,7 @@ export SWIFTPM_MODULECACHE_OVERRIDE="$swift_module_cache"
 
 echo "[1/9] Structure, dependency boundaries and secret patterns"
 bash "$module_root/Scripts/check_structure.sh"
+bash "$module_root/Scripts/check_optional_provider_boundary.sh"
 
 echo "[2/9] Documentation links and contracts"
 bash "$module_root/Scripts/check_documentation.sh"
@@ -73,9 +74,6 @@ bash "$module_root/Scripts/check_adapty_experiment_contracts.sh"
 bash "$module_root/Scripts/check_product_price_presentation_contract.sh"
 bash "$module_root/Scripts/check_special_offer_campaign_contract.sh"
 bash "$module_root/Scripts/check_special_offer_migration_contract.sh"
-bash "$module_root/Scripts/check_ru_experiment_contracts.sh"
-bash "$module_root/Scripts/check_ru_provider_fallback_contracts.sh"
-bash "$module_root/Scripts/check_ru_account_policy_contracts.sh"
 bash "$module_root/Scripts/check_token_purchase_contracts.sh"
 bash "$module_root/Scripts/generate_public_api_report.sh"
 
