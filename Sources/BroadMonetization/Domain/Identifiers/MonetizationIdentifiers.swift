@@ -22,7 +22,10 @@ public struct PlacementID: RawRepresentable, Codable, Hashable, Sendable, Valida
     public static let feature = PlacementID(rawValue: "feature")
     public static let tokens = PlacementID(rawValue: "tokens")
     public static let discount = PlacementID(rawValue: "discount")
-    public static let specialOffer = PlacementID(rawValue: "special-offer")
+    /// Adapty placement of the standard Special Offer paywall: `special_offer`,
+    /// the base placement ID of the team Adapty scheme. The legacy `special-offer`
+    /// spelling is still recognised as a Special Offer placement.
+    public static let specialOffer = PlacementID(rawValue: "special_offer")
 
     public let rawValue: String
 
@@ -36,6 +39,13 @@ public struct PlacementID: RawRepresentable, Codable, Hashable, Sendable, Valida
 
     var isTokenPlacement: Bool {
         ["token", "tokens"].contains(rawValue.lowercased())
+    }
+
+    /// A dedicated Special Offer placement: never replaced by the `main` fallback
+    /// and never treated as an ordinary subscription paywall. Both spellings
+    /// are accepted so apps configured with the legacy ID keep their rules.
+    var isSpecialOfferPlacement: Bool {
+        ["special_offer", "special-offer"].contains(rawValue.lowercased())
     }
 }
 

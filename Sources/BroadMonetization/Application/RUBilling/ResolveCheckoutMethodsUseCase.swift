@@ -48,7 +48,7 @@ public struct ResolveCheckoutMethodsUseCase: ResolveCheckoutMethodsUseCaseProtoc
     ) async -> CheckoutMethodsResolution {
         await resolve(
             product: selection.product,
-            isSpecialOffer: selection.requestedPlacementID == .specialOffer,
+            isSpecialOffer: selection.requestedPlacementID.isSpecialOfferPlacement,
             remoteConfiguration: remoteConfiguration
         )
     }

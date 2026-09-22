@@ -1,5 +1,29 @@
 # Changelog
 
+## 4.1.1
+
+### Fixed
+
+- `PlacementID.specialOffer` теперь `special_offer` — базовый Placement ID
+  командной схемы Adapty и значение, которое README этого модуля уже называет
+  в таблице Placement IDs. Раньше константа была `special-offer`: приложение
+  с placement `special_offer` в Adapty получало пустой второй пейвол, а
+  `.custom("special_offer")` не считался Special Offer — ему разрешался
+  fallback на `main` и RU checkout ordinary subscription path.
+- Правила Special Offer (без fallback на `main`, отдельный RU checkout)
+  определяются по обоим написаниям, `special_offer` и `special-offer`, так же
+  как token placement уже принимает `token`/`tokens`. Приложения со старым
+  ID в Adapty сохраняют прежнее поведение.
+- Contract probe dedicated placements проверяет и legacy `special-offer`.
+
+### Почему
+
+Катя готовит Adapty новых приложений по схеме, где Placement ID —
+`special_offer` (с подчёркиванием). Host, который брал `.specialOffer` из
+платформы, запрашивал несуществующий placement. Persisted Special Offer cycle
+хранится по raw ID, поэтому у приложений на старом ID при переходе цикл
+начнётся заново — один раз.
+
 ## 4.1.0
 
 ### Added
