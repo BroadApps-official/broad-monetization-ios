@@ -19,8 +19,31 @@ public actor PurchaseSelectedProductUseCase: PurchaseSelectedProductUseCaseProto
         operationGate: MonetizationOperationGate,
         inProgressError: AppError,
         pendingStateUnavailableError: AppError? = nil,
+        unsupportedProductError: AppError? = nil
+    ) {
+        self.init(
+            repository: repository,
+            entitlementRepository: entitlementRepository,
+            analytics: analytics,
+            pendingStore: pendingStore,
+            operationGate: operationGate,
+            inProgressError: inProgressError,
+            pendingStateUnavailableError: pendingStateUnavailableError,
+            unsupportedProductError: unsupportedProductError,
+            premiumProductCatalog: nil
+        )
+    }
+
+    public init(
+        repository: any PurchaseRepositoryProtocol,
+        entitlementRepository: any EntitlementRepositoryProtocol,
+        analytics: any MonetizationAnalyticsProtocol,
+        pendingStore: any PendingApplePurchaseStoreProtocol,
+        operationGate: MonetizationOperationGate,
+        inProgressError: AppError,
+        pendingStateUnavailableError: AppError? = nil,
         unsupportedProductError: AppError? = nil,
-        premiumProductCatalog: ApplePremiumProductCatalog? = nil
+        premiumProductCatalog: ApplePremiumProductCatalog?
     ) {
         self.repository = repository
         self.entitlementRepository = entitlementRepository

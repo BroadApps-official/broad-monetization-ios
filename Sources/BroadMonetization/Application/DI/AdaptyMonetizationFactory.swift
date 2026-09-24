@@ -76,8 +76,31 @@ public struct AdaptyMonetizationFactory: Sendable {
         pendingApplePurchaseStore: any PendingApplePurchaseStoreProtocol,
         pendingAppleTransactionRecovery: any PendingAppleTransactionRecoveryProtocol,
         operationGate: MonetizationOperationGate,
+        paywallLoaderFactory: (any PaywallLoaderFactoryProtocol)? = nil
+    ) -> BroadMonetizationServices {
+        makeServices(
+            entitlementRepository: entitlementRepository,
+            analytics: analytics,
+            paywallCache: paywallCache,
+            errors: errors,
+            pendingApplePurchaseStore: pendingApplePurchaseStore,
+            pendingAppleTransactionRecovery: pendingAppleTransactionRecovery,
+            operationGate: operationGate,
+            paywallLoaderFactory: paywallLoaderFactory,
+            premiumProductCatalog: nil
+        )
+    }
+
+    public func makeServices(
+        entitlementRepository: any EntitlementRepositoryProtocol,
+        analytics: any MonetizationAnalyticsProtocol,
+        paywallCache: (any PaywallCacheProtocol)? = nil,
+        errors: MonetizationFlowErrors,
+        pendingApplePurchaseStore: any PendingApplePurchaseStoreProtocol,
+        pendingAppleTransactionRecovery: any PendingAppleTransactionRecoveryProtocol,
+        operationGate: MonetizationOperationGate,
         paywallLoaderFactory: (any PaywallLoaderFactoryProtocol)? = nil,
-        premiumProductCatalog: ApplePremiumProductCatalog? = nil
+        premiumProductCatalog: ApplePremiumProductCatalog?
     ) -> BroadMonetizationServices {
         precondition(
             !configuration.observerMode,

@@ -25,7 +25,8 @@
   require a verified matching transaction.
 - Hosts can pass their entitlement `ApplePremiumProductCatalog` to the Adapty
   service factory. A premium product missing from that catalog, or whose kind
-  differs, is refused before the payment sheet opens.
+  differs, is refused before the payment sheet opens. Existing initializer and
+  factory method signatures remain available for source compatibility.
 - Documented the finished-consumable recovery gap after a process exit and the
   backend transaction-ID contract that prevents false token pending states.
 
