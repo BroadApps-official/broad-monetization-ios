@@ -5,6 +5,8 @@ set -euo pipefail
 module_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 changelog="$module_root/CHANGELOG.md"
 readme="$module_root/README.md"
+release_notes="$(mktemp)"
+trap 'rm -f "$release_notes"' EXIT
 
 declared_version="$(
     awk '/^## [0-9]+\.[0-9]+\.[0-9]+([[:space:]]|$)/ { print $2; exit }' "$changelog"
@@ -28,5 +30,8 @@ do
         exit 1
     fi
 done
+
+bash "$module_root/Scripts/extract_release_notes.sh" \
+    "$expected_version" "$release_notes"
 
 echo "Release metadata is consistent for $expected_version."
