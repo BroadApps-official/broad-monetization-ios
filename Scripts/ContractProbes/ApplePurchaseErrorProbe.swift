@@ -10,7 +10,9 @@ enum ApplePurchaseErrorProbe {
         expect(SKError(.paymentNotAllowed), .definitivelyNotPurchased)
         expect(StoreKitError.notAvailableInStorefront, .definitivelyNotPurchased)
         expect(StoreKitError.notEntitled, .definitivelyNotPurchased)
-        expect(StoreKitError.unsupported, .definitivelyNotPurchased)
+        if #available(macOS 15.4, *) {
+            expect(StoreKitError.unsupported, .definitivelyNotPurchased)
+        }
         expect(
             NSError(
                 domain: "fixture.sdk.purchase",
