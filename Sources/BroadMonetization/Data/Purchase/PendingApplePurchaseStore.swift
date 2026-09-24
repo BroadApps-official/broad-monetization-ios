@@ -104,6 +104,7 @@ public actor PendingApplePurchaseStore: PendingApplePurchaseStoreProtocol {
     private let applicationIdentifier: String
     private let reviewInterval: TimeInterval
     private let clock: CacheClock
+    let diagnostics: KeychainPurchaseDiagnosticStore
 
     public init(
         subject: EntitlementSubject,
@@ -131,6 +132,10 @@ public actor PendingApplePurchaseStore: PendingApplePurchaseStoreProtocol {
         self.reviewInterval = reviewInterval
         self.clock = clock
         self.cache = cache
+        diagnostics = KeychainPurchaseDiagnosticStore(
+            applicationIdentifier: applicationIdentifier,
+            kind: .premium
+        )
         key = CacheKey(
             // One app-wide key intentionally survives host login/logout. The
             // record retains its originating subject so only that identity can
@@ -170,7 +175,15 @@ public actor PendingApplePurchaseStore: PendingApplePurchaseStoreProtocol {
         )
 
         do {
-            return try await cache.insertIfMissing(record, for: key)
+            let inserted = try await cache.insertIfMissing(record, for: key)
+            if inserted {
+                await diagnostics.begin(
+                    context: context,
+                    kind: productKind == .consumable ? .consumable : .premium,
+                    startedAt: startedAt
+                )
+            }
+            return inserted
         } catch {
             return false
         }
@@ -207,8 +220,10 @@ public actor PendingApplePurchaseStore: PendingApplePurchaseStoreProtocol {
             return .unavailable
         }
     }
+}
 
-    public func markTransactionConfirmed(
+public extension PendingApplePurchaseStore {
+    func markTransactionConfirmed(
         attemptID: MonetizationAttemptID
     ) async -> Bool {
         let result: CacheReadResult<Record>
@@ -230,6 +245,9 @@ public actor PendingApplePurchaseStore: PendingApplePurchaseStoreProtocol {
         else {
             return false
         }
+        if record.phase == .transactionConfirmed {
+            return true
+        }
 
         let confirmed = Record(
             subjectKey: record.subjectKey,
@@ -241,18 +259,24 @@ public actor PendingApplePurchaseStore: PendingApplePurchaseStoreProtocol {
             phase: .transactionConfirmed
         )
         do {
-            return try await cache.replace(
+            let replaced = try await cache.replace(
                 confirmed,
                 ifMatching: record,
                 for: key
             )
+            if replaced {
+                await diagnostics.note(
+                    attemptID: attemptID,
+                    stage: .transactionVerified,
+                    diagnosticCode: nil
+                )
+            }
+            return replaced
         } catch {
             return false
         }
     }
-}
 
-public extension PendingApplePurchaseStore {
     func clear(attemptID: MonetizationAttemptID) async -> Bool {
         let result: CacheReadResult<Record>
         do {
@@ -273,7 +297,11 @@ public extension PendingApplePurchaseStore {
             return false
         }
         do {
-            return try await cache.remove(key, ifMatching: record)
+            let removed = try await cache.remove(key, ifMatching: record)
+            if removed {
+                await diagnostics.clear(attemptID: attemptID)
+            }
+            return removed
         } catch {
             return false
         }

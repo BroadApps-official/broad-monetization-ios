@@ -18,6 +18,22 @@ from iOS 17 transaction history. ``AppleTransactionUpdatesBridge`` delivers and
 briefly buffers the same evidence for Ask-to-Buy and other out-of-band completions,
 including updates received before ``TokenPurchaseManager`` is composed. StoreKit
 unfinished/history scans remain recovery fallbacks, not the normal proof path.
+The bridge buffer is process-local. Hosts that enable finished-consumable history
+must reconcile transaction IDs on their backend before granting tokens again.
+Token fulfillment must use the exact transaction ID, not a change in total balance.
+
+After a provider-confirmed Apple subscription, the durable intent enters
+`transactionConfirmed` before the entitlement refresh. A later refresh can finish
+the attempt without repeating a timestamp-based transaction history match.
+Pending and outcome-unknown attempts still require verified StoreKit evidence.
+Typed Adapty and StoreKit cancellation or definitive purchase-call rejection
+clears the durable intent and permits an immediate retry. This includes
+StoreKit 2 errors and nested StoreKit errors wrapped by Adapty. Network and
+unknown failures retain the blocker because a charge may already exist.
+For a StoreKit premium entitlement source, pass the same
+``ApplePremiumProductCatalog`` to `AdaptyMonetizationFactory.makeServices`.
+This rejects a remote paywall product before payment when entitlement cannot
+recognize its SKU or kind.
 
 ## Topics
 
@@ -64,6 +80,9 @@ restore a cleared cycle after relaunch; storage failures remain unavailable.
 - ``AdaptySDKProfileIdentityProvider``
 - ``SubscriptionPurchaseManager``
 - ``TokenPurchaseManager``
+- ``PendingPurchaseDiagnostic``
+- ``PendingApplePurchaseStore``
+- ``PendingTokenPurchaseStore``
 - ``TokenFulfillmentOutcome``
 - ``TokenFulfillmentRepositoryProtocol``
 - ``AppleTransactionUpdatesBridge``

@@ -206,6 +206,65 @@ Do not add it to applications that only use App Store billing.
 Use `AppleCheckoutMethodsUseCase` and `CheckoutSelectedProductUseCase(applePurchase:)`
 for the base composition. See [5.0 migration](Documentation/OptionalProviders.md).
 
+## Повтор Apple-покупки
+
+`PurchaseSelectedProductUseCase` хранит intent до известного результата
+StoreKit. Отмена пользователем и окончательный отказ StoreKit без успешной
+транзакции очищают intent: после освобождения operation gate кнопку можно
+нажать снова.
+`AdaptyPurchaseRepository` различает эти исходы по типизированным кодам
+Adapty/StoreKit, включая `StoreKitError` из StoreKit 2 и вложенный `SKError`
+из `productPurchaseFailed`. Текст ошибки и `AppError.isRetryable` сами по себе
+не дают права очистить intent. В частности, после ошибки сети или неизвестного
+системного сбоя запись остаётся: платформа не знает, прошла ли оплата.
+
+После успешного ответа Adapty платформа сначала сохраняет этап
+`transactionConfirmed`, затем проверяет свежий entitlement. Если проверка
+временно недоступна, запуск или возврат в приложение повторит её без поиска
+той же покупки по времени в истории StoreKit. Для отложенной оплаты, сетевой
+ошибки и неопределённого ответа это правило не действует: нужна verified
+StoreKit transaction для точного SKU.
+
+Если premium выдаётся через `StoreKitAppleEntitlementVerifier`, передайте в
+`AdaptyMonetizationFactory.makeServices(..., premiumProductCatalog:)` тот же
+`ApplePremiumProductCatalog`, что передан entitlement source. Тогда SKU или
+тип продукта, появившийся в удалённом Adapty paywall без поддержки в каталоге
+доступа, будет отклонён **до** `makePurchase`. Paywall при этом сохраняет
+порядок и состав продуктов от Adapty; недоступный товар не скрывается молча.
+
+При отложенной оплате, сетевой ошибке или неопределённом ответе intent остаётся.
+Повторный `makePurchase` в этом состоянии запрещён: host должен показывать
+ожидание и вызывать `PendingApplePurchaseCoordinator.applicationDidBecomeActive()`
+при запуске, возврате в приложение и пока открыт заблокированный paywall.
+Только verified StoreKit transaction с точным product ID и подтверждённый
+entitlement завершают восстановление. Нельзя очищать intent по таймауту,
+отсутствию транзакции в одном опросе или нажатию «попробовать ещё раз».
+Intent, сохранённый старой версией как `outcomeUnknown`, не становится
+отменённой покупкой после обновления SDK: без verified transaction он требует
+разбора поддержкой.
+
+### Диагностика незавершённой Apple-покупки
+
+`PendingApplePurchaseStore.diagnosticSnapshot()` и
+`PendingTokenPurchaseStore.diagnosticSnapshot()` возвращают
+`PendingPurchaseDiagnostic`. Его `supportText` можно вставить в письмо или
+форму поддержки. Там есть ID попытки, product/placement/variation, время
+начала и последней проверки, этап и безопасный диагностический код. Чек,
+подписанная транзакция, баланс и ID пользователя туда не попадают.
+
+Платформа сохраняет этот общий контекст в локальном Keychain без iCloud sync.
+После переустановки он может остаться, даже если локальная запись о покупке
+исчезла; тогда `isPendingLocally == false`, а этап `localRecordMissing`.
+Это повод сверить покупку, а не доказательство оплаты и не разрешение повторно
+списать деньги. Если Keychain недоступен, активный intent всё равно даёт
+снимок из основного хранилища, но без последней проверки.
+
+Для подписки `reviewRequired` становится `true` через 24 часа ожидания.
+Это только признак для обращения в поддержку: он не снимает блокировку,
+не отменяет покупку и не запускает восстановление сам по себе. Проверку
+начисления токенов после переустановки host реализует для своего backend;
+платформа не владеет его балансом или webhook.
+
 ## Token purchases и recovery
 
 <p align="center">
@@ -234,8 +293,12 @@ consumable там отсутствует. `AppleTransactionUpdatesBridge`, ус�
 старта Adapty, тем же способом принимает Ask-to-Buy и другие out-of-band
 завершения; короткий process-local буфер не теряет событие, если
 `TokenPurchaseManager` создаётся чуть позже. `Transaction.unfinished`, затем
-`Transaction.all` остаются только recovery fallback. Включать iOS 18
-`SKIncludeConsumableInAppPurchaseHistory` для корректности этого flow не нужно.
+`Transaction.all` остаются recovery fallback. Буфер bridge живёт только в
+процессе: если приложение завершилось до сохранения JWS, завершённый consumable
+по умолчанию исчезает из `Transaction.all`. Host с idempotent ledger по Apple
+transaction ID может включить `SKIncludeConsumableInAppPurchaseHistory` в
+Info.plist для восстановления и после такого прерывания. Backend обязан
+различать уже начисленные transaction ID, иначе повторная выдача токенов опасна.
 
 Pending intent сохраняется при `.pending`, `.unavailable` и `.failed` независимо
 от `AppError.isRetryable`. Повтор использует то же evidence и attempt ID без
@@ -248,6 +311,12 @@ Pending intent сохраняется при `.pending`, `.unavailable` и `.fai
 аккаунту, верните `.alreadyCredited(balance)`. Для миграции на 4.0.0 обновите
 exhaustive switches по `TokenFulfillmentOutcome`; существующие adapters с
 `.failed(error)` сохраняют прежнее восстановление.
+
+Не определяйте `.credited` по росту общего баланса после вызова `fulfill`:
+webhook может прийти до первого чтения, а баланс может вырасти по другой причине.
+Backend adapter должен проверять именно `request.evidence.transactionID` и
+возвращать `.credited`/`.alreadyCredited` по результату атомарного учёта этой
+транзакции.
 
 Уже зависшие попытки, созданные версией 4.0.0 на iOS 17 после auto-finish,
 могут не иметь локально доступного JWS. Их нельзя безопасно очищать по таймауту:

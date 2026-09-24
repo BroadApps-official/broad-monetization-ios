@@ -5,6 +5,7 @@
 
 | Kind | Declaration |
 |---|---|
+| Case | `case accountMismatch` |
 | Case | `case activated` |
 | Case | `case activated(EntitlementSnapshot)` |
 | Case | `case active` |
@@ -20,6 +21,8 @@
 | Case | `case autoRenewableSubscription` |
 | Case | `case available` |
 | Case | `case available(Storefront)` |
+| Case | `case backendPending` |
+| Case | `case backendUnavailable` |
 | Case | `case cacheMiss` |
 | Case | `case cached` |
 | Case | `case campaign(SpecialOfferCampaign)` |
@@ -42,6 +45,7 @@
 | Case | `case eligible` |
 | Case | `case emptyCatalog` |
 | Case | `case emptyProducts` |
+| Case | `case entitlementAwaitingConfirmation` |
 | Case | `case entitlementResolved(EntitlementAnalyticsContext)` |
 | Case | `case expired(date: Date)` |
 | Case | `case expires(at: Date)` |
@@ -63,6 +67,8 @@
 | Case | `case loaded(PaywallPayload)` |
 | Case | `case loaded(RemotePaywallConfiguration)` |
 | Case | `case loaded(SpecialOfferState)` |
+| Case | `case localRecordMissing` |
+| Case | `case localStoreUnavailable` |
 | Case | `case matched(VerifiedApplePurchaseTransaction)` |
 | Case | `case missing` |
 | Case | `case month` |
@@ -91,6 +97,7 @@
 | Case | `case persistenceUnavailable` |
 | Case | `case placementUnavailable` |
 | Case | `case platformCache` |
+| Case | `case premium` |
 | Case | `case productSelected(PaywallAnalyticsContext, product: ProductAnalyticsContext)` |
 | Case | `case providerCacheFallbackPossible` |
 | Case | `case providerCheckoutConfirmed(ProviderCheckoutAnalyticsContext)` |
@@ -98,6 +105,7 @@
 | Case | `case providerCheckoutOpenFailed(ProviderCheckoutAnalyticsContext, failure: MonetizationAnalyticsFailure)` |
 | Case | `case providerCheckoutSafariReturned(ProviderCheckoutAnalyticsContext)` |
 | Case | `case providerCheckoutTimedOut(ProviderCheckoutAnalyticsContext)` |
+| Case | `case providerPending` |
 | Case | `case purchase` |
 | Case | `case purchaseCancelled(PurchaseAnalyticsContext)` |
 | Case | `case purchaseCompletedButUnverified(PurchaseAnalyticsContext)` |
@@ -125,13 +133,17 @@
 | Case | `case stale(PaywallPayload)` |
 | Case | `case stalePayload` |
 | Case | `case startNewGeneration` |
+| Case | `case started` |
 | Case | `case starts(SpecialOfferCampaignWindow)` |
+| Case | `case storeUnavailable` |
 | Case | `case stored` |
 | Case | `case substitutedPaywall` |
 | Case | `case synchronized(SpecialOfferTrustedTime)` |
 | Case | `case timedOut` |
 | Case | `case transactionConfirmed` |
 | Case | `case transactionConfirmedAwaitingEntitlement(EntitlementSnapshot?)` |
+| Case | `case transactionNotFound` |
+| Case | `case transactionVerified` |
 | Case | `case unavailable` |
 | Case | `case unavailable(AppError)` |
 | Case | `case unavailable(SpecialOfferCampaignRefusal)` |
@@ -198,6 +210,7 @@
 | Enumeration | `enum EntitlementSourceResolution` |
 | Enumeration | `enum EntitlementState` |
 | Enumeration | `enum EntitlementStatus` |
+| Enumeration | `enum Kind` |
 | Enumeration | `enum MonetizationActivationOutcome` |
 | Enumeration | `enum MonetizationAnalyticsEvent` |
 | Enumeration | `enum MonetizationIdentifierPolicy` |
@@ -233,6 +246,7 @@
 | Enumeration | `enum SpecialOfferState` |
 | Enumeration | `enum SpecialOfferStateLoadOutcome` |
 | Enumeration | `enum SpecialOfferUnavailableReason` |
+| Enumeration | `enum Stage` |
 | Enumeration | `enum StoreKitCurrentEntitlementRecord` |
 | Enumeration | `enum StoreKitEntitlementOwnershipPolicy` |
 | Enumeration | `enum StoreKitStorefrontClientResult` |
@@ -261,6 +275,7 @@
 | Initializer | `init(attemptID: MonetizationAttemptID)` |
 | Initializer | `init(attemptID: MonetizationAttemptID, evidence: TokenTransactionEvidence)` |
 | Initializer | `init(attemptID: MonetizationAttemptID, productID: ProductID, checkoutMethod: CheckoutMethod, paywallPresentationID: PaywallPresentationID? = nil, paywallVariationID: PaywallVariationID? = nil, requestedPlacementID: PlacementID? = nil, resolvedPlacementID: PlacementID? = nil)` |
+| Initializer | `init(attemptID: MonetizationAttemptID, productID: ProductID, requestedPlacementID: PlacementID, resolvedPlacementID: PlacementID, paywallVariationID: PaywallVariationID?, kind: PendingPurchaseDiagnostic.Kind, startedAt: Date, lastCheckedAt: Date?, stage: PendingPurchaseDiagnostic.Stage, diagnosticCode: String?, isPendingLocally: Bool, reviewRequired: Bool)` |
 | Initializer | `init(attemptID: MonetizationAttemptID, request: PaywallLoadRequest)` |
 | Initializer | `init(attemptID: MonetizationAttemptID, selection: ProductSelection, checkoutMethod: CheckoutMethod)` |
 | Initializer | `init(attemptID: MonetizationAttemptID, selection: ProductSelection, productID: ProductID, checkoutMethod: CheckoutMethod)` |
@@ -329,7 +344,7 @@
 | Initializer | `init(repository: any CacheRepositoryProtocol, subject: EntitlementSubject, freshTimeToLive: TimeInterval = 15 * 60, maximumStaleAge: TimeInterval = 24 * 60 * 60, schemaIdentifier: String = VersionedPaywallCache.defaultSchemaIdentifier, version: Int = VersionedPaywallCache.currentVersion, unavailableError: AppError, clock: CacheClock = .system)` |
 | Initializer | `init(repository: any MonetizationRepositoryProtocol)` |
 | Initializer | `init(repository: any PaywallRepositoryProtocol, cache: (any PaywallCacheProtocol)? = nil, analytics: any MonetizationAnalyticsProtocol, presentationLifecycle: any PaywallPresentationLifecycleProtocol = NoOpPaywallPresentationLifecycle(), staleLoadError: AppError)` |
-| Initializer | `init(repository: any PurchaseRepositoryProtocol, entitlementRepository: any EntitlementRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol, pendingStore: any PendingApplePurchaseStoreProtocol, operationGate: MonetizationOperationGate, inProgressError: AppError, pendingStateUnavailableError: AppError? = nil, unsupportedProductError: AppError? = nil)` |
+| Initializer | `init(repository: any PurchaseRepositoryProtocol, entitlementRepository: any EntitlementRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol, pendingStore: any PendingApplePurchaseStoreProtocol, operationGate: MonetizationOperationGate, inProgressError: AppError, pendingStateUnavailableError: AppError? = nil, unsupportedProductError: AppError? = nil, premiumProductCatalog: ApplePremiumProductCatalog? = nil)` |
 | Initializer | `init(repository: any RestoreRepositoryProtocol, entitlementRepository: any EntitlementRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol, operationGate: MonetizationOperationGate, verificationUnavailableError: AppError)` |
 | Initializer | `init(requestedPlacementID: PlacementID, resolvedPlacementID: PlacementID, catalogSource: CatalogSource, fallbackReason: PaywallFallbackReason? = nil)` |
 | Initializer | `init(resolve: any ResolveSpecialOfferUseCaseProtocol, configuration: SpecialOfferConfiguration, followedPlacementIDs: Set<PlacementID>? = nil)` |
@@ -422,6 +437,7 @@
 | Instance Method | `func currentStatus() async -> EntitlementStatus` |
 | Instance Method | `func currentStorefront() async -> StorefrontResolution` |
 | Instance Method | `func decision(startedAt: Date?, now: Date, windowDuration: TimeInterval, cooldownDuration: TimeInterval) -> SpecialOfferCadence.Decision` |
+| Instance Method | `func diagnosticSnapshot() async -> PendingPurchaseDiagnostic?` |
 | Instance Method | `func encode(to encoder: any Encoder) throws` |
 | Instance Method | `func entry(for productID: String) -> ApplePremiumProductCatalog.Entry?` |
 | Instance Method | `func evidence(productID: ProductID, purchasedAfter: Date) async -> TokenEvidenceResolution` |
@@ -448,10 +464,12 @@
 | Instance Method | `func makePaywallLoader(provider: any ProviderPaywallAttemptRepositoryProtocol, cache: (any PaywallCacheProtocol)?, presentationLifecycle: any PaywallPresentationLifecycleProtocol, staleLoadError: AppError) -> any LoadPaywallUseCaseProtocol` |
 | Instance Method | `func makeRegistration(configuration: AppleEntitlementSourceConfiguration, additionalAuthoritativeVerifiers: [any AppleEntitlementVerifierProtocol] = []) -> EntitlementSourceRegistration` |
 | Instance Method | `func makeRegistration(configuration: PrimaryBackendSourceConfiguration) -> EntitlementSourceRegistration` |
-| Instance Method | `func makeServices(entitlementRepository: any EntitlementRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol, paywallCache: (any PaywallCacheProtocol)? = nil, errors: MonetizationFlowErrors, pendingApplePurchaseStore: any PendingApplePurchaseStoreProtocol, pendingAppleTransactionRecovery: any PendingAppleTransactionRecoveryProtocol, operationGate: MonetizationOperationGate, paywallLoaderFactory: (any PaywallLoaderFactoryProtocol)? = nil) -> BroadMonetizationServices` |
+| Instance Method | `func makeServices(entitlementRepository: any EntitlementRepositoryProtocol, analytics: any MonetizationAnalyticsProtocol, paywallCache: (any PaywallCacheProtocol)? = nil, errors: MonetizationFlowErrors, pendingApplePurchaseStore: any PendingApplePurchaseStoreProtocol, pendingAppleTransactionRecovery: any PendingAppleTransactionRecoveryProtocol, operationGate: MonetizationOperationGate, paywallLoaderFactory: (any PaywallLoaderFactoryProtocol)? = nil, premiumProductCatalog: ApplePremiumProductCatalog? = nil) -> BroadMonetizationServices` |
 | Instance Method | `func markTransactionConfirmed(attemptID: MonetizationAttemptID) -> Bool` |
 | Instance Method | `func markTransactionConfirmed(attemptID: MonetizationAttemptID) async -> Bool` |
 | Instance Method | `func matches(_ authorization: SubjectBoundAuthorization) -> Bool` |
+| Instance Method | `func noteDiagnostic(attemptID: MonetizationAttemptID, stage: PendingPurchaseDiagnostic.Stage, diagnosticCode: String? = nil) async` |
+| Instance Method | `func noteDiagnostic(attemptID: MonetizationAttemptID, stage: PendingPurchaseDiagnostic.Stage, diagnosticCode: String?) async` |
 | Instance Method | `func notifyFinancialOperationStateChanged()` |
 | Instance Method | `func parse(_ dictionary: [String : Any]) -> ProviderRemoteConfiguration?` |
 | Instance Method | `func parse(_ dictionary: [String : Any]) -> RemotePaywallConfiguration` |
@@ -551,6 +569,7 @@
 | Instance Property | `let date: Date` |
 | Instance Property | `let decisionData: Data` |
 | Instance Property | `let diagnosticCode: String` |
+| Instance Property | `let diagnosticCode: String?` |
 | Instance Property | `let displayPrice: String?` |
 | Instance Property | `let endpointURL: URL` |
 | Instance Property | `let entitlement: EntitlementSnapshot` |
@@ -584,6 +603,7 @@
 | Instance Property | `let isFromCurrentRefresh: Bool` |
 | Instance Property | `let isInGracePeriod: Bool` |
 | Instance Property | `let isLifetime: Bool` |
+| Instance Property | `let isPendingLocally: Bool` |
 | Instance Property | `let isRefund: Bool` |
 | Instance Property | `let isUpgraded: Bool` |
 | Instance Property | `let kind: AppError.Kind` |
@@ -591,6 +611,8 @@
 | Instance Property | `let kind: MonetizationOperationKind` |
 | Instance Property | `let kind: MonetizationProductKind` |
 | Instance Property | `let kind: PendingOperationBlockerKey.Kind` |
+| Instance Property | `let kind: PendingPurchaseDiagnostic.Kind` |
+| Instance Property | `let lastCheckedAt: Date?` |
 | Instance Property | `let liveMetadata: Data?` |
 | Instance Property | `let loadPaywall: any LoadPaywallUseCaseProtocol` |
 | Instance Property | `let main: AdaptyPlacementID` |
@@ -671,6 +693,7 @@
 | Instance Property | `let specialOfferDurationHours: [String]` |
 | Instance Property | `let specialOfferGate: [String]` |
 | Instance Property | `let specialOfferPeriodText: [String]` |
+| Instance Property | `let stage: PendingPurchaseDiagnostic.Stage` |
 | Instance Property | `let stalePaywallLoad: AppError` |
 | Instance Property | `let startedAt: Date` |
 | Instance Property | `let startsAt: Date?` |
@@ -736,6 +759,7 @@
 | Instance Property | `var remainingTimeInterval: TimeInterval { get }` |
 | Instance Property | `var shouldAttemptFallback: Bool { get }` |
 | Instance Property | `var supportSubscriptionValue: String { get }` |
+| Instance Property | `var supportText: String { get }` |
 | Instance Property | `var usedFallback: Bool { get }` |
 | Protocol | `protocol ActivateMonetizationUseCaseProtocol : Sendable` |
 | Protocol | `protocol AdaptyEntitlementProfileClientProtocol : Sendable` |
@@ -854,6 +878,7 @@
 | Structure | `struct PaywallVariationID` |
 | Structure | `struct PendingApplePurchaseIntent` |
 | Structure | `struct PendingOperationBlockerKey` |
+| Structure | `struct PendingPurchaseDiagnostic` |
 | Structure | `struct PendingTokenPurchaseIntent` |
 | Structure | `struct PeriodWeights` |
 | Structure | `struct PlacementID` |

@@ -76,7 +76,8 @@ public struct AdaptyMonetizationFactory: Sendable {
         pendingApplePurchaseStore: any PendingApplePurchaseStoreProtocol,
         pendingAppleTransactionRecovery: any PendingAppleTransactionRecoveryProtocol,
         operationGate: MonetizationOperationGate,
-        paywallLoaderFactory: (any PaywallLoaderFactoryProtocol)? = nil
+        paywallLoaderFactory: (any PaywallLoaderFactoryProtocol)? = nil,
+        premiumProductCatalog: ApplePremiumProductCatalog? = nil
     ) -> BroadMonetizationServices {
         precondition(
             !configuration.observerMode,
@@ -100,7 +101,8 @@ public struct AdaptyMonetizationFactory: Sendable {
             inputs: inputs,
             paywallRepository: paywallRepository,
             operationGate: operationGate,
-            paywallLoaderFactory: paywallLoaderFactory
+            paywallLoaderFactory: paywallLoaderFactory,
+            premiumProductCatalog: premiumProductCatalog
         )
     }
 }
@@ -110,7 +112,8 @@ private extension AdaptyMonetizationFactory {
         inputs: AdaptyServiceInputs,
         paywallRepository: AdaptyPaywallRepository,
         operationGate: MonetizationOperationGate,
-        paywallLoaderFactory: (any PaywallLoaderFactoryProtocol)? = nil
+        paywallLoaderFactory: (any PaywallLoaderFactoryProtocol)? = nil,
+        premiumProductCatalog: ApplePremiumProductCatalog? = nil
     ) -> BroadMonetizationServices {
         BroadMonetizationServices(
             activate: ActivateMonetizationUseCase(
@@ -131,7 +134,8 @@ private extension AdaptyMonetizationFactory {
                 analytics: inputs.deliveryAnalytics,
                 pendingStore: inputs.pendingStore,
                 operationGate: operationGate,
-                inProgressError: inputs.errors.purchaseInProgress
+                inProgressError: inputs.errors.purchaseInProgress,
+                premiumProductCatalog: premiumProductCatalog
             ),
             restorePurchases: RestorePurchasesUseCase(
                 repository: makeRestoreRepository(),

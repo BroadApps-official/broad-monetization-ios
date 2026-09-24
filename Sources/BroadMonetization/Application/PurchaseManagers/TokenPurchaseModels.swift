@@ -234,9 +234,20 @@ public protocol PendingTokenPurchaseStoreProtocol:
         attemptID: MonetizationAttemptID
     ) async -> Bool
     func clear(attemptID: MonetizationAttemptID) async -> Bool
+    func noteDiagnostic(
+        attemptID: MonetizationAttemptID,
+        stage: PendingPurchaseDiagnostic.Stage,
+        diagnosticCode: String?
+    ) async
 }
 
 public extension PendingTokenPurchaseStoreProtocol {
+    func noteDiagnostic(
+        attemptID: MonetizationAttemptID,
+        stage: PendingPurchaseDiagnostic.Stage,
+        diagnosticCode: String? = nil
+    ) async {}
+
     func hasPendingMonetizationOperation() async -> Bool {
         switch await state() {
         case .pending, .unavailable:

@@ -20,6 +20,7 @@ public actor PendingTokenPurchaseStore: PendingTokenPurchaseStoreProtocol {
     private let subjectKey: String
     private let applicationIdentifier: String
     private let clock: CacheClock
+    private let diagnostics: KeychainPurchaseDiagnosticStore
 
     public init(
         subject: EntitlementSubject,
@@ -41,6 +42,10 @@ public actor PendingTokenPurchaseStore: PendingTokenPurchaseStoreProtocol {
         self.applicationIdentifier = applicationIdentifier
         self.cache = cache
         self.clock = clock
+        diagnostics = KeychainPurchaseDiagnosticStore(
+            applicationIdentifier: applicationIdentifier,
+            kind: .consumable
+        )
         pendingOperationBlockerKey = PendingOperationBlockerKey(
             kind: .tokenPurchase,
             applicationIdentifier: applicationIdentifier
@@ -64,7 +69,7 @@ public actor PendingTokenPurchaseStore: PendingTokenPurchaseStoreProtocol {
             return false
         }
         do {
-            return try await cache.insertIfMissing(
+            let inserted = try await cache.insertIfMissing(
                 Record(
                     subjectKey: subjectKey,
                     applicationIdentifier: applicationIdentifier,
@@ -74,6 +79,14 @@ public actor PendingTokenPurchaseStore: PendingTokenPurchaseStoreProtocol {
                 ),
                 for: key
             )
+            if inserted {
+                await diagnostics.begin(
+                    context: context,
+                    kind: .consumable,
+                    startedAt: startedAt
+                )
+            }
+            return inserted
         } catch {
             return false
         }
@@ -121,7 +134,15 @@ public actor PendingTokenPurchaseStore: PendingTokenPurchaseStoreProtocol {
             evidence: evidence
         )
         do {
-            return try await cache.replace(updated, ifMatching: record, for: key)
+            let replaced = try await cache.replace(updated, ifMatching: record, for: key)
+            if replaced {
+                await diagnostics.note(
+                    attemptID: attemptID,
+                    stage: .transactionVerified,
+                    diagnosticCode: nil
+                )
+            }
+            return replaced
         } catch {
             return false
         }
@@ -135,9 +156,79 @@ public actor PendingTokenPurchaseStore: PendingTokenPurchaseStoreProtocol {
             return false
         }
         do {
-            return try await cache.remove(key, ifMatching: record)
+            let removed = try await cache.remove(key, ifMatching: record)
+            if removed {
+                await diagnostics.clear(attemptID: attemptID)
+            }
+            return removed
         } catch {
             return false
+        }
+    }
+
+    public func noteDiagnostic(
+        attemptID: MonetizationAttemptID,
+        stage: PendingPurchaseDiagnostic.Stage,
+        diagnosticCode: String? = nil
+    ) async {
+        guard case let .pending(intent) = await state(), intent.attemptID == attemptID else {
+            return
+        }
+        if case .missing = await diagnostics.read() {
+            await diagnostics.begin(
+                context: intent.analyticsContext,
+                kind: .consumable,
+                startedAt: intent.startedAt
+            )
+        }
+        await diagnostics.note(
+            attemptID: attemptID,
+            stage: stage,
+            diagnosticCode: diagnosticCode
+        )
+    }
+
+    public func diagnosticSnapshot() async -> PendingPurchaseDiagnostic? {
+        let current = await state()
+        let saved = await diagnostics.read()
+        let keychainRecord: KeychainPurchaseDiagnosticStore.Record? = switch saved {
+        case let .value(record): record
+        case .missing, .unavailable: nil
+        }
+        switch current {
+        case let .pending(intent):
+            let matching = keychainRecord?.attemptID == intent.attemptID
+                ? keychainRecord : nil
+            return PendingPurchaseDiagnostic(
+                attemptID: intent.attemptID,
+                productID: intent.productID,
+                requestedPlacementID: intent.analyticsContext.requestedPlacementID,
+                resolvedPlacementID: intent.analyticsContext.resolvedPlacementID,
+                paywallVariationID: intent.analyticsContext.paywallVariationID,
+                kind: .consumable,
+                startedAt: intent.startedAt,
+                lastCheckedAt: matching?.lastCheckedAt,
+                stage: matching?.stage ?? (intent.evidence == nil ? .started : .transactionVerified),
+                diagnosticCode: matching?.diagnosticCode,
+                isPendingLocally: true,
+                reviewRequired: false
+            )
+        case .none, .unavailable:
+            guard let record = keychainRecord else { return nil }
+            return PendingPurchaseDiagnostic(
+                attemptID: record.attemptID,
+                productID: record.analyticsContext.productID,
+                requestedPlacementID: record.analyticsContext.requestedPlacementID,
+                resolvedPlacementID: record.analyticsContext.resolvedPlacementID,
+                paywallVariationID: record.analyticsContext.paywallVariationID,
+                kind: record.kind,
+                startedAt: record.startedAt,
+                lastCheckedAt: record.lastCheckedAt,
+                stage: current == .unavailable ? .localStoreUnavailable : .localRecordMissing,
+                diagnosticCode: record.diagnosticCode,
+                isPendingLocally: false,
+                reviewRequired: false
+            )
         }
     }
 

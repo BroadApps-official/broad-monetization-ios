@@ -1,5 +1,42 @@
 # Changelog
 
+## Unreleased (5.1.0)
+
+### Added
+
+- Support-safe `PendingPurchaseDiagnostic` and `diagnosticSnapshot()` for
+  Apple and token purchase intents. Common attempt context and the last
+  reconciliation stage are mirrored to device-local Keychain so support can
+  investigate even when reinstall removed the app's local pending record.
+  These diagnostics never authorize entitlement, token credit or a new charge.
+
+### Fixed
+
+- Adapty cancellation and proven terminal StoreKit failures now clear the
+  durable Apple intent, so the paywall can offer another purchase attempt.
+  This includes StoreKit 2 typed errors and nested StoreKit errors carried by
+  Adapty's `productPurchaseFailed` wrapper.
+  Pending payments, network failures and ambiguous SDK errors still block a
+  second charge until verified transaction reconciliation.
+- A provider-confirmed Apple subscription now persists its confirmed phase
+  before entitlement refresh. Recovery can retry entitlement after a timeout,
+  restart or late StoreKit update without rejecting the paid purchase because
+  its transaction date differs from the device clock. Unknown outcomes still
+  require a verified matching transaction.
+- Hosts can pass their entitlement `ApplePremiumProductCatalog` to the Adapty
+  service factory. A premium product missing from that catalog, or whose kind
+  differs, is refused before the payment sheet opens.
+- Documented the finished-consumable recovery gap after a process exit and the
+  backend transaction-ID contract that prevents false token pending states.
+
+### Validation
+
+- SemVer intent: minor; additive public diagnostics and optional premium catalog
+  API. Existing financial intent formats and backend contracts stay unchanged.
+- Apple purchase error and recovery contract probes check cancellation and
+  terminal-error retries, confirmed purchase recovery, unchanged fail-closed
+  behavior for unknown outcomes, and premium catalog refusal before payment.
+
 ## 5.0.0
 
 ### Optional providers

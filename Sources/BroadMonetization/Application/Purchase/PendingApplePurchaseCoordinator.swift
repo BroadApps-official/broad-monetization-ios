@@ -11,8 +11,9 @@ public enum PendingApplePurchaseOutcome: Equatable, Sendable {
 
 /// Reconciles the one application-wide Apple purchase intent. A generic active
 /// entitlement never proves that the attempted SKU completed. The coordinator
-/// accepts only a verified StoreKit purchase for the exact SKU and keeps a
-/// second durable `transactionConfirmed` phase until premium is authoritative.
+/// accepts a verified StoreKit purchase for the exact SKU or a provider-completed
+/// attempt recorded before entitlement refresh. The durable
+/// `transactionConfirmed` phase remains until premium is authoritative.
 public actor PendingApplePurchaseCoordinator {
     private let store: any PendingApplePurchaseStoreProtocol
     private let refreshEntitlement: any EntitlementRepositoryProtocol
@@ -47,19 +48,29 @@ public actor PendingApplePurchaseCoordinator {
     public func applicationDidBecomeActive() async -> PendingApplePurchaseOutcome {
         switch await store.state() {
         case .none:
-            .noPendingPurchase
+            return .noPendingPurchase
         case .unavailable:
-            .unavailable
+            return .unavailable
         case let .pending(intent) where intent.phase == .transactionConfirmed:
-            await reconcileConfirmed(intent)
+            return await reconcileConfirmed(intent)
         case let .pending(intent):
             switch await transactionRecovery.recover(intent) {
             case let .matched(transaction):
-                await resolveVerified(transaction, intent: intent)
+                return await resolveVerified(transaction, intent: intent)
             case .noMatch:
-                .pending(intent)
+                await store.noteDiagnostic(
+                    attemptID: intent.attemptID,
+                    stage: .transactionNotFound,
+                    diagnosticCode: nil
+                )
+                return .pending(intent)
             case .unavailable:
-                .unavailable
+                await store.noteDiagnostic(
+                    attemptID: intent.attemptID,
+                    stage: .storeUnavailable,
+                    diagnosticCode: nil
+                )
+                return .unavailable
             }
         }
     }
@@ -76,6 +87,9 @@ public actor PendingApplePurchaseCoordinator {
         case .unavailable:
             return .unavailable
         case let .pending(intent):
+            if intent.phase == .transactionConfirmed {
+                return await reconcileConfirmed(intent)
+            }
             guard matches(transaction, intent: intent) else {
                 return .pending(intent)
             }
@@ -132,6 +146,11 @@ private extension PendingApplePurchaseCoordinator {
         _ intent: PendingApplePurchaseIntent
     ) async -> PendingApplePurchaseOutcome {
         guard intent.belongsToCurrentSubject else {
+            await store.noteDiagnostic(
+                attemptID: intent.attemptID,
+                stage: .accountMismatch,
+                diagnosticCode: nil
+            )
             await analytics.track(
                 .purchaseCompletedButUnverified(intent.analyticsContext)
             )
@@ -142,6 +161,11 @@ private extension PendingApplePurchaseCoordinator {
             policy: .startNewGeneration
         )
         guard snapshot.isCurrentActiveConfirmed else {
+            await store.noteDiagnostic(
+                attemptID: intent.attemptID,
+                stage: .entitlementAwaitingConfirmation,
+                diagnosticCode: nil
+            )
             await analytics.track(
                 .purchaseCompletedButUnverified(intent.analyticsContext)
             )

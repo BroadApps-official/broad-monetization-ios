@@ -66,9 +66,20 @@ public protocol PendingApplePurchaseStoreProtocol:
     func state() async -> PendingApplePurchaseState
     func markTransactionConfirmed(attemptID: MonetizationAttemptID) async -> Bool
     func clear(attemptID: MonetizationAttemptID) async -> Bool
+    func noteDiagnostic(
+        attemptID: MonetizationAttemptID,
+        stage: PendingPurchaseDiagnostic.Stage,
+        diagnosticCode: String?
+    ) async
 }
 
 public extension PendingApplePurchaseStoreProtocol {
+    func noteDiagnostic(
+        attemptID: MonetizationAttemptID,
+        stage: PendingPurchaseDiagnostic.Stage,
+        diagnosticCode: String? = nil
+    ) async {}
+
     func hasPendingMonetizationOperation() async -> Bool {
         switch await state() {
         case .pending, .unavailable:

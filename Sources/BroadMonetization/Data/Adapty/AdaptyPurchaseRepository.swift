@@ -1,6 +1,5 @@
 import Adapty
 import BroadCore
-import StoreKit
 
 public actor AdaptyPurchaseRepository: PurchaseRepositoryProtocol {
     private let configuration: AdaptyPlatformConfiguration
@@ -91,10 +90,47 @@ private extension AdaptyPurchaseRepository {
                 return completedOutcome(result, request: request)
             }
         } catch {
-            return .failed(
-                purchaseUnavailableError(),
-                disposition: .outcomeUnknown
-            )
+            return purchaseFailure(after: error)
+        }
+    }
+
+    func purchaseFailure(after error: any Error) -> PurchaseAttemptOutcome {
+        guard let adaptyError = error as? AdaptyError else {
+            return .failed(purchaseUnavailableError(), disposition: .outcomeUnknown)
+        }
+
+        switch adaptyError.adaptyErrorCode {
+        case .paymentCancelled:
+            return .cancelled
+        case .paymentPendingError:
+            return .pending
+        case .clientInvalid, .paymentInvalid, .paymentNotAllowed,
+             .storeProductNotAvailable, .noProductIDsFound,
+             .invalidOfferIdentifier, .invalidSignature, .missingOfferParams,
+             .invalidOfferPrice, .unauthorizedRequestData,
+             .cantMakePayments, .notActivated:
+            // These failures prove no purchase completed. The durable intent
+            // can be cleared so the user may try again after fixing the cause.
+            return definitiveFailure(purchaseUnavailableError())
+        case .productPurchaseFailed:
+            // StoreKit 2 can throw StoreKitError, and the SDK can wrap a
+            // terminal SKError inside another NSError. Classify only the
+            // original purchase-call error, never a later validation failure.
+            if let originalError = adaptyError.originalError {
+                switch ApplePurchaseErrorClassifier.classify(originalError) {
+                case .cancelled:
+                    return .cancelled
+                case .definitivelyNotPurchased:
+                    return definitiveFailure(purchaseUnavailableError())
+                case .outcomeUnknown:
+                    break
+                }
+            }
+            return .failed(purchaseUnavailableError(), disposition: .outcomeUnknown)
+        default:
+            // A network or SDK failure can happen after StoreKit has charged.
+            // Keep the intent until a verified transaction resolves it.
+            return .failed(purchaseUnavailableError(), disposition: .outcomeUnknown)
         }
     }
 

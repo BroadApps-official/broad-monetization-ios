@@ -113,6 +113,11 @@ public actor TokenPurchaseManager {
             return .failed(unavailableError)
         case let .pending(intent):
             guard intent.belongsToCurrentSubject else {
+                await pendingStore.noteDiagnostic(
+                    attemptID: intent.attemptID,
+                    stage: .accountMismatch,
+                    diagnosticCode: nil
+                )
                 return .failed(unavailableError)
             }
             return await resolve(intent)
@@ -179,11 +184,21 @@ private extension TokenPurchaseManager {
                 event: .purchaseCancelled(context)
             )
         case .pending:
+            await pendingStore.noteDiagnostic(
+                attemptID: context.attemptID,
+                stage: .providerPending,
+                diagnosticCode: nil
+            )
             await analytics.track(.purchasePending(context))
             await operationGate.notifyFinancialOperationStateChanged()
             return .pending
         case let .failed(error, disposition):
             guard disposition == .definitivelyNotPurchased else {
+                await pendingStore.noteDiagnostic(
+                    attemptID: context.attemptID,
+                    stage: .outcomeUnknown,
+                    diagnosticCode: error.diagnosticCode
+                )
                 await analytics.track(.purchasePending(context))
                 await operationGate.notifyFinancialOperationStateChanged()
                 return .pending
@@ -241,9 +256,19 @@ private extension TokenPurchaseManager {
                 }
                 evidence = resolvedEvidence
             case .notFound:
+                await pendingStore.noteDiagnostic(
+                    attemptID: intent.attemptID,
+                    stage: .transactionNotFound,
+                    diagnosticCode: nil
+                )
                 await analytics.track(.purchasePending(intent.analyticsContext))
                 return .pending
             case .unavailable:
+                await pendingStore.noteDiagnostic(
+                    attemptID: intent.attemptID,
+                    stage: .storeUnavailable,
+                    diagnosticCode: nil
+                )
                 return .failed(unavailableError)
             }
         }
@@ -272,9 +297,19 @@ private extension TokenPurchaseManager {
             await analytics.track(.purchaseSuccess(intent.analyticsContext))
             return .credited(balance)
         case .pending:
+            await pendingStore.noteDiagnostic(
+                attemptID: intent.attemptID,
+                stage: .backendPending,
+                diagnosticCode: nil
+            )
             await analytics.track(.purchasePending(intent.analyticsContext))
             return .pending
         case let .unavailable(error), let .failed(error):
+            await pendingStore.noteDiagnostic(
+                attemptID: intent.attemptID,
+                stage: .backendUnavailable,
+                diagnosticCode: error.diagnosticCode
+            )
             // Neither outcome proves a terminal refusal. Preserve evidence
             // even when the AppError UI retry hint is false.
             await analytics.track(

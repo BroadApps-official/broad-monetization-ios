@@ -141,6 +141,14 @@ fulfillment остаются idempotent app/backend boundaries.
 как recovery fallback. Так не теряются и покупки, завершившиеся вне приложения.
 Раньше этот listener писал каждый host.
 
+Если Apple premium определяется через `ApplePremiumProductCatalog`, host передаёт
+тот же каталог в `AdaptyMonetizationFactory.makeServices` как
+`premiumProductCatalog`. Платформа отклоняет несовпадающий SKU или тип до оплаты.
+Подтверждённая Adapty покупка сначала сохраняет этап `transactionConfirmed`;
+после временно неудачной проверки доступа reconciliation повторяет только
+entitlement refresh. Для `.pending` и неизвестного исхода по-прежнему требуется
+verified StoreKit transaction.
+
 Для диагностики (например, письмо в поддержку) `EntitlementStatus.supportSubscriptionValue`
 даёт канонический строковый статус (`subscribed`/`not_subscribed`/`unknown`), а
 `ProfileIdentityProviderProtocol` (реализация `AdaptySDKProfileIdentityProvider`)

@@ -9,6 +9,7 @@ public actor PurchaseSelectedProductUseCase: PurchaseSelectedProductUseCaseProto
     private let inProgressError: AppError
     private let pendingStateUnavailableError: AppError
     private let unsupportedProductError: AppError
+    private let premiumProductCatalog: ApplePremiumProductCatalog?
 
     public init(
         repository: any PurchaseRepositoryProtocol,
@@ -18,7 +19,8 @@ public actor PurchaseSelectedProductUseCase: PurchaseSelectedProductUseCaseProto
         operationGate: MonetizationOperationGate,
         inProgressError: AppError,
         pendingStateUnavailableError: AppError? = nil,
-        unsupportedProductError: AppError? = nil
+        unsupportedProductError: AppError? = nil,
+        premiumProductCatalog: ApplePremiumProductCatalog? = nil
     ) {
         self.repository = repository
         self.entitlementRepository = entitlementRepository
@@ -30,6 +32,7 @@ public actor PurchaseSelectedProductUseCase: PurchaseSelectedProductUseCaseProto
             ?? Self.defaultPendingStateUnavailableError
         self.unsupportedProductError = unsupportedProductError
             ?? Self.defaultUnsupportedProductError
+        self.premiumProductCatalog = premiumProductCatalog
         operationGate.registerPendingOperationBlocker(pendingStore)
     }
 
@@ -43,6 +46,14 @@ public actor PurchaseSelectedProductUseCase: PurchaseSelectedProductUseCaseProto
         // Reject before acquiring the gate, persisting intent or opening the
         // provider sheet.
         guard selection.product.isEligibleForGenericPurchase else {
+            return .failed(unsupportedProductError)
+        }
+        if checkoutMethod == .apple,
+           let premiumProductCatalog,
+           !Self.isCoveredByPremiumCatalog(
+               selection.product,
+               catalog: premiumProductCatalog
+           ) {
             return .failed(unsupportedProductError)
         }
         guard let lease = await monetizationOperationGate.acquire(.purchase) else {
@@ -65,7 +76,8 @@ public actor PurchaseSelectedProductUseCase: PurchaseSelectedProductUseCaseProto
         await analytics.track(.purchaseStarted(context))
         let providerOutcome = await performPurchase(
             selection,
-            using: checkoutMethod
+            using: checkoutMethod,
+            context: context
         )
         let outcome: PurchaseOutcome
         if shouldClearPendingIntent(
@@ -89,9 +101,27 @@ public actor PurchaseSelectedProductUseCase: PurchaseSelectedProductUseCaseProto
 extension PurchaseSelectedProductUseCase: MonetizationOperationGateProviding {}
 
 private extension PurchaseSelectedProductUseCase {
+    static func isCoveredByPremiumCatalog(
+        _ product: MonetizationProduct,
+        catalog: ApplePremiumProductCatalog
+    ) -> Bool {
+        guard let entry = catalog.entry(for: product.productID.rawValue) else {
+            return false
+        }
+        switch (product.kind, entry.kind) {
+        case (.autoRenewableSubscription, .autoRenewable),
+             (.nonConsumable, .nonConsumable),
+             (.nonRenewingSubscription, .nonRenewing):
+            return true
+        default:
+            return false
+        }
+    }
+
     func performPurchase(
         _ selection: ProductSelection,
-        using checkoutMethod: CheckoutMethod
+        using checkoutMethod: CheckoutMethod,
+        context: PurchaseAnalyticsContext
     ) async -> PurchaseOutcome {
         let attempt = await repository.purchase(
             PurchaseRequest(
@@ -104,20 +134,64 @@ private extension PurchaseSelectedProductUseCase {
         case .cancelled:
             return .cancelled
         case .pending:
+            await pendingStore.noteDiagnostic(
+                attemptID: context.attemptID,
+                stage: .providerPending,
+                diagnosticCode: nil
+            )
             return .pending
         case let .failed(error, disposition):
+            if disposition != .definitivelyNotPurchased {
+                await pendingStore.noteDiagnostic(
+                    attemptID: context.attemptID,
+                    stage: .outcomeUnknown,
+                    diagnosticCode: error.diagnosticCode
+                )
+            }
             return disposition == .definitivelyNotPurchased
                 ? .failed(error)
                 : .pending
         case let .completed(confirmation):
-            let snapshot = await entitlementRepository.refreshEntitlement(
-                policy: .startNewGeneration
+            return await confirmCompleted(
+                confirmation,
+                selection: selection,
+                checkoutMethod: checkoutMethod,
+                context: context
             )
-            guard snapshot.isCurrentActiveConfirmed else {
-                return .completedButUnverified(confirmation)
-            }
-            return .activated(snapshot)
         }
+    }
+
+    func confirmCompleted(
+        _ confirmation: PurchaseConfirmation,
+        selection: ProductSelection,
+        checkoutMethod: CheckoutMethod,
+        context: PurchaseAnalyticsContext
+    ) async -> PurchaseOutcome {
+        // Persist provider completion before refresh. Unknown and deferred
+        // outcomes still require verified StoreKit history.
+        if checkoutMethod == .apple,
+           selection.product.kind != .consumable {
+            _ = await pendingStore.markTransactionConfirmed(
+                attemptID: context.attemptID
+            )
+        }
+        await pendingStore.noteDiagnostic(
+            attemptID: context.attemptID,
+            stage: .transactionVerified,
+            diagnosticCode: nil
+        )
+        let snapshot = await entitlementRepository.refreshEntitlement(
+            policy: .startNewGeneration
+        )
+        guard snapshot.isCurrentActiveConfirmed else {
+            await pendingStore.noteDiagnostic(
+                attemptID: context.attemptID,
+                stage: .entitlementAwaitingConfirmation,
+                diagnosticCode: nil
+            )
+            return .completedButUnverified(confirmation)
+        }
+        return .activated(snapshot)
     }
 
     func resolvedOutcome(

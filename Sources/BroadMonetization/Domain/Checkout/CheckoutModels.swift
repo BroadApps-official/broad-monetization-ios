@@ -177,8 +177,9 @@ struct CapturedStoreTransactionEvidence: Equatable, Sendable {
 /// Raw result produced by the StoreKit/Adapty purchase adapter. A completed SDK
 /// operation is not yet proof that premium access is active.
 public enum PurchaseFailureDisposition: Equatable, Sendable {
-    /// The provider purchase sheet was not started, or StoreKit definitively
-    /// reported user cancellation. Clearing the durable intent is safe.
+    /// The provider did not start a purchase, or StoreKit definitively reported
+    /// cancellation or terminal failure without a completed transaction.
+    /// Clearing the durable intent is safe.
     case definitivelyNotPurchased
 
     /// The adapter cannot prove whether StoreKit charged/completed. The durable
