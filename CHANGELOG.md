@@ -1,6 +1,21 @@
 # Changelog
 
-## Unreleased (5.1.0)
+## 5.1.0
+
+### Upgrade from 5.0.0
+
+- Existing purchase and service factory calls remain source-compatible. The
+  premium catalog preflight is opt-in; pass the same catalog used by the
+  StoreKit entitlement source when the host is ready to enforce it.
+- Keep the existing application identifier, account subject and pending
+  purchase storage. An old outcome-unknown attempt still needs verified
+  transaction reconciliation or support review; updating the package does not
+  erase it.
+- Apps with token fulfillment must continue to reconcile the exact StoreKit
+  transaction ID on their backend. The platform cannot infer token credit from
+  a change in total balance.
+- See [the 5.1 upgrade guide](Documentation/UpgradeTo5.1.md) for host actions,
+  validation scope and rollback.
 
 ### Added
 

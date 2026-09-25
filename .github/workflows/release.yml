@@ -26,9 +26,15 @@ jobs:
         run: brew install ripgrep
       - name: Validate release metadata
         run: bash Scripts/check_release_version.sh "$GITHUB_REF_NAME"
+      - name: Require tag commit on main
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
       - name: Repeat full standalone module gate
         run: bash Scripts/module_gate.sh
-      - name: Create GitHub Release with changelog
+      - name: Prepare version-specific release notes
+        run: bash Scripts/extract_release_notes.sh "$GITHUB_REF_NAME" "$RUNNER_TEMP/release-notes.md"
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "BroadMonetization $GITHUB_REF_NAME" --notes-file CHANGELOG.md
+        run: gh release create "$GITHUB_REF_NAME" --title "BroadMonetization $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md"
