@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Gate exports a UTF-8 locale before invoking Ruby so checks work in checkout
+  paths containing Cyrillic characters, even when the caller uses the C locale.
+
 ## 5.1.0
 
 ### Upgrade from 5.0.0

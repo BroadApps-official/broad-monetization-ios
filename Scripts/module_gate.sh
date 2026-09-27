@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
 module_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 module_name="$(/usr/bin/ruby -rjson -e 'puts JSON.parse(File.read(ARGV.fetch(0))).fetch("module")' "$module_root/ModuleContract.json")"
 sandbox_name="$(/usr/bin/ruby -rjson -e 'puts JSON.parse(File.read(ARGV.fetch(0))).fetch("sandbox")' "$module_root/ModuleContract.json")"
