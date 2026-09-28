@@ -236,6 +236,13 @@ private extension AdaptyPaywallRepository {
         }
         do {
             let adaptyProducts = try await Adapty.getPaywallProducts(paywall: paywall)
+            #if DEBUG
+                Self.logMissingProducts(
+                    in: paywall,
+                    returned: adaptyProducts,
+                    placementID: logicalPlacementID
+                )
+            #endif
             let presentationID = PaywallPresentationID.generated()
             let paywallReference = PaywallReference.generatedForAdapty()
             let mappedProducts = Self.mapProducts(adaptyProducts)

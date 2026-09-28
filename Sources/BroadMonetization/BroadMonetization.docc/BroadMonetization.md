@@ -52,6 +52,17 @@ configuration without changing active-window or cooldown dates. Existing canonic
 state always wins. Resets leave a durable eligible marker so an old snapshot cannot
 restore a cleared cycle after relaunch; storage failures remain unavailable.
 
+While the ordinary paywall is visible, call
+`await resolver.prepare(configuration: configuration)`. After a dismissal without
+a confirmed purchase, call `await resolver(configuration: configuration)` or let
+``SpecialOfferCoordinator`` resolve the close event. Preparation loads the
+ordinary placement's strict gate and the separate offer's products, without
+starting the persisted window or reporting an impression. The actor keeps one
+preparation for at most ten minutes and releases unused presentations on reset,
+replacement, expiry, or an active entitlement. The close still checks access,
+trusted time, cadence, and both flags. Without a fresh matching preparation it
+uses the normal loading path. See [Standard Special Offer](../../../Documentation/StandardSpecialOffer.md).
+
 - ``ResolveSpecialOfferUseCase``
 - ``SpecialOfferResolution``
 - ``SpecialOfferPresentationAuthorization``

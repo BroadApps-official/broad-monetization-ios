@@ -20,6 +20,9 @@ RU composition. Legacy initializers remain valid without the optional tracker.
 
 Fixture-only iPhone app для проверки products-first pipeline, Special Offer
 provenance/countdown и current-provider RU authority.
+The Special Offer section shows the preparation boundary: gate and offer load
+while the ordinary paywall is visible, and the 24-hour window starts only at
+dismissal resolution. The fixture does not make network requests.
 
 ```bash
 bash Scripts/generate_sandbox.sh

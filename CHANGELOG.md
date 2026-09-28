@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- `ResolveSpecialOfferUseCase.prepare(configuration:)` loads the gate paywall
+  and every Special Offer product while the ordinary paywall is still on
+  screen, so the offer appears the moment the paywall closes. Preparation
+  lives up to ten minutes, never starts the 24-hour window and never counts a
+  view; the resolver still checks entitlement, trusted time, cadence and both
+  strict flags at close. Custom resolvers get a no-op default.
+- DEBUG warning when Adapty returns fewer products than the paywall's vendor
+  product IDs: placement, matched count and the missing IDs to add to the
+  app's Debug `.storekit` with App Store prices. Release is unchanged.
 - Gate exports a UTF-8 locale before invoking Ruby so checks work in checkout
   paths containing Cyrillic characters, even when the caller uses the C locale.
 

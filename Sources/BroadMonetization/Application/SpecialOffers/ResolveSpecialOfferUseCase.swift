@@ -1,12 +1,12 @@
 import BroadCore
 import Foundation
 
-private enum StandardSpecialOfferGateOutcome {
+enum StandardSpecialOfferGateOutcome {
     case authorized(PaywallPayload)
     case refused(SpecialOfferResolution)
 }
 
-private enum StandardSpecialOfferCadenceOutcome {
+enum StandardSpecialOfferCadenceOutcome {
     case active(SpecialOfferWindow, SpecialOfferTrustedTime)
     case refused(SpecialOfferResolution)
 }
@@ -14,6 +14,7 @@ private enum StandardSpecialOfferCadenceOutcome {
 public actor ResolveSpecialOfferUseCase: ResolveSpecialOfferUseCaseProtocol {
     public static let defaultWindowDuration = SpecialOfferConfiguration.standardWindowDuration
     public static let defaultCooldownDuration = SpecialOfferConfiguration.standardCooldownDuration
+    static let preparationLifetime: Duration = .seconds(600)
 
     private struct InFlightResolution {
         let identifier: UUID
@@ -21,13 +22,15 @@ public actor ResolveSpecialOfferUseCase: ResolveSpecialOfferUseCaseProtocol {
         let task: Task<SpecialOfferResolution, Never>
     }
 
-    private let loadPaywallUseCase: any LoadPaywallUseCaseProtocol
-    private let stateRepository: (any SpecialOfferStateRepositoryProtocol)?
-    private let presentationLifecycle: any PaywallPresentationLifecycleProtocol
+    let loadPaywallUseCase: any LoadPaywallUseCaseProtocol
+    let stateRepository: (any SpecialOfferStateRepositoryProtocol)?
+    let presentationLifecycle: any PaywallPresentationLifecycleProtocol
     private let clock: SpecialOfferClock?
-    private let entitlementStatusProvider: (any EntitlementStatusProviderProtocol)?
+    let entitlementStatusProvider: (any EntitlementStatusProviderProtocol)?
 
     private var inFlightResolutions: [PlacementID: InFlightResolution] = [:]
+    var preparedOffer: PreparedOffer?
+    var preparationGeneration: UInt64 = 0
 
     /// Source-compatible initializer for hosts that have not wired the timed
     /// contract yet. It fails closed when the gate is enabled because a window
@@ -75,6 +78,9 @@ public actor ResolveSpecialOfferUseCase: ResolveSpecialOfferUseCaseProtocol {
             removeIfCurrent(inFlight, for: configuration.placementID)
         }
 
+        preparationGeneration &+= 1
+        let preparation = preparedOffer
+        preparedOffer = nil
         let identifier = UUID()
         let loadPaywallUseCase = loadPaywallUseCase
         let stateRepository = stateRepository
@@ -82,8 +88,14 @@ public actor ResolveSpecialOfferUseCase: ResolveSpecialOfferUseCaseProtocol {
         let clock = clock
         let entitlementStatusProvider = entitlementStatusProvider
         let task = Task<SpecialOfferResolution, Never> {
-            await Self.resolveConfiguredOffer(
+            let usablePreparation = preparation?.isFresh(for: configuration) == true
+                ? preparation : nil
+            if let preparation, usablePreparation == nil {
+                await Self.end(preparation, using: presentationLifecycle)
+            }
+            return await Self.resolveConfiguredOffer(
                 configuration,
+                preparedOffer: usablePreparation,
                 loadPaywallUseCase: loadPaywallUseCase,
                 stateRepository: stateRepository,
                 presentationLifecycle: presentationLifecycle,
@@ -99,20 +111,9 @@ public actor ResolveSpecialOfferUseCase: ResolveSpecialOfferUseCaseProtocol {
         inFlightResolutions[configuration.placementID] = inFlight
         return await finish(inFlight, for: configuration.placementID)
     }
-
-    /// Clears the running window after a confirmed purchase or restore.
-    @discardableResult
-    public func resetCycle(
-        configuration: SpecialOfferConfiguration
-    ) async -> Bool {
-        guard let stateRepository else {
-            return false
-        }
-        return await stateRepository.save(.eligible, for: configuration)
-    }
 }
 
-private extension ResolveSpecialOfferUseCase {
+extension ResolveSpecialOfferUseCase {
     private func finish(
         _ resolution: InFlightResolution,
         for placementID: PlacementID
@@ -139,16 +140,89 @@ private extension ResolveSpecialOfferUseCase {
 
     static func resolveConfiguredOffer(
         _ configuration: SpecialOfferConfiguration,
+        preparedOffer: PreparedOffer?,
         loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
         stateRepository: (any SpecialOfferStateRepositoryProtocol)?,
         presentationLifecycle: any PaywallPresentationLifecycleProtocol,
         clock: SpecialOfferClock?,
         entitlementStatusProvider: (any EntitlementStatusProviderProtocol)?
     ) async -> SpecialOfferResolution {
-        guard let entitlementStatusProvider else { return unavailable(.persistenceUnavailable) }
+        guard let entitlementStatusProvider else {
+            if let preparedOffer {
+                await end(preparedOffer, using: presentationLifecycle)
+            }
+            return unavailable(.persistenceUnavailable)
+        }
         guard await entitlementStatusProvider.currentStatus() != .active else {
+            if let preparedOffer {
+                await end(preparedOffer, using: presentationLifecycle)
+            }
             return await resetForActiveEntitlement(configuration, stateRepository: stateRepository)
         }
+        if let preparedOffer {
+            return await resolvePreparedOffer(
+                configuration,
+                preparation: preparedOffer,
+                stateRepository: stateRepository,
+                presentationLifecycle: presentationLifecycle,
+                clock: clock
+            )
+        }
+        return await resolveUnpreparedOffer(
+            configuration,
+            loadPaywallUseCase: loadPaywallUseCase,
+            stateRepository: stateRepository,
+            presentationLifecycle: presentationLifecycle,
+            clock: clock
+        )
+    }
+
+    static func resolvePreparedOffer(
+        _ configuration: SpecialOfferConfiguration,
+        preparation: PreparedOffer,
+        stateRepository: (any SpecialOfferStateRepositoryProtocol)?,
+        presentationLifecycle: any PaywallPresentationLifecycleProtocol,
+        clock: SpecialOfferClock?
+    ) async -> SpecialOfferResolution {
+        let cadenceOutcome = await authorizeCadence(
+            configuration,
+            stateRepository: stateRepository,
+            clock: clock
+        )
+        guard case let .active(window, trustedTime) = cadenceOutcome else {
+            await end(preparation, using: presentationLifecycle)
+            guard case let .refused(resolution) = cadenceOutcome else { preconditionFailure() }
+            return resolution
+        }
+        guard preparation.gatePaywall.remoteConfigurationProvenance
+            .authorizesSpecialOfferPresentation,
+            preparation.gatePaywall.remoteConfiguration.specialOffer?.isEnabled == true,
+            preparation.offerPaywall.remoteConfigurationProvenance
+            .authorizesSpecialOfferPresentation,
+            preparation.offerPaywall.remoteConfiguration.specialOffer?.isEnabled == true
+        else {
+            await end(preparation, using: presentationLifecycle)
+            guard await resetIfPossible(configuration, stateRepository: stateRepository) else {
+                return unavailable(.persistenceUnavailable)
+            }
+            return unavailable(.disabledByRemoteConfiguration)
+        }
+        await end(preparation.gatePaywall, using: presentationLifecycle)
+        return SpecialOfferResolution(
+            state: .active(window),
+            paywall: preparation.offerPaywall,
+            trustedTime: trustedTime,
+            gatePaywall: preparation.gatePaywall
+        )
+    }
+
+    static func resolveUnpreparedOffer(
+        _ configuration: SpecialOfferConfiguration,
+        loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
+        stateRepository: (any SpecialOfferStateRepositoryProtocol)?,
+        presentationLifecycle: any PaywallPresentationLifecycleProtocol,
+        clock: SpecialOfferClock?
+    ) async -> SpecialOfferResolution {
         let gateOutcome = await loadAuthorizedGate(
             configuration,
             loadPaywallUseCase: loadPaywallUseCase,
@@ -211,7 +285,8 @@ private extension ResolveSpecialOfferUseCase {
         _ configuration: SpecialOfferConfiguration,
         loadPaywallUseCase: any LoadPaywallUseCaseProtocol,
         stateRepository: (any SpecialOfferStateRepositoryProtocol)?,
-        presentationLifecycle: any PaywallPresentationLifecycleProtocol
+        presentationLifecycle: any PaywallPresentationLifecycleProtocol,
+        resetOnDisabled: Bool = true
     ) async -> StandardSpecialOfferGateOutcome {
         let outcome = await loadPaywallUseCase(
             PaywallLoadRequest(placementID: configuration.gatePlacementID)
@@ -227,8 +302,10 @@ private extension ResolveSpecialOfferUseCase {
               paywall.remoteConfiguration.specialOffer?.isEnabled == true
         else {
             await end(paywall, using: presentationLifecycle)
-            guard await resetIfPossible(configuration, stateRepository: stateRepository) else {
-                return .refused(unavailable(.persistenceUnavailable))
+            if resetOnDisabled {
+                guard await resetIfPossible(configuration, stateRepository: stateRepository) else {
+                    return .refused(unavailable(.persistenceUnavailable))
+                }
             }
             return .refused(unavailable(.disabledByRemoteConfiguration))
         }
@@ -279,61 +356,6 @@ private extension ResolveSpecialOfferUseCase {
             return nil
         }
         return paywall
-    }
-
-    /// The cadence is continuous after the first qualifying close: every
-    /// 24-hour active phase is followed immediately by a 24-hour cooldown, even
-    /// while the app is not running.
-    static func nextState(
-        from state: SpecialOfferState,
-        now: Date
-    ) -> SpecialOfferState {
-        switch state {
-        case let .active(window):
-            return phase(
-                startingAt: window.startedAt,
-                now: now
-            )
-        case let .cooldown(until):
-            if now < until {
-                return .cooldown(until: until)
-            }
-            return phase(startingAt: until, now: now)
-        case .eligible, .expired, .unavailable:
-            return .active(newWindow(startingAt: now))
-        }
-    }
-
-    static func phase(
-        startingAt initialWindowStart: Date,
-        now: Date
-    ) -> SpecialOfferState {
-        let windowDuration = defaultWindowDuration
-        let cooldownDuration = defaultCooldownDuration
-        let fullCycleDuration = windowDuration + cooldownDuration
-        let elapsed = max(0, now.timeIntervalSince(initialWindowStart))
-        let completedCycles = floor(elapsed / fullCycleDuration)
-        let cycleStart = initialWindowStart.addingTimeInterval(
-            completedCycles * fullCycleDuration
-        )
-        let activeUntil = cycleStart.addingTimeInterval(windowDuration)
-        if now < activeUntil {
-            return .active(
-                SpecialOfferWindow(startedAt: cycleStart, expiresAt: activeUntil)
-            )
-        }
-        return .cooldown(
-            until: cycleStart.addingTimeInterval(fullCycleDuration)
-        )
-    }
-
-    static func newWindow(
-        startingAt date: Date
-    ) -> SpecialOfferWindow {
-        SpecialOfferWindow(
-            startedAt: date,
-            expiresAt: date.addingTimeInterval(defaultWindowDuration)
-        )
     }
 
     static func isExactOrigin(

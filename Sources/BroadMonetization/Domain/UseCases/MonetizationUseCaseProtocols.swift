@@ -79,6 +79,10 @@ public protocol TrackPaywallEventUseCaseProtocol: Sendable {
 }
 
 public protocol ResolveSpecialOfferUseCaseProtocol: Sendable {
+    /// Loads the gate and offer while the ordinary paywall is visible. This does
+    /// not start or change the persisted Special Offer window.
+    func prepare(configuration: SpecialOfferConfiguration) async
+
     /// Implementations must return `.unavailable(.notConfigured)` immediately for
     /// `nil` and must not touch placement, network, cache, timers or persistence.
     func callAsFunction(
@@ -93,6 +97,9 @@ public protocol ResolveSpecialOfferUseCaseProtocol: Sendable {
 }
 
 public extension ResolveSpecialOfferUseCaseProtocol {
+    /// Keeps existing custom resolvers source compatible.
+    func prepare(configuration _: SpecialOfferConfiguration) async {}
+
     /// Source-compatible default for custom resolvers. Production resolvers
     /// should persist the reset and return `true` only after it succeeds.
     @discardableResult

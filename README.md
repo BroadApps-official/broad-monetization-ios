@@ -168,11 +168,22 @@ Adapty.getPaywall
   → products из отдельного Special Offer placement
 ```
 
-`ResolveSpecialOfferUseCase` сначала загружает основной paywall и после
-парсинга его products читает strict boolean `special_offer`. При `true`
-резолвер проверяет persisted cadence и только затем загружает отдельный
-placement Special Offer со всеми его products. Fallback на `main` не может
-подменить оффер.
+Пока обычный paywall открыт, приложение может вызвать
+`await resolveSpecialOffer.prepare(configuration: specialOfferConfiguration)`.
+Это заранее загружает gate paywall и все products отдельного placement
+Special Offer. Закрытие без покупки вызывает
+`await resolveSpecialOffer(configuration: specialOfferConfiguration)` (либо
+`SpecialOfferCoordinator` делает это после события закрытия). Подготовка
+действует до 10 минут для той же конфигурации; она не запускает окно и не
+регистрирует показ. При отсутствии подготовки резолвер сохраняет прежнюю
+последовательность загрузки. Gate читает strict boolean `special_offer` из
+выбранного paywall `gatePlacementID` с fallback отсутствующих ключей на `main`;
+products Special Offer никогда не подменяются `main`.
+
+В DEBUG, если Adapty вернул paywall, но не отдал все его vendor product IDs,
+платформа пишет предупреждение с placement, числом доступных продуктов,
+отсутствующими ID и подсказкой по Debug `.storekit` с ценами App Store.
+Подробнее: [Standard Special Offer](Documentation/StandardSpecialOffer.md).
 
 Цикл фиксирован: 24 часа окна показа, затем 24 часа cooldown.
 Countdown идёт до конца текущего окна и на нуле истекает; UI закрывает

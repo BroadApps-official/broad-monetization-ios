@@ -64,6 +64,8 @@ struct MonetizationSandboxView: View {
                 }
 
                 Section("Special Offer authority") {
+                    LabeledContent("Preparation", value: "gate + offer before close")
+                    LabeledContent("Window starts", value: "on dismissal resolution")
                     LabeledContent(
                         "Current provider payload",
                         value: yesNo(providerConfiguration.specialOffer?.isEnabled == true)

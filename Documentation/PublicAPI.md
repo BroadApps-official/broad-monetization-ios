@@ -475,6 +475,8 @@
 | Instance Method | `func notifyFinancialOperationStateChanged()` |
 | Instance Method | `func parse(_ dictionary: [String : Any]) -> ProviderRemoteConfiguration?` |
 | Instance Method | `func parse(_ dictionary: [String : Any]) -> RemotePaywallConfiguration` |
+| Instance Method | `func prepare(configuration _: SpecialOfferConfiguration) async` |
+| Instance Method | `func prepare(configuration: SpecialOfferConfiguration) async` |
 | Instance Method | `func preparedForNewPresentation() -> PaywallPayload` |
 | Instance Method | `func presentationDidAppear(_ analyticsContext: PaywallAnalyticsContext) async` |
 | Instance Method | `func presentationDidAppear(_ context: PaywallAnalyticsContext) async` |
