@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased
+## 5.2.0
+
+### Upgrade from 5.1.0
+
+- Source-compatible. To show the Special Offer the moment an ordinary paywall
+  closes, call `prepare(configuration:)` while that paywall is on screen and
+  keep one resolver for the app lifetime. Without it the resolver loads as
+  before.
+
+### Added
 
 - `ResolveSpecialOfferUseCase.prepare(configuration:)` loads the gate paywall
   and every Special Offer product while the ordinary paywall is still on
@@ -11,8 +20,17 @@
 - DEBUG warning when Adapty returns fewer products than the paywall's vendor
   product IDs: placement, matched count and the missing IDs to add to the
   app's Debug `.storekit` with App Store prices. Release is unchanged.
+
+### Fixed
+
 - Gate exports a UTF-8 locale before invoking Ruby so checks work in checkout
   paths containing Cyrillic characters, even when the caller uses the C locale.
+
+### Why
+
+App 5153 showed a spinner between closing the paywall and the offer while the
+gate and offer placements loaded, and a paywall with fewer plans than Adapty
+because its Debug `.storekit` lacked products — with nothing in the log.
 
 ## 5.1.0
 
