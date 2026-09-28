@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 5.2.1
+
+### Changed
 
 - A Special Offer sells one product: the account manager keeps one in the
   `special_offer` placement and the screen shows one card. A DEBUG warning

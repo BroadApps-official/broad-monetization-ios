@@ -12,7 +12,7 @@
   <img alt="iOS 17+" src="https://img.shields.io/badge/iOS-17%2B-111827?logo=apple&amp;logoColor=white">
   <img alt="Swift 5" src="https://img.shields.io/badge/Swift-language%20mode%205-F05138?logo=swift&amp;logoColor=white">
   <img alt="Adapty 3.17.3" src="https://img.shields.io/badge/Adapty-3.17.3-7C3AED">
-  <img alt="Release 5.2.0" src="https://img.shields.io/badge/release-5.2.0-10B981">
+  <img alt="Release 5.2.1" src="https://img.shields.io/badge/release-5.2.1-10B981">
 </p>
 
 Provider-neutral monetization-модуль BroadApps для paywall catalog,
@@ -68,7 +68,7 @@ umbrella package нет. Если app напрямую импортирует `B
 dependencies: [
     .package(
         url: "https://github.com/BroadApps-official/broad-monetization-ios.git",
-        from: "5.2.0"
+        from: "5.2.1"
     )
 ]
 ```
