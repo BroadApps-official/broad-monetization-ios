@@ -52,6 +52,14 @@ configuration without changing active-window or cooldown dates. Existing canonic
 state always wins. Resets leave a durable eligible marker so an old snapshot cannot
 restore a cleared cycle after relaunch; storage failures remain unavailable.
 
+The account manager configures exactly one product in `special_offer`. The
+Special Offer UI displays one card for the first product in display
+order. BroadMonetization still maps and retains the complete Adapty array 1:1.
+BroadUIFlows calculates the crossed-out price from `referenceProducts`, using
+the tariff with the same subscription period on the ordinary paywall that was
+just closed. A DEBUG warning reports the placement ID and product count when
+a Special Offer placement returns more than one product.
+
 While the ordinary paywall is visible, call
 `await resolver.prepare(configuration: configuration)`. After a dismissal without
 a confirmed purchase, call `await resolver(configuration: configuration)` or let

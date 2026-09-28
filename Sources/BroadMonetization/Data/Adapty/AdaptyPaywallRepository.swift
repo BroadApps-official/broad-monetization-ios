@@ -237,7 +237,7 @@ private extension AdaptyPaywallRepository {
         do {
             let adaptyProducts = try await Adapty.getPaywallProducts(paywall: paywall)
             #if DEBUG
-                Self.logMissingProducts(
+                Self.logProductDiagnostics(
                     in: paywall,
                     returned: adaptyProducts,
                     placementID: logicalPlacementID

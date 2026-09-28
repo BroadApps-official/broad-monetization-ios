@@ -31,6 +31,13 @@ flag and provenance. The prepared paywalls are held for at most ten minutes.
 Another preparation replaces them. A reset, active entitlement, expiry, or
 rejected decision ends unused presentations.
 
+The account manager must configure exactly one product in the `special_offer`
+placement. The Special Offer screen shows one card for the first product in
+provider display order. BroadMonetization maps and retains every Adapty product
+1:1, even if the placement is misconfigured with more than one. BroadUIFlows
+calculates the crossed-out price from `referenceProducts`, using the tariff with
+the same subscription period on the ordinary paywall that was just closed.
+
 Preparation does not read or write the persisted cycle, request trusted time,
 or count an impression. Resolution after dismissal checks entitlement, trusted
 time, the 24-hour window and 24-hour cooldown, then validates the flags before
@@ -43,6 +50,9 @@ In DEBUG, a returned Adapty paywall whose vendor product IDs are missing from
 `getPaywallProducts` produces a platform warning with the logical placement,
 matched and expected counts, and missing IDs. Add those IDs to the app's Debug
 `.storekit` file with App Store prices. Release behavior is unchanged.
+If a Special Offer placement returns more than one product, a separate DEBUG
+warning reports only its placement ID and product count and asks the account
+manager to keep one product in the placement.
 
 This additive public API has **minor SemVer intent**. Existing custom
 `ResolveSpecialOfferUseCaseProtocol` implementations keep compiling through its

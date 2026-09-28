@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- A Special Offer sells one product: the account manager keeps one in the
+  `special_offer` placement and the screen shows one card. A DEBUG warning
+  names the placement and the product count when it returns more than one;
+  products are still mapped 1:1. README, StandardSpecialOffer and DocC state
+  the rule.
+
 ## 5.2.0
 
 ### Upgrade from 5.1.0
